@@ -1,0 +1,14 @@
+[package]
+name = "imp022"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bevy = "0.12.0"
+chrono = { version = "0.4.31", default-features = false, features = ["std"] }
+rand = "0.8.5"
+ron = { version = "0.8.1" }
+serde = { version = "1.0.192", features = ["derive"] }
+walkdir = "2.4.0"
