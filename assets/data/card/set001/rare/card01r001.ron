@@ -1,5 +1,5 @@
 Card(
     id: (Set(1), Rare, 1),
-    name: "",
+    name: "Rare 1",
     text: "",
 )

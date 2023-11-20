@@ -44,6 +44,10 @@ enum PlayerPartHolderKind {
 #[derive(Component, Clone)]
 struct PlayerPartHolder(Option<PlayerPart>);
 
+#[derive(Component, Clone)]
+struct CardHolder(usize);
+
+
 #[derive(Component)]
 enum InfoKind {
     Name,
@@ -279,7 +283,7 @@ fn spawn_part(parent: &mut ChildBuilder, part: PlayerPart, font_info: &FontInfo)
             parent
                 .spawn(label_container.clone())
                 .with_children(|parent| {
-                    for build in part.build.iter() {
+                    for build in &part.build {
                         text_children.push(parent.spawn(text(build.title.clone(), font_info)).id());
                     }
                 })
@@ -290,7 +294,7 @@ fn spawn_part(parent: &mut ChildBuilder, part: PlayerPart, font_info: &FontInfo)
             parent
                 .spawn(label_container.clone())
                 .with_children(|parent| {
-                    for category in part.category.iter() {
+                    for category in &part.category {
                         text_children.push(parent.spawn(text(category.title.clone(), font_info)).id());
                     }
                 })
@@ -300,7 +304,7 @@ fn spawn_part(parent: &mut ChildBuilder, part: PlayerPart, font_info: &FontInfo)
             parent
                 .spawn(val_container.clone())
                 .with_children(|parent| {
-                    for value in part.values.iter() {
+                    for value in &part.values {
                         text_children.push(parent.spawn(text(value.to_string(), font_info)).id());
                     }
                 })
@@ -309,6 +313,13 @@ fn spawn_part(parent: &mut ChildBuilder, part: PlayerPart, font_info: &FontInfo)
         .insert(PlayerPartHolder(Some(part)))
         .insert(TextChildren(text_children))
     ;
+}
+
+fn spawn_card_holder(parent: &mut ChildBuilder, idx: usize, font_info: &FontInfo) -> Entity {
+    parent
+        .spawn(text("-", font_info))
+        .insert(CardHolder(idx))
+        .id()
 }
 
 fn font_size(asset_server: &Res<AssetServer>, size: f32) -> FontInfo {
@@ -328,6 +339,7 @@ fn compose_enter(
     let font_info_val = font_size(&asset_server, 48.0);
     let font_info_label = font_size(&asset_server, 16.0);
     let font_info_part = font_size(&asset_server, 12.0);
+    let font_info_card = font_size(&asset_server, 14.0);
 
     let main_layout = NodeBundle {
         style: Style {
@@ -422,6 +434,12 @@ fn compose_enter(
                     ;
                     parent
                         .spawn(deq_gutter)
+                        .with_children(|parent| {
+
+                            for idx in 0..40 {
+                                spawn_card_holder(parent, idx, &font_info_card);
+                            }
+                        })
                     ;
                     parent
                         .spawn(spacer)
@@ -459,7 +477,7 @@ fn compose_enter(
                             parent
                                 .spawn(compose_attribs.clone())
                                 .with_children(|parent| {
-                                    let headers = ["ANT", "BUS", "CPU", "DEK"];
+                                    let headers = ["ANT", "BRD", "CPU", "DSC"];
                                     spawn_val_label(parent, PlayerPartHolderKind::StatRow(Build), &font_info_val, PlayerPartHolderKind::Build, &font_info_label, headers);
                                 })
                             ;
@@ -576,7 +594,8 @@ fn dragdrop(
 fn finish_player(
     receive: EventReader<FinishPlayer>,
     holder_q: Query<(&PlayerPartHolder, &PlayerPartHolderKind)>,
-    mut info_q: Query<(&mut Text, &InfoKind)>,
+    mut deq_q: Query<(&mut Text, &CardHolder), Without<InfoKind>>,
+    mut info_q: Query<(&mut Text, &InfoKind), Without<CardHolder>>,
     dm: Res<DataManager>,
 ) {
     if !receive.is_empty() {
@@ -607,6 +626,12 @@ fn finish_player(
                     InfoKind::ID => info.sections[0].value = player.id.clone(),
                     InfoKind::Birthplace => info.sections[0].value = player.birthplace(),
                     InfoKind::DoB => info.sections[0].value = player.age().to_string(),
+                }
+            }
+
+            for (idx,card) in player.deq.iter().enumerate() {
+                if let Some((mut card_text,_)) = deq_q.iter_mut().find(|o| o.1.0 == idx) {
+                    card_text.sections[0].value = card.name.clone();
                 }
             }
         }

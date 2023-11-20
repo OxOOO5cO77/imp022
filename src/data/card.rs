@@ -3,7 +3,7 @@ use serde::Deserialize;
 #[derive(Clone, Deserialize, PartialEq)]
 pub(crate) struct Set(u8);
 
-#[derive(Clone, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Deserialize, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum Rarity {
     Common,
     Uncommon,
