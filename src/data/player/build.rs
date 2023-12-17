@@ -1,12 +1,20 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use std::mem::discriminant;
+
 use serde::Deserialize;
-use crate::data::card::CardSlot;
-use crate::data::player_builder::PlayerPart;
+
+use crate::data::player::card::CardSlot;
+use crate::data::player::player_builder::PlayerPart;
 
 #[derive(Clone, Deserialize)]
-pub(crate) enum Market { Any, Consumer, Enthusiast, Prosumer, Professional }
+pub(crate) enum Market {
+    Any,
+    Consumer,
+    Enthusiast,
+    Prosumer,
+    Professional,
+}
 
 #[derive(Clone, Deserialize)]
 pub(crate) enum ANT {
@@ -65,12 +73,12 @@ impl BuildInstance {
         discriminant(&self.build) == discriminant(other)
     }
 
-    pub(crate) fn from_parts(build: &PlayerPart, values: &PlayerPart) -> [(BuildInstance, u8); 4] {
+    pub(crate) fn from_parts(part: &PlayerPart, values: &PlayerPart) -> [(BuildInstance, u8); 4] {
         [
-            (build.build[0].clone(), values.values[0]),
-            (build.build[1].clone(), values.values[1]),
-            (build.build[2].clone(), values.values[2]),
-            (build.build[3].clone(), values.values[3]),
+            (part.build[0].clone(), values.values[0]),
+            (part.build[1].clone(), values.values[1]),
+            (part.build[2].clone(), values.values[2]),
+            (part.build[3].clone(), values.values[3]),
         ]
     }
 }

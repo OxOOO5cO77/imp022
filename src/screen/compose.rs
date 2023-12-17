@@ -1,9 +1,10 @@
 use bevy::prelude::*;
 use rand::RngCore;
 use rand::rngs::ThreadRng;
+
 use crate::app_state::AppState;
 use crate::data::data_manager::DataManager;
-use crate::data::player_builder::{PlayerBuilder, PlayerPart};
+use crate::data::player::player_builder::{PlayerBuilder, PlayerPart};
 use crate::screen::compose::StatRowKind::{Build, Category};
 use crate::system::dragdrop::{DragDrag, DragDrop, Dragging, DragTarget, DropTarget};
 use crate::system::ui::{filled_rect, HUNDRED, screen_exit, ScreenBundle};
@@ -435,7 +436,6 @@ fn compose_enter(
                     parent
                         .spawn(deq_gutter)
                         .with_children(|parent| {
-
                             for idx in 0..40 {
                                 spawn_card_holder(parent, idx, &font_info_card);
                             }
@@ -497,8 +497,8 @@ fn compose_enter(
                                         .spawn(v_vals(HUNDRED))
                                         .with_children(|parent| {
                                             parent.spawn(node(ATTRIB_VAL, Color::NONE));
-                                            spawn_info(parent, "Name", InfoKind::Name, &font_info_label);
                                             spawn_info(parent, "ID", InfoKind::ID, &font_info_label);
+                                            spawn_info(parent, "Name", InfoKind::Name, &font_info_label);
                                             spawn_info(parent, "Birthplace", InfoKind::Birthplace, &font_info_label);
                                             spawn_info(parent, "Age", InfoKind::DoB, &font_info_label);
                                         })
@@ -629,8 +629,8 @@ fn finish_player(
                 }
             }
 
-            for (idx,card) in player.deq.iter().enumerate() {
-                if let Some((mut card_text,_)) = deq_q.iter_mut().find(|o| o.1.0 == idx) {
+            for (idx, card) in player.deq.iter().enumerate() {
+                if let Some((mut card_text, _)) = deq_q.iter_mut().find(|o| o.1.0 == idx) {
                     card_text.sections[0].value = card.name.clone();
                 }
             }

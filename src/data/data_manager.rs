@@ -1,14 +1,17 @@
 use std::io::{Error, ErrorKind};
 use std::path::Path;
+
 use bevy::prelude::Resource;
 use chrono::NaiveDate;
 use rand::distributions::Uniform;
 use rand::prelude::*;
 use walkdir::WalkDir;
-use crate::data::build::{ANT, BRD, Build, BuildInstance, CPU, DSC};
-use crate::data::card::{Card, CardSlot};
-use crate::data::category::{Category, CategoryInstance, Institution, Location, Distro, Role};
-use crate::data::bio::BioManager;
+
+use crate::data::bio_manager::BioManager;
+use crate::data::mission::Mission;
+use crate::data::player::build::{ANT, BRD, Build, BuildInstance, CPU, DSC};
+use crate::data::player::card::{Card, CardSlot};
+use crate::data::player::category::{Category, CategoryInstance, Distro, Institution, Location, Role};
 
 #[derive(Resource)]
 pub(crate) struct DataManager {
@@ -16,22 +19,22 @@ pub(crate) struct DataManager {
     category: Vec<CategoryInstance>,
     card: Vec<Card>,
     bio: BioManager,
+    mission: Vec<Mission>,
 }
 
 impl DataManager {
     pub(crate) fn new() -> Result<Self, Error> {
-        Ok(
-            DataManager {
-                build: load_data("assets/data/build")?,
-                category: load_data("assets/data/category")?,
-                card: load_data("assets/data/card")?,
-                bio: BioManager {
-                    country: load_data_single("assets/data/bio/country.ron")?,
-                    city: load_data_single("assets/data/bio/city.ron")?,
-                    name: load_data_single("assets/data/bio/name.ron")?,
-                },
-            }
-        )
+        Ok(DataManager {
+            build: load_data("assets/data/build")?,
+            category: load_data("assets/data/category")?,
+            card: load_data("assets/data/card")?,
+            bio: BioManager {
+                country: load_data_single("assets/data/bio/country.ron")?,
+                city: load_data_single("assets/data/bio/city.ron")?,
+                name: load_data_single("assets/data/bio/name.ron")?,
+            },
+            mission: load_data("assets/data/mission")?,
+        })
     }
 
     pub(crate) fn pick_values(rng: &mut impl Rng) -> [u8; 4] {
@@ -48,48 +51,79 @@ impl DataManager {
 
     pub(crate) fn pick_build(&self, rng: &mut impl Rng) -> Option<[BuildInstance; 4]> {
         Some([
-            self.build.iter().filter(|o| o.is(&Build::ANT(ANT::Any))).choose(rng)?.clone(),
-            self.build.iter().filter(|o| o.is(&Build::BRD(BRD::Any))).choose(rng)?.clone(),
-            self.build.iter().filter(|o| o.is(&Build::CPU(CPU::Any))).choose(rng)?.clone(),
-            self.build.iter().filter(|o| o.is(&Build::DSC(DSC::Any))).choose(rng)?.clone(),
+            self.build.iter()
+                .filter(|o| o.is(&Build::ANT(ANT::Any)))
+                .choose(rng)?
+                .clone(),
+            self.build.iter()
+                .filter(|o| o.is(&Build::BRD(BRD::Any)))
+                .choose(rng)?
+                .clone(),
+            self.build.iter()
+                .filter(|o| o.is(&Build::CPU(CPU::Any)))
+                .choose(rng)?
+                .clone(),
+            self.build.iter()
+                .filter(|o| o.is(&Build::DSC(DSC::Any)))
+                .choose(rng)?
+                .clone(),
         ])
     }
 
     pub(crate) fn pick_category(&self, rng: &mut impl Rng) -> Option<[CategoryInstance; 4]> {
         Some([
-            self.category.iter().filter(|o| o.is(&Category::Institution(Institution::Any))).choose(rng)?.clone(),
-            self.category.iter().filter(|o| o.is(&Category::Role(Role::Any))).choose(rng)?.clone(),
-            self.category.iter().filter(|o| o.is(&Category::Location(Location::Any))).choose(rng)?.clone(),
-            self.category.iter().filter(|o| o.is(&Category::Distro(Distro::Any))).choose(rng)?.clone(),
+            self.category.iter()
+                .filter(|o| o.is(&Category::Institution(Institution::Any)))
+                .choose(rng)?
+                .clone(),
+            self.category.iter()
+                .filter(|o| o.is(&Category::Role(Role::Any))).choose(rng)?
+                .clone(),
+            self.category.iter()
+                .filter(|o| o.is(&Category::Location(Location::Any)))
+                .choose(rng)?
+                .clone(),
+            self.category.iter()
+                .filter(|o| o.is(&Category::Distro(Distro::Any)))
+                .choose(rng)?
+                .clone(),
         ])
     }
 
     fn pick_card(&self, rng: &mut impl Rng, slot: &CardSlot) -> Option<Card> {
-        self.card.iter().filter(|o| o.matches(slot)).choose(rng).cloned()
+        self.card.iter()
+            .filter(|o| o.matches(slot))
+            .choose(rng)
+            .cloned()
     }
 
     pub(crate) fn pick_cards(&self, rng: &mut impl Rng, from: &[CardSlot], count: u8) -> Vec<Card> {
-        let slots = from.choose_multiple(rng, count as usize).cloned().collect::<Vec<_>>();
-        slots.iter().filter_map(|slot| self.pick_card(rng, slot)).collect()
+        let slots = from
+            .choose_multiple(rng, count as usize)
+            .cloned()
+            .collect::<Vec<_>>();
+        slots.iter()
+            .filter_map(|slot| self.pick_card(rng, slot))
+            .collect()
     }
 
     pub(crate) fn pick_country(&self, rng: &mut impl Rng) -> String {
         self.bio.country(rng)
     }
-    pub(crate) fn pick_city(&self, country: &String, rng: &mut impl Rng) -> (String,String) {
+    pub(crate) fn pick_city(&self, country: &String, rng: &mut impl Rng) -> (String, String) {
         self.bio.city(country, rng)
     }
     pub(crate) fn pick_gender(&self, country: &String, rng: &mut impl Rng) -> char {
         self.bio.gender(country, rng)
     }
-    pub(crate) fn pick_name(&self, country: &String, gender: char, rng: &mut impl Rng) -> (String,String) {
+    pub(crate) fn pick_name(&self, country: &String, gender: char, rng: &mut impl Rng) -> (String, String) {
         self.bio.name(country, gender, rng)
     }
     pub(crate) fn pick_dob(&self, rng: &mut impl Rng) -> NaiveDate {
         self.bio.dob(rng)
     }
 
-    pub (crate) fn make_id(rng: &mut impl Rng) -> String {
+    pub(crate) fn make_id(rng: &mut impl Rng) -> String {
         format!("{:016X}", rng.next_u64())
             .chars()
             .collect::<Vec<char>>()
@@ -100,26 +134,38 @@ impl DataManager {
     }
 }
 
-fn load_data_single<T: serde::de::DeserializeOwned, P: AsRef<Path>>(source_file: P) -> Result<T, Error> {
+fn load_data_single<T, P>(source_file: P) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned,
+        P: AsRef<Path>,
+{
     let ron = std::fs::read_to_string(source_file)?;
     let parsed = ron::from_str::<T>(&ron).map_err(|o| Error::new(ErrorKind::Other, o))?;
     Ok(parsed)
 }
 
-fn load_data<T: serde::de::DeserializeOwned, P: AsRef<Path>>(source_dir: P) -> Result<Vec<T>, Error> {
+fn load_data<T, P>(source_dir: P) -> Result<Vec<T>, Error>
+    where
+        T: serde::de::DeserializeOwned,
+        P: AsRef<Path>,
+{
     let mut result = Vec::new();
-    for entry in WalkDir::new(source_dir).into_iter().filter_map(|e| e.ok()).filter(|e| !e.file_type().is_dir()) {
+    for entry in WalkDir::new(source_dir)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| !e.file_type().is_dir())
+    {
         result.push(load_data_single(entry.path())?);
     }
 
     Ok(result)
 }
 
-
 #[cfg(test)]
 mod data_manager_test {
     use rand::prelude::StdRng;
     use rand::SeedableRng;
+
     use crate::data::data_manager::DataManager;
 
     #[test]
@@ -139,5 +185,3 @@ mod data_manager_test {
         assert_eq!(values.iter().sum::<u8>(), 20);
     }
 }
-
-

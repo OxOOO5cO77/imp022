@@ -1,11 +1,13 @@
 use std::collections::VecDeque;
+
 use chrono::NaiveDate;
-use rand::SeedableRng;
 use rand::rngs::StdRng;
-use crate::data::attribute::Attributes;
-use crate::data::build::BuildInstance;
-use crate::data::category::CategoryInstance;
+use rand::SeedableRng;
+
 use crate::data::data_manager::DataManager;
+use crate::data::player::attribute::Attributes;
+use crate::data::player::build::BuildInstance;
+use crate::data::player::category::CategoryInstance;
 use crate::data::player::Player;
 
 #[derive(Clone)]
@@ -19,14 +21,7 @@ pub(crate) struct PlayerPart {
 impl PlayerPart {
     pub(crate) fn new(dm: &DataManager, seed: u64) -> Option<Self> {
         let mut rng = StdRng::seed_from_u64(seed);
-        Some(
-            PlayerPart {
-                seed,
-                values: DataManager::pick_values(&mut rng),
-                build: dm.pick_build(&mut rng)?,
-                category: dm.pick_category(&mut rng)?,
-            }
-        )
+        Some(PlayerPart { seed, values: DataManager::pick_values(&mut rng), build: dm.pick_build(&mut rng)?, category: dm.pick_category(&mut rng)? })
     }
 }
 
@@ -53,7 +48,7 @@ impl PlayerBuilder {
             seed: self.generate_seed(),
             id: String::default(),
             name: String::default(),
-            birthplace: (String::default(),String::default(),String::default()),
+            birthplace: (String::default(), String::default(), String::default()),
             dob: NaiveDate::MIN,
         };
 
@@ -74,22 +69,14 @@ impl PlayerBuilder {
     }
 
     fn generate_seed(&self) -> u64 {
-        0x00000000000000FF & &self.access.clone().map(|o| o.seed).unwrap_or(0)
-            | 0x000000000000FF00 & &self.breach.clone().map(|o| o.seed).unwrap_or(0)
-            | 0x0000000000FF0000 & &self.compute.clone().map(|o| o.seed).unwrap_or(0)
-            | 0x00000000FF000000 & &self.disrupt.clone().map(|o| o.seed).unwrap_or(0)
-            | 0x000000FF00000000 & &self.build.clone().map(|o| o.seed).unwrap_or(0)
-            | 0x0000FF0000000000 & &self.build_values.clone().map(|o| o.seed).unwrap_or(0)
-            | 0x00FF000000000000 & &self.category.clone().map(|o| o.seed).unwrap_or(0)
-            | 0xFF00000000000000 & &self.category_values.clone().map(|o| o.seed).unwrap_or(0)
+        0x00000000000000FF & &self.access.clone().map(|o| o.seed).unwrap_or(0) | 0x000000000000FF00 & &self.breach.clone().map(|o| o.seed).unwrap_or(0) | 0x0000000000FF0000 & &self.compute.clone().map(|o| o.seed).unwrap_or(0) | 0x00000000FF000000 & &self.disrupt.clone().map(|o| o.seed).unwrap_or(0) | 0x000000FF00000000 & &self.build.clone().map(|o| o.seed).unwrap_or(0) | 0x0000FF0000000000 & &self.build_values.clone().map(|o| o.seed).unwrap_or(0) | 0x00FF000000000000 & &self.category.clone().map(|o| o.seed).unwrap_or(0) | 0xFF00000000000000 & &self.category_values.clone().map(|o| o.seed).unwrap_or(0)
     }
 }
 
 #[cfg(test)]
-mod player_builder_test
-{
+mod player_builder_test {
     use crate::data::data_manager::DataManager;
-    use crate::data::player_builder::{PlayerBuilder, PlayerPart};
+    use crate::data::player::player_builder::{PlayerBuilder, PlayerPart};
 
     #[test]
     fn test_player_builder_empty() -> Result<(), std::io::Error> {
@@ -108,16 +95,7 @@ mod player_builder_test
         let dm = DataManager::new()?;
         let parts = parts(&dm);
 
-        let partial_builder = PlayerBuilder {
-            access: Some(parts[0].clone()),
-            breach: Some(parts[1].clone()),
-            compute: Some(parts[2].clone()),
-            disrupt: Some(parts[3].clone()),
-            build: None,
-            build_values: None,
-            category: None,
-            category_values: None,
-        };
+        let partial_builder = PlayerBuilder { access: Some(parts[0].clone()), breach: Some(parts[1].clone()), compute: Some(parts[2].clone()), disrupt: Some(parts[3].clone()), build: None, build_values: None, category: None, category_values: None };
         assert!(partial_builder.build(&dm).is_none());
 
         Ok(())
@@ -128,16 +106,7 @@ mod player_builder_test
         let dm = DataManager::new()?;
         let parts = parts(&dm);
 
-        let full_builder = PlayerBuilder {
-            access: Some(parts[0].clone()),
-            breach: Some(parts[1].clone()),
-            compute: Some(parts[2].clone()),
-            disrupt: Some(parts[3].clone()),
-            build: Some(parts[4].clone()),
-            build_values: Some(parts[5].clone()),
-            category: Some(parts[6].clone()),
-            category_values: Some(parts[7].clone()),
-        };
+        let full_builder = PlayerBuilder { access: Some(parts[0].clone()), breach: Some(parts[1].clone()), compute: Some(parts[2].clone()), disrupt: Some(parts[3].clone()), build: Some(parts[4].clone()), build_values: Some(parts[5].clone()), category: Some(parts[6].clone()), category_values: Some(parts[7].clone()) };
         let player = full_builder.build(&dm);
         assert!(player.is_some());
 

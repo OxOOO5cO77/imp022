@@ -1,11 +1,19 @@
 use std::collections::VecDeque;
+
 use chrono::NaiveDate;
 use rand::prelude::*;
-use crate::data::attribute::Attributes;
-use crate::data::build::BuildInstance;
-use crate::data::card::Card;
-use crate::data::category::CategoryInstance;
+
 use crate::data::data_manager::DataManager;
+use crate::data::player::attribute::Attributes;
+use crate::data::player::build::BuildInstance;
+use crate::data::player::card::Card;
+use crate::data::player::category::CategoryInstance;
+
+mod attribute;
+pub mod build;
+pub(crate) mod card;
+pub mod category;
+pub(crate) mod player_builder;
 
 pub(crate) struct Player {
     pub(crate) attributes: Attributes,
@@ -35,7 +43,7 @@ impl Player {
     // }
 
     fn sort_deq_rarity(&mut self) {
-        self.deq.make_contiguous().sort_by(|a,b| b.id.1.cmp(&a.id.1));
+        self.deq.make_contiguous().sort_by(|a, b| b.id.1.cmp(&a.id.1));
     }
 
     pub(crate) fn birthplace(&self) -> String {
