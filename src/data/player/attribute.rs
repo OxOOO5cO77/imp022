@@ -31,6 +31,10 @@ impl Attribute {
     pub(crate) fn from_part(part: &PlayerPart) -> Self {
         Self { ability: part.values[0], cadence: part.values[1], beat: part.values[2], duration: part.values[3] }
     }
+    
+    pub(crate) fn to_array(&self) -> [u8; 4] {
+        [self.ability, self.beat, self.cadence, self.duration]
+    }
 }
 
 pub(crate) struct Attributes {

@@ -51,7 +51,7 @@ fn cursor_pos(
 
 fn draggable(
     state: Res<DragDropState>,
-    input: Res<Input<MouseButton>>,
+    input: Res<ButtonInput<MouseButton>>,
     mut draggable: Query<(Entity, &Node, &GlobalTransform), With<DragTarget>>,
     mut notify: EventWriter<DragDrag>,
 ) {
@@ -69,7 +69,7 @@ fn draggable(
 
 fn dragging(
     state: Res<DragDropState>,
-    input: Res<Input<MouseButton>>,
+    input: Res<ButtonInput<MouseButton>>,
     mut dragged: Query<(&Node, &mut Style), With<Dragging>>,
 ) {
     if input.pressed(MouseButton::Left) {
@@ -83,7 +83,7 @@ fn dragging(
 
 fn drop(
     state: Res<DragDropState>,
-    input: Res<Input<MouseButton>>,
+    input: Res<ButtonInput<MouseButton>>,
     mut dragging_q: Query<(Entity, &Dragging), With<Dragging>>,
     droptargets_q: Query<(Entity, &Node, &GlobalTransform), With<DropTarget>>,
     mut notify: EventWriter<DragDrop>,

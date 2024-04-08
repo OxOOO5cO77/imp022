@@ -17,6 +17,14 @@ enum Slot {
     Number(u8),
 }
 
+#[derive(Clone, Copy, Deserialize, Hash, PartialEq, Eq)]
+pub(crate) enum Kind {
+    Analyze,
+    Breach,
+    Compute,
+    Disrupt,
+}
+
 #[derive(Clone, Deserialize)]
 pub(crate) struct CardSlot(Set, Rarity, Slot);
 
@@ -25,6 +33,8 @@ pub(crate) struct Card {
     pub(crate) id: (Set, Rarity, u8),
     pub(crate) name: String,
     pub(crate) text: String,
+    pub(crate) kind: Kind,
+    pub(crate) cost: u32,
 }
 
 impl Card {

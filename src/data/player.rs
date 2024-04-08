@@ -9,10 +9,10 @@ use crate::data::player::build::BuildInstance;
 use crate::data::player::card::Card;
 use crate::data::player::category::CategoryInstance;
 
-mod attribute;
-pub mod build;
+pub(crate) mod attribute;
+pub(crate) mod build;
 pub(crate) mod card;
-pub mod category;
+pub(crate) mod category;
 pub(crate) mod player_builder;
 
 pub(crate) struct Player {
@@ -38,9 +38,6 @@ impl Player {
         self.deq.extend(category_cards);
         self.sort_deq_rarity();
     }
-    // pub(crate) fn shuffle_deq(&mut self, rng: &mut impl Rng) {
-    //     self.deq.make_contiguous().shuffle(rng)
-    // }
 
     fn sort_deq_rarity(&mut self) {
         self.deq.make_contiguous().sort_by(|a, b| b.id.1.cmp(&a.id.1));

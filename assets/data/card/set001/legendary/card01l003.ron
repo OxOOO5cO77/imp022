@@ -1,0 +1,7 @@
+Card(
+    id: (Set(1), Legendary, 3),
+    name: "Legendary 3",
+    text: "",
+    kind: Compute,
+    cost: 1,
+)

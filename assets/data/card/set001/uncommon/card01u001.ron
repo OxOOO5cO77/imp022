@@ -2,4 +2,6 @@ Card(
     id: (Set(1), Uncommon, 1),
     name: "Uncommon 1",
     text: "",
+    kind: Analyze,
+    cost: 1,
 )

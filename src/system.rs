@@ -4,6 +4,7 @@ use crate::system::dragdrop::DragDropPlugin;
 
 pub(crate) mod dragdrop;
 pub(crate) mod ui;
+pub mod app_state;
 
 struct SystemPlugins;
 

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use rand::RngCore;
 use rand::rngs::ThreadRng;
 
-use crate::app_state::AppState;
+use crate::system::app_state::AppState;
 use crate::data::data_manager::DataManager;
 use crate::data::player::player_builder::{PlayerBuilder, PlayerPart};
 use crate::screen::compose::StatRowKind::{Build, Category};
@@ -15,9 +15,9 @@ impl Plugin for ComposePlugin {
     fn build(&self, app: &mut App) {
         app
             .add_event::<FinishPlayer>()
-            .add_systems(OnEnter(AppState::ComposeScreen), compose_enter)
-            .add_systems(Update, (dragdrag, dragdrop, finish_player).run_if(in_state(AppState::ComposeScreen)))
-            .add_systems(OnExit(AppState::ComposeScreen), screen_exit)
+            .add_systems(OnEnter(AppState::Compose), compose_enter)
+            .add_systems(Update, (dragdrag, dragdrop, finish_player).run_if(in_state(AppState::Compose)))
+            .add_systems(OnExit(AppState::Compose), screen_exit)
         ;
     }
 }

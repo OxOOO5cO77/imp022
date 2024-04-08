@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-use crate::app_state::AppState;
+use crate::system::app_state::AppState;
 use crate::system::ui::HUNDRED;
 
 pub struct SplashPlugin;
@@ -10,9 +10,9 @@ pub struct SplashPlugin;
 impl Plugin for SplashPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(OnEnter(AppState::SplashScreen), splash_enter)
-            .add_systems(Update, splash_update.run_if(in_state(AppState::SplashScreen)))
-            .add_systems(OnExit(AppState::SplashScreen), splash_exit);
+            .add_systems(OnEnter(AppState::Splash), splash_enter)
+            .add_systems(Update, splash_update.run_if(in_state(AppState::Splash)))
+            .add_systems(OnExit(AppState::Splash), splash_exit);
     }
 }
 
@@ -32,7 +32,7 @@ fn splash_update(mut splash_q: Query<&mut Splash>, mut app_state: ResMut<NextSta
     splash.timer.tick(time.delta());
 
     if splash.timer.just_finished() {
-        app_state.set(AppState::ComposeScreen);
+        app_state.set(AppState::Compose);
     }
 }
 

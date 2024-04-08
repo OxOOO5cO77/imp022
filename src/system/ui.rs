@@ -11,7 +11,10 @@ pub(crate) struct ScreenBundle {
 
 impl Default for ScreenBundle {
     fn default() -> Self {
-        Self { screen: Screen, node: filled_rect(ZERO, ZERO, HUNDRED, HUNDRED, Color::BLACK) }
+        Self {
+            screen: Screen,
+            node: filled_rect(ZERO, ZERO, HUNDRED, HUNDRED, Color::BLACK),
+        }
     }
 }
 
@@ -23,5 +26,20 @@ pub(crate) fn screen_exit(mut commands: Commands, screen_q: Query<Entity, With<S
 }
 
 pub(crate) fn filled_rect(left: Val, top: Val, width: Val, height: Val, color: Color) -> NodeBundle {
-    NodeBundle { style: Style { position_type: PositionType::Absolute, left, top, width, height, justify_content: JustifyContent::Center, align_items: AlignItems::Center, align_content: AlignContent::Center, align_self: AlignSelf::Center, ..default() }, background_color: color.into(), ..default() }
+    NodeBundle {
+        style: Style {
+            position_type: PositionType::Absolute,
+            left,
+            top,
+            width,
+            height,
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            align_content: AlignContent::Center,
+            align_self: AlignSelf::Center,
+            ..default()
+        },
+        background_color: color.into(),
+        ..default()
+    }
 }

@@ -69,7 +69,14 @@ impl PlayerBuilder {
     }
 
     fn generate_seed(&self) -> u64 {
-        0x00000000000000FF & &self.access.clone().map(|o| o.seed).unwrap_or(0) | 0x000000000000FF00 & &self.breach.clone().map(|o| o.seed).unwrap_or(0) | 0x0000000000FF0000 & &self.compute.clone().map(|o| o.seed).unwrap_or(0) | 0x00000000FF000000 & &self.disrupt.clone().map(|o| o.seed).unwrap_or(0) | 0x000000FF00000000 & &self.build.clone().map(|o| o.seed).unwrap_or(0) | 0x0000FF0000000000 & &self.build_values.clone().map(|o| o.seed).unwrap_or(0) | 0x00FF000000000000 & &self.category.clone().map(|o| o.seed).unwrap_or(0) | 0xFF00000000000000 & &self.category_values.clone().map(|o| o.seed).unwrap_or(0)
+        0x00000000000000FF & &self.access.clone().map(|o| o.seed).unwrap_or(0)
+            | 0x000000000000FF00 & &self.breach.clone().map(|o| o.seed).unwrap_or(0)
+            | 0x0000000000FF0000 & &self.compute.clone().map(|o| o.seed).unwrap_or(0)
+            | 0x00000000FF000000 & &self.disrupt.clone().map(|o| o.seed).unwrap_or(0)
+            | 0x000000FF00000000 & &self.build.clone().map(|o| o.seed).unwrap_or(0)
+            | 0x0000FF0000000000 & &self.build_values.clone().map(|o| o.seed).unwrap_or(0)
+            | 0x00FF000000000000 & &self.category.clone().map(|o| o.seed).unwrap_or(0)
+            | 0xFF00000000000000 & &self.category_values.clone().map(|o| o.seed).unwrap_or(0)
     }
 }
 

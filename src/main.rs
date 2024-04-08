@@ -1,19 +1,19 @@
 use bevy::app::App;
 use bevy::prelude::*;
 
-use crate::app_state::AppState;
+use system::app_state::AppState;
 use crate::data::data_manager::DataManager;
 use crate::screen::ScreenPlugins;
 use crate::system::SystemPlugin;
 
-mod app_state;
 mod data;
 mod screen;
 mod system;
+mod game;
 
 fn main() {
     App::new()
-        .add_state::<AppState>()
+        .init_state::<AppState>()
         .add_plugins(DefaultPlugins)
         .add_plugins(SystemPlugin)
         .add_plugins(ScreenPlugins)
