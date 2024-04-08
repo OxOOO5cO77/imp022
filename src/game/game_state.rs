@@ -32,53 +32,40 @@ impl GameState {
         }
     }
 
+    fn increment(alloc: &mut (u32, u32), erg: u32) {
+        alloc.0 += 1;
+        alloc.1 += erg;
+    }
+
     pub(crate) fn resolve_matchups(erg_roll: &[u32], p_kind: Kind, p_attr: &[u8], p_erg: &mut HashMap<Kind, u32>, a_kind: Kind, a_attr: &[u8], a_erg: &mut HashMap<Kind, u32>) {
         let mut matchups = zip(erg_roll, zip(p_attr, a_attr)).collect::<Vec<_>>();
         matchups.sort_unstable_by_key(|(erg, (_, _))| Reverse(*erg));
 
-        let mut p_alloc = 0;
-        let mut a_alloc = 0;
+        let mut p_alloc = (0, 0);
+        let mut a_alloc = (0, 0);
 
         for (erg, (protag, antag)) in matchups.iter() {
             match protag.cmp(antag) {
-                Ordering::Greater => {
-                    *p_erg.entry(p_kind).or_default() += **erg;
-                    p_alloc += 1;
-                }
-                Ordering::Less => {
-                    *a_erg.entry(a_kind).or_default() += **erg;
-                    a_alloc += 1;
-                }
-                Ordering::Equal => {}
+                Ordering::Greater => Self::increment(&mut p_alloc, **erg),
+                Ordering::Less => Self::increment(&mut a_alloc, **erg),
+                Ordering::Equal => {},
             };
         }
 
         for (erg, (protag, antag)) in matchups.iter() {
-            let result = match protag.cmp(antag) {
-                Ordering::Greater => None,
-                Ordering::Less => None,
+            match protag.cmp(antag) {
+                Ordering::Greater => {},
+                Ordering::Less => {},
                 Ordering::Equal => match p_alloc.cmp(&a_alloc) {
-                    Ordering::Greater => Some(false),
-                    Ordering::Less => Some(true),
-                    Ordering::Equal => match p_erg.entry(p_kind).or_default().cmp(&a_erg.entry(a_kind).or_default()) {
-                        Ordering::Greater => Some(false),
-                        Ordering::Less => Some(true),
-                        Ordering::Equal => Some(true),
-                    }
+                    Ordering::Greater => Self::increment(&mut a_alloc, **erg),
+                    Ordering::Less => Self::increment(&mut p_alloc, **erg),
+                    Ordering::Equal => Self::increment(&mut p_alloc, **erg),
                 },
             };
-            match result {
-                Some(true) => {
-                    *p_erg.entry(p_kind).or_default() += **erg;
-                    p_alloc += 1;
-                }
-                Some(false) => {
-                    *a_erg.entry(a_kind).or_default() += **erg;
-                    a_alloc += 1;
-                }
-                None => {}
-            };
         }
+
+        *p_erg.entry(p_kind).or_default() += p_alloc.1;
+        *a_erg.entry(a_kind).or_default() += a_alloc.1;
     }
 
     fn resolve(&mut self) -> Option<()> {
@@ -149,6 +136,5 @@ mod tests {
         assert_eq!(*protag_erg.get(&Kind::Disrupt).unwrap_or(&0), 22);
         assert_eq!(*antag_erg.get(&Kind::Compute).unwrap_or(&0), 17);
         assert_eq!(*antag_erg.get(&Kind::Disrupt).unwrap_or(&0), 14);
-
     }
 }
