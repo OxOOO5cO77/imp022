@@ -1,11 +1,6 @@
-use std::mem::discriminant;
-
 use serde::Deserialize;
 
-use crate::data::player::card::CardSlot;
-use crate::data::player::player_builder::PlayerPart;
-
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 pub(crate) enum Academic {
     Any,
     CompSci,
@@ -14,7 +9,7 @@ pub(crate) enum Academic {
     Theoretical,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 pub(crate) enum Bureaucratic {
     Any,
     Africa,
@@ -23,7 +18,7 @@ pub(crate) enum Bureaucratic {
     Europe,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 pub(crate) enum Corporate {
     Any,
     Consumer,
@@ -32,7 +27,7 @@ pub(crate) enum Corporate {
     Military,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 pub(crate) enum Decentralized {
     Any,
     Activist,
@@ -41,7 +36,7 @@ pub(crate) enum Decentralized {
     OpenSource,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 pub(crate) enum Institution {
     Any,
     Academic(Academic),
@@ -50,7 +45,7 @@ pub(crate) enum Institution {
     Decentralized(Decentralized),
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 pub(crate) enum Developer {
     Any,
     Art,
@@ -59,7 +54,7 @@ pub(crate) enum Developer {
     QA,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 pub(crate) enum IT {
     Any,
     DevOps,
@@ -68,7 +63,7 @@ pub(crate) enum IT {
     Support,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 pub(crate) enum People {
     Any,
     Accounting,
@@ -77,7 +72,7 @@ pub(crate) enum People {
     Marketing,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 pub(crate) enum Physical {
     Any,
     Maintenance,
@@ -86,7 +81,7 @@ pub(crate) enum Physical {
     Trades,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 pub(crate) enum Role {
     Any,
     Developer(Developer),
@@ -95,7 +90,7 @@ pub(crate) enum Role {
     Physical(Physical),
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 pub(crate) enum Office {
     Any,
     Campus,
@@ -104,7 +99,7 @@ pub(crate) enum Office {
     Tower,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 pub(crate) enum Public {
     Any,
     Commercial,
@@ -113,7 +108,7 @@ pub(crate) enum Public {
     Municipal,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 pub(crate) enum Residence {
     Any,
     Apartment,
@@ -122,7 +117,7 @@ pub(crate) enum Residence {
     Shared,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 pub(crate) enum Unauthorized {
     Any,
     Infrastructure,
@@ -131,7 +126,7 @@ pub(crate) enum Unauthorized {
     Residential,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 pub(crate) enum Location {
     Any,
     Office(Office),
@@ -140,7 +135,7 @@ pub(crate) enum Location {
     Unauthorized(Unauthorized),
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 pub(crate) enum Consumer {
     Any,
     Casual,
@@ -149,7 +144,7 @@ pub(crate) enum Consumer {
     Productivity,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 pub(crate) enum Fringe {
     Any,
     Exotic,
@@ -158,7 +153,7 @@ pub(crate) enum Fringe {
     Source,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 pub(crate) enum Hardened {
     Any,
     Anonymous,
@@ -167,7 +162,7 @@ pub(crate) enum Hardened {
     Industry,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 pub(crate) enum Restricted {
     Any,
     Access,
@@ -176,7 +171,7 @@ pub(crate) enum Restricted {
     Use,
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 pub(crate) enum Distro {
     Any,
     Consumer(Consumer),
@@ -185,33 +180,11 @@ pub(crate) enum Distro {
     Restricted(Restricted),
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone, Copy, Deserialize)]
 pub(crate) enum Category {
     Any,
     Institution(Institution),
     Role(Role),
     Location(Location),
     Distro(Distro),
-}
-
-#[derive(Clone, Deserialize)]
-pub(crate) struct CategoryInstance {
-    category: Category,
-    pub(crate) title: String,
-    pub(crate) cards: Vec<CardSlot>,
-}
-
-impl CategoryInstance {
-    pub(crate) fn is(&self, other: &Category) -> bool {
-        discriminant(&self.category) == discriminant(other)
-    }
-
-    pub(crate) fn from_parts(part: &PlayerPart, values: &PlayerPart) -> [(CategoryInstance, u8); 4] {
-        [
-            (part.category[0].clone(), values.values[0]),
-            (part.category[1].clone(), values.values[1]),
-            (part.category[2].clone(), values.values[2]),
-            (part.category[3].clone(), values.values[3])
-        ]
-    }
 }

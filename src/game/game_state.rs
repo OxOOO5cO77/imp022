@@ -2,9 +2,7 @@ use std::cmp::{Ordering, Reverse};
 use std::collections::HashMap;
 use std::iter::zip;
 
-use rand::distributions::Uniform;
-use rand::prelude::ThreadRng;
-use rand::Rng;
+use rand::{distributions::Uniform, Rng, rngs::ThreadRng};
 
 use crate::data::player::card::Kind;
 use crate::game::player_state::PlayerState;
@@ -17,7 +15,7 @@ struct GameState {
 }
 
 impl GameState {
-    fn new(protagonist: PlayerState, antagonist: PlayerState) -> Self {
+    fn from_players(protagonist: PlayerState, antagonist: PlayerState) -> Self {
         GameState {
             protagonist,
             antagonist,
@@ -48,14 +46,14 @@ impl GameState {
             match protag.cmp(antag) {
                 Ordering::Greater => Self::increment(&mut p_alloc, **erg),
                 Ordering::Less => Self::increment(&mut a_alloc, **erg),
-                Ordering::Equal => {},
+                Ordering::Equal => {}
             };
         }
 
         for (erg, (protag, antag)) in matchups.iter() {
             match protag.cmp(antag) {
-                Ordering::Greater => {},
-                Ordering::Less => {},
+                Ordering::Greater => {}
+                Ordering::Less => {}
                 Ordering::Equal => match p_alloc.cmp(&a_alloc) {
                     Ordering::Greater => Self::increment(&mut a_alloc, **erg),
                     Ordering::Less => Self::increment(&mut p_alloc, **erg),

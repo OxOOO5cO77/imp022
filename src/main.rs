@@ -2,7 +2,7 @@ use bevy::app::App;
 use bevy::prelude::*;
 
 use system::app_state::AppState;
-use crate::data::data_manager::DataManager;
+use crate::data::backend_manager::BackendManager;
 use crate::screen::ScreenPlugins;
 use crate::system::SystemPlugin;
 
@@ -38,6 +38,6 @@ fn setup(mut commands: Commands) {
         }
     );
 
-    let dm = DataManager::new().expect("[DataManager] error]");
-    commands.insert_resource(dm);
+    let bm = BackendManager::new().expect("[BackendManager] error]");
+    commands.insert_resource(bm);
 }

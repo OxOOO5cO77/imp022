@@ -1,9 +1,8 @@
 use std::collections::{HashMap, VecDeque};
 
-use rand::prelude::*;
+use rand::{Rng, seq::SliceRandom};
 
-use crate::data::player::card::{Card, Kind};
-use crate::data::player::Player;
+use crate::data::player::{card::{Card, Kind}, Player};
 
 pub(crate) struct PlayerState {
     pub(crate) player: Player,
@@ -17,16 +16,16 @@ pub(crate) struct PlayerState {
 
 impl PlayerState {
     pub(crate) fn from_player(player: Player) -> Self {
-        let deck = player.deq.clone();
+        let deck = player.deck.clone();
 
         PlayerState {
             player,
             deck,
-            discard: vec![],
-            hand: vec![],
+            discard: Vec::new(),
+            hand: Vec::new(),
             erg: HashMap::new(),
             pick: None,
-            play: vec![],
+            play: Vec::new(),
         }
     }
 

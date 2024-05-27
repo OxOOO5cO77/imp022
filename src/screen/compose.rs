@@ -2,10 +2,10 @@ use bevy::prelude::*;
 use rand::RngCore;
 use rand::rngs::ThreadRng;
 
-use crate::system::app_state::AppState;
-use crate::data::data_manager::DataManager;
-use crate::data::player::player_builder::{PlayerBuilder, PlayerPart};
+use crate::data::backend_manager::BackendManager;
+use crate::data::player::part::PlayerPart;
 use crate::screen::compose::StatRowKind::{Build, Category};
+use crate::system::app_state::AppState;
 use crate::system::dragdrop::{DragDrag, DragDrop, Dragging, DragTarget, DropTarget};
 use crate::system::ui::{filled_rect, HUNDRED, screen_exit, ScreenBundle};
 
@@ -237,7 +237,7 @@ fn attrib_row(parent: &mut ChildBuilder, kind: StatRowKind, font_info: &FontInfo
     ;
 }
 
-fn spawn_part(parent: &mut ChildBuilder, part: PlayerPart, font_info: &FontInfo) {
+fn spawn_part(parent: &mut ChildBuilder, part: &PlayerPart, font_info: &FontInfo) {
     let part_display = NodeBundle {
         style: Style {
             display: Display::Grid,
@@ -285,7 +285,7 @@ fn spawn_part(parent: &mut ChildBuilder, part: PlayerPart, font_info: &FontInfo)
                 .spawn(label_container.clone())
                 .with_children(|parent| {
                     for build in &part.build {
-                        text_children.push(parent.spawn(text(build.title.clone(), font_info)).id());
+                        text_children.push(parent.spawn(text(build.1.clone(), font_info)).id());
                     }
                 })
             ;
@@ -296,7 +296,7 @@ fn spawn_part(parent: &mut ChildBuilder, part: PlayerPart, font_info: &FontInfo)
                 .spawn(label_container.clone())
                 .with_children(|parent| {
                     for category in &part.category {
-                        text_children.push(parent.spawn(text(category.title.clone(), font_info)).id());
+                        text_children.push(parent.spawn(text(category.1.clone(), font_info)).id());
                     }
                 })
             ;
@@ -311,7 +311,7 @@ fn spawn_part(parent: &mut ChildBuilder, part: PlayerPart, font_info: &FontInfo)
                 })
             ;
         })
-        .insert(PlayerPartHolder(Some(part)))
+        .insert(PlayerPartHolder(Some(part.clone())))
         .insert(TextChildren(text_children))
     ;
 }
@@ -334,7 +334,7 @@ fn font_size(asset_server: &Res<AssetServer>, size: f32) -> FontInfo {
 
 fn compose_enter(
     mut commands: Commands,
-    dm: Res<DataManager>,
+    bm: Res<BackendManager>,
     asset_server: Res<AssetServer>,
 ) {
     let font_info_val = font_size(&asset_server, 48.0);
@@ -367,7 +367,7 @@ fn compose_enter(
         },
         ..default()
     };
-    let deq_gutter = NodeBundle {
+    let deck_gutter = NodeBundle {
         style: Style {
             display: Display::Grid,
             width: HUNDRED,
@@ -426,15 +426,24 @@ fn compose_enter(
                     parent
                         .spawn(part_gutter)
                         .with_children(|parent| {
-                            for _ in 0..8 {
-                                let seed = rng.next_u64();
-                                let part = PlayerPart::new(&dm, seed).expect("[PlayerPart] error");
-                                spawn_part(parent, part, &font_info_part);
+                            let mut seeds = [0, 0, 0, 0, 0, 0, 0, 0];
+                            for seed in seeds.iter_mut() {
+                                *seed = rng.next_u64();
+                            }
+                            match bm.fetch_parts(seeds) {
+                                Ok(parts) => {
+                                    for part in &parts.parts {
+                                        spawn_part(parent, part, &font_info_part);
+                                    }
+                                }
+                                Err(err) => {
+                                    println!("Error: {err}");
+                                }
                             }
                         })
                     ;
                     parent
-                        .spawn(deq_gutter)
+                        .spawn(deck_gutter)
                         .with_children(|parent| {
                             for idx in 0..40 {
                                 spawn_card_holder(parent, idx, &font_info_card);
@@ -531,7 +540,7 @@ fn dragdrag(
                     Dragging(dragdrag.src)
                 ))
                 .with_children(|parent| {
-                    spawn_part(parent, part.clone(), &font_info);
+                    spawn_part(parent, part, &font_info);
                 })
             ;
         }
@@ -554,8 +563,8 @@ fn update_part_holder(kind: &PlayerPartHolderKind, kids: Option<&TextChildren>, 
     if let Some(kids) = kids {
         let func = match kind {
             PlayerPartHolderKind::StatRow(_) => |o: &PlayerPart, i: usize| o.values[i].to_string(),
-            PlayerPartHolderKind::Build => |o: &PlayerPart, i: usize| o.build[i].title.clone(),
-            PlayerPartHolderKind::Category => |o: &PlayerPart, i: usize| o.category[i].title.clone(),
+            PlayerPartHolderKind::Build => |o: &PlayerPart, i: usize| o.build[i].1.clone(),
+            PlayerPartHolderKind::Category => |o: &PlayerPart, i: usize| o.category[i].1.clone(),
             PlayerPartHolderKind::Unallocated => |_: &PlayerPart, _: usize| "".to_owned(),
         };
         populate_children(kids, holder, text_q, func);
@@ -591,48 +600,60 @@ fn dragdrop(
     }
 }
 
+fn seed_from_holder(holder: &PlayerPartHolder) -> u64 {
+    holder.0.as_ref().map(|o| o.seed).unwrap_or_default()
+}
+
 fn finish_player(
     receive: EventReader<FinishPlayer>,
     holder_q: Query<(&PlayerPartHolder, &PlayerPartHolderKind)>,
-    mut deq_q: Query<(&mut Text, &CardHolder), Without<InfoKind>>,
+    mut deck_q: Query<(&mut Text, &CardHolder), Without<InfoKind>>,
     mut info_q: Query<(&mut Text, &InfoKind), Without<CardHolder>>,
-    dm: Res<DataManager>,
+    bm: Res<BackendManager>,
 ) {
     if !receive.is_empty() {
-        let mut builder = PlayerBuilder::default();
+        let mut seeds = [0, 0, 0, 0, 0, 0, 0, 0, ];
 
         for (holder, holder_kind) in holder_q.iter() {
             match holder_kind {
                 PlayerPartHolderKind::StatRow(row) => {
                     match row {
-                        StatRowKind::Access => builder.access = holder.0.clone(),
-                        StatRowKind::Breach => builder.breach = holder.0.clone(),
-                        StatRowKind::Compute => builder.compute = holder.0.clone(),
-                        StatRowKind::Disrupt => builder.disrupt = holder.0.clone(),
-                        Build => builder.build_values = holder.0.clone(),
-                        Category => builder.category_values = holder.0.clone(),
+                        StatRowKind::Access => seeds[0] = seed_from_holder(holder),
+                        StatRowKind::Breach => seeds[1] = seed_from_holder(holder),
+                        StatRowKind::Compute => seeds[2] = seed_from_holder(holder),
+                        StatRowKind::Disrupt => seeds[3] = seed_from_holder(holder),
+                        Build => seeds[5] = seed_from_holder(holder),
+                        Category => seeds[7] = seed_from_holder(holder),
                     }
                 }
-                PlayerPartHolderKind::Build => builder.build = holder.0.clone(),
-                PlayerPartHolderKind::Category => builder.category = holder.0.clone(),
+                PlayerPartHolderKind::Build => seeds[4] = seed_from_holder(holder),
+                PlayerPartHolderKind::Category => seeds[6] = seed_from_holder(holder),
                 PlayerPartHolderKind::Unallocated => {}
             }
         }
 
-        if let Some(player) = builder.build(&dm) {
-            for (mut info, info_kind) in info_q.iter_mut() {
-                match info_kind {
-                    InfoKind::Name => info.sections[0].value = player.name.clone(),
-                    InfoKind::ID => info.sections[0].value = player.id.clone(),
-                    InfoKind::Birthplace => info.sections[0].value = player.birthplace(),
-                    InfoKind::DoB => info.sections[0].value = player.age().to_string(),
-                }
-            }
+        if seeds.iter().all(|&o| o != 0) {
+            match bm.fetch_player(seeds) {
+                Ok(response) => {
+                    if let Some(player) = response.player {
+                        for (mut info, info_kind) in info_q.iter_mut() {
+                            match info_kind {
+                                InfoKind::Name => info.sections[0].value.clone_from(&player.name),
+                                InfoKind::ID => info.sections[0].value.clone_from(&player.id),
+                                InfoKind::Birthplace => info.sections[0].value = player.birthplace(),
+                                InfoKind::DoB => info.sections[0].value = player.age().to_string(),
+                            }
+                        }
 
-            for (idx, card) in player.deq.iter().enumerate() {
-                if let Some((mut card_text, _)) = deq_q.iter_mut().find(|o| o.1.0 == idx) {
-                    card_text.sections[0].value = card.name.clone();
+                        for (idx, card) in player.deck.iter().enumerate() {
+                            if let Some((mut card_text, _)) = deck_q.iter_mut().find(|o| o.1.0 == idx) {
+                                card_text.sections[0].value.clone_from(&card.name);
+                            }
+                        }
+
+                    }
                 }
+                Err(err) => println!("Error: {err}"),
             }
         }
     }

@@ -6,9 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = "0.13.1"
-chrono = { version = "0.4.37", default-features = false, features = ["std"] }
-rand = "0.8.5"
+bevy = { version = "0.13.2" }
+chrono = { version = "0.4.38", default-features = false, features = ["std", "serde"] }
+rand = { version = "0.8.5" }
+reqwest = { version = "0.12.4", features = ["blocking", "json"] }
 ron = { version = "0.8.1" }
-serde = { version = "1.0.197", features = ["derive"] }
-walkdir = "2.5.0"
+serde = { version = "1.0.202", features = ["derive"] }
+walkdir = { version = "2.5.0" }
+serde_json = { version = "1.0.117" }
+anyhow = { version = "1.0.86" }

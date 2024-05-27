@@ -1,7 +1,0 @@
-Card(
-    id: (Set(1), Legendary, 2),
-    name: "Legendary 2",
-    text: "",
-    kind: Breach,
-    cost: 1,
-)
