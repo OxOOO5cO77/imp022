@@ -1,10 +1,10 @@
 use std::cmp::{Ordering, Reverse};
 use std::collections::HashMap;
 use std::iter::zip;
+use imp022_shared::player::card::Kind;
 
 use rand::{distributions::Uniform, Rng, rngs::ThreadRng};
 
-use crate::data::player::card::Kind;
 use crate::game::player_state::PlayerState;
 
 struct GameState {
@@ -35,7 +35,7 @@ impl GameState {
         alloc.1 += erg;
     }
 
-    pub(crate) fn resolve_matchups(erg_roll: &[u32], p_kind: Kind, p_attr: &[u8], p_erg: &mut HashMap<Kind, u32>, a_kind: Kind, a_attr: &[u8], a_erg: &mut HashMap<Kind, u32>) {
+    pub fn resolve_matchups(erg_roll: &[u32], p_kind: Kind, p_attr: &[u8], p_erg: &mut HashMap<Kind, u32>, a_kind: Kind, a_attr: &[u8], a_erg: &mut HashMap<Kind, u32>) {
         let mut matchups = zip(erg_roll, zip(p_attr, a_attr)).collect::<Vec<_>>();
         matchups.sort_unstable_by_key(|(erg, (_, _))| Reverse(*erg));
 
@@ -78,8 +78,8 @@ impl GameState {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
+    use imp022_shared::player::card::Kind;
 
-    use crate::data::player::card::Kind;
     use crate::game::game_state::GameState;
 
     #[test]

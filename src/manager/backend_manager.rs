@@ -1,43 +1,13 @@
 use std::io::Error;
 
 use bevy::prelude::Resource;
-use serde::{Deserialize, Serialize};
-
-use crate::data::player::part::PlayerPart;
-use crate::data::player::Player;
+use imp022_shared::message::part::{PartRequest, PartResponse};
+use imp022_shared::message::player::{PlayerRequest, PlayerResponse};
 
 #[derive(Resource)]
 pub(crate) struct BackendManager {
     client: reqwest::blocking::Client,
 }
-
-#[derive(Serialize)]
-pub(crate) struct PlayerRequest {
-    pub(crate) access: u64,
-    pub(crate) breach: u64,
-    pub(crate) compute: u64,
-    pub(crate) disrupt: u64,
-    pub(crate) build: u64,
-    pub(crate) build_values: u64,
-    pub(crate) category: u64,
-    pub(crate) category_values: u64,
-}
-
-#[derive(Deserialize)]
-pub(crate) struct PlayerResponse {
-    pub(crate) player: Option<Player>,
-}
-
-#[derive(Serialize)]
-pub(crate) struct PartRequest {
-    seeds: [u64; 8],
-}
-
-#[derive(Default, Deserialize)]
-pub(crate) struct PartResponse {
-    pub(crate) parts: Vec<PlayerPart>,
-}
-
 
 impl BackendManager {
     pub(crate) fn new() -> Result<Self, Error> {
@@ -67,9 +37,13 @@ impl BackendManager {
     }
 
     pub fn fetch_parts(&self, seeds: [u64; 8]) -> anyhow::Result<PartResponse> {
+        let request = PartRequest {
+            seeds,
+        };
+
         Ok(
             self.client.post("http://127.0.0.1:23235/part")
-                .json(&PartRequest { seeds })
+                .json(&request)
                 .send()?
                 .json::<PartResponse>()?
         )

@@ -2,11 +2,11 @@ use bevy::app::App;
 use bevy::prelude::*;
 
 use system::app_state::AppState;
-use crate::data::backend_manager::BackendManager;
+use crate::manager::backend_manager::BackendManager;
 use crate::screen::ScreenPlugins;
 use crate::system::SystemPlugin;
 
-mod data;
+mod manager;
 mod screen;
 mod system;
 mod game;

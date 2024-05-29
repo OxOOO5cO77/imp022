@@ -8,10 +8,10 @@ edition = "2021"
 [dependencies]
 bevy = { version = "0.13.2" }
 chrono = { version = "0.4.38", default-features = false, features = ["std", "serde"] }
-rand = { version = "0.8.5" }
 reqwest = { version = "0.12.4", features = ["blocking", "json"] }
+rand = { version = "0.8.5" }
 ron = { version = "0.8.1" }
 serde = { version = "1.0.202", features = ["derive"] }
-walkdir = { version = "2.5.0" }
 serde_json = { version = "1.0.117" }
 anyhow = { version = "1.0.86" }
+imp022-shared = { path = "../imp022-shared" }

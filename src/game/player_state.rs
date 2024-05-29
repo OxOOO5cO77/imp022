@@ -1,21 +1,21 @@
 use std::collections::{HashMap, VecDeque};
+use imp022_shared::player::card::{Card, Kind};
+use imp022_shared::player::Player;
 
 use rand::{Rng, seq::SliceRandom};
 
-use crate::data::player::{card::{Card, Kind}, Player};
-
-pub(crate) struct PlayerState {
-    pub(crate) player: Player,
+pub struct PlayerState {
+    pub player: Player,
     deck: VecDeque<Card>,
     discard: Vec<Card>,
     hand: Vec<Card>,
-    pub(crate) erg: HashMap<Kind, u32>,
-    pub(crate) pick: Option<Kind>,
+    pub erg: HashMap<Kind, u32>,
+    pub pick: Option<Kind>,
     play: Vec<Card>,
 }
 
 impl PlayerState {
-    pub(crate) fn from_player(player: Player) -> Self {
+    pub fn from_player(player: Player) -> Self {
         let deck = player.deck.clone();
 
         PlayerState {
@@ -54,7 +54,7 @@ impl PlayerState {
         }
     }
 
-    pub(crate) fn get_pick_attr(&self) -> Option<[u8; 4]> {
+    pub fn get_pick_attr(&self) -> Option<[u8; 4]> {
         Some(match self.pick? {
             Kind::Analyze => self.player.attributes.analyze.to_array(),
             Kind::Breach => self.player.attributes.breach.to_array(),

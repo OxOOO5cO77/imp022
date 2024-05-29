@@ -1,9 +1,9 @@
 use bevy::prelude::*;
+use imp022_shared::player::part::PlayerPart;
 use rand::RngCore;
 use rand::rngs::ThreadRng;
 
-use crate::data::backend_manager::BackendManager;
-use crate::data::player::part::PlayerPart;
+use crate::manager::BackendManager;
 use crate::screen::compose::StatRowKind::{Build, Category};
 use crate::system::app_state::AppState;
 use crate::system::dragdrop::{DragDrag, DragDrop, Dragging, DragTarget, DropTarget};
