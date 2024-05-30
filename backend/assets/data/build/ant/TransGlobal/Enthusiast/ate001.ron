@@ -1,0 +1,21 @@
+BuildInstance(
+    build: ANT(TransGlobal(Enthusiast)),
+    title: "AX1500 Chocolate",
+    cards: [
+        CardSlot(Set(1), Common, Number(1)),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Uncommon, Any),
+        CardSlot(Set(1), Uncommon, Any),
+        CardSlot(Set(1), Uncommon, Any),
+        CardSlot(Set(1), Uncommon, Any),
+        CardSlot(Set(1), Rare, Any),
+        CardSlot(Set(1), Rare, Any),
+        CardSlot(Set(1), Legendary, Any),
+    ],
+)

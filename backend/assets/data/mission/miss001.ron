@@ -1,0 +1,168 @@
+Mission(
+    node: [
+        MissionNode(
+            kind: AccessPoint,
+            state: Unknown,
+            link: [
+                MissionNodeLink( direction: Right, state: Closed ),
+                MissionNodeLink( direction: Down, state: Closed ),
+            ],
+            content: [],
+        ),
+        MissionNode(
+            kind: Gateway,
+            state: Unknown,
+            link: [
+                MissionNodeLink( direction: Left, state: Closed ),
+                MissionNodeLink( direction: Right, state: Closed ),
+                MissionNodeLink( direction: Down, state: Closed ),
+            ],
+            content: [],
+        ),
+        MissionNode(
+            kind: Gateway,
+            state: Unknown,
+            link: [
+                MissionNodeLink( direction: Left, state: Closed ),
+                MissionNodeLink( direction: Right, state: Closed ),
+                MissionNodeLink( direction: Down, state: Closed ),
+            ],
+            content: [],
+        ),
+        MissionNode(
+            kind: AccessPoint,
+            state: Unknown,
+            link: [
+                MissionNodeLink( direction: Left, state: Closed ),
+                MissionNodeLink( direction: Down, state: Closed ),
+            ],
+            content: [],
+        ),
+        MissionNode(
+            kind: Frontend,
+            state: Unknown,
+            link: [
+                MissionNodeLink( direction: Right, state: Closed ),
+                MissionNodeLink( direction: Up, state: Closed ),
+                MissionNodeLink( direction: Down, state: Closed ),
+            ],
+            content: [],
+        ),
+        MissionNode(
+            kind: Backend,
+            state: Unknown,
+            link: [
+                MissionNodeLink( direction: Left, state: Closed ),
+                MissionNodeLink( direction: Right, state: Closed ),
+                MissionNodeLink( direction: Up, state: Closed ),
+                MissionNodeLink( direction: Down, state: Closed ),
+            ],
+            content: [],
+        ),
+        MissionNode(
+            kind: Database,
+            state: Unknown,
+            link: [
+                MissionNodeLink( direction: Left, state: Closed ),
+                MissionNodeLink( direction: Right, state: Closed ),
+                MissionNodeLink( direction: Up, state: Closed ),
+                MissionNodeLink( direction: Down, state: Closed ),
+            ],
+            content: [],
+        ),
+        MissionNode(
+            kind: Control,
+            state: Unknown,
+            link: [
+                MissionNodeLink( direction: Left, state: Closed ),
+                MissionNodeLink( direction: Up, state: Closed ),
+                MissionNodeLink( direction: Down, state: Closed ),
+            ],
+            content: [],
+        ),
+        MissionNode(
+            kind: Hardware,
+            state: Unknown,
+            link: [
+                MissionNodeLink( direction: Right, state: Closed ),
+                MissionNodeLink( direction: Up, state: Closed ),
+                MissionNodeLink( direction: Down, state: Closed ),
+            ],
+            content: [],
+        ),
+        MissionNode(
+            kind: Executor,
+            state: Unknown,
+            link: [
+                MissionNodeLink( direction: Left, state: Closed ),
+                MissionNodeLink( direction: Right, state: Closed ),
+                MissionNodeLink( direction: Up, state: Closed ),
+                MissionNodeLink( direction: Down, state: Closed ),
+            ],
+            content: [],
+        ),
+        MissionNode(
+            kind: Database,
+            state: Unknown,
+            link: [
+                MissionNodeLink( direction: Left, state: Closed ),
+                MissionNodeLink( direction: Right, state: Closed ),
+                MissionNodeLink( direction: Up, state: Closed ),
+                MissionNodeLink( direction: Down, state: Closed ),
+            ],
+            content: [],
+        ),
+        MissionNode(
+            kind: Backend,
+            state: Unknown,
+            link: [
+                MissionNodeLink( direction: Left, state: Closed ),
+                MissionNodeLink( direction: Up, state: Closed ),
+                MissionNodeLink( direction: Down, state: Closed ),
+            ],
+            content: [],
+        ),
+        MissionNode(
+            kind: AccessPoint,
+            state: Unknown,
+            link: [
+                MissionNodeLink( direction: Right, state: Closed ),
+                MissionNodeLink( direction: Up, state: Closed ),
+            ],
+            content: [],
+        ),
+        MissionNode(
+            kind: Gateway,
+            state: Unknown,
+            link: [
+                MissionNodeLink( direction: Left, state: Closed ),
+                MissionNodeLink( direction: Right, state: Closed ),
+                MissionNodeLink( direction: Up, state: Closed ),
+            ],
+            content: [],
+        ),
+        MissionNode(
+            kind: Gateway,
+            state: Unknown,
+            link: [
+                MissionNodeLink( direction: Left, state: Closed ),
+                MissionNodeLink( direction: Right, state: Closed ),
+                MissionNodeLink( direction: Up, state: Closed ),
+            ],
+            content: [],
+        ),
+        MissionNode(
+            kind: AccessPoint,
+            state: Unknown,
+            link: [
+                MissionNodeLink( direction: Left, state: Closed ),
+                MissionNodeLink( direction: Up, state: Closed ),
+                MissionNodeLink( direction: Down, state: Closed ),
+            ],
+            content: [],
+        ),
+    ],
+    objective: [
+
+    ],
+)

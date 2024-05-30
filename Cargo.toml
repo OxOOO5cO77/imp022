@@ -1,17 +1,3 @@
-[package]
-name = "imp022"
-version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-bevy = { version = "0.13.2" }
-chrono = { version = "0.4.38", default-features = false, features = ["std", "serde"] }
-reqwest = { version = "0.12.4", features = ["blocking", "json"] }
-rand = { version = "0.8.5" }
-ron = { version = "0.8.1" }
-serde = { version = "1.0.202", features = ["derive"] }
-serde_json = { version = "1.0.117" }
-anyhow = { version = "1.0.86" }
-imp022-shared = { path = "../imp022-shared" }
+[workspace]
+members = ["client","backend","shared"]
+resolver = "2"

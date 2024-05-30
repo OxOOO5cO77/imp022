@@ -1,0 +1,7 @@
+Card(
+    id: (Set(1), Uncommon, 4),
+    name: "Uncommon 4",
+    text: "",
+    kind: Disrupt,
+    cost: 1,
+)
