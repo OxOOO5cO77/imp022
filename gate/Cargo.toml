@@ -1,0 +1,11 @@
+[package]
+name = "gate"
+description = "Client interface service"
+version = "0.1.0"
+edition = "2021"
+authors = ["Scott Barcik <oxooo5co77@impending.org>"]
+
+[dependencies]
+chrono = { version = "0.4.38" }
+tokio = { version = "1.37.0", features = ["macros", "rt-multi-thread", "signal"] }
+shared-net = { path = "../shared-net" }

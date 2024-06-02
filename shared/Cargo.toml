@@ -1,8 +1,0 @@
-[package]
-name = "imp022-shared"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-serde = { version = "1.0.202", features = ["derive"] }
-chrono = { version = "0.4.38", default-features = false, features = ["std","serde"] }

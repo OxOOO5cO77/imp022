@@ -1,0 +1,11 @@
+FROM rust:1 AS builder
+COPY shared-net /shared-net
+COPY forum /forum
+WORKDIR /forum
+RUN cargo build --release --bin forum
+
+# We do not need the Rust toolchain to run the binary!
+FROM debian:stable-slim AS runtime
+WORKDIR /forum
+COPY --from=builder /forum/target/release/forum /usr/local/bin
+ENTRYPOINT ["/usr/local/bin/forum"]

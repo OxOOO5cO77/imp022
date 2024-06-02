@@ -1,0 +1,11 @@
+[package]
+name = "hall"
+description = "Game service"
+version = "0.1.0"
+edition = "2021"
+authors = ["Scott Barcik <oxooo5co77@impending.org>"]
+
+[dependencies]
+rand = { version = "0.9.0-alpha.1" }
+tokio = { version = "1.12.0", features = ["macros", "rt-multi-thread"] }
+shared-net = { path = "../shared-net" }
