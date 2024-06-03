@@ -50,6 +50,8 @@ pub async fn async_client<T>(context: T, flavor: op::Flavor, external_tx: Unboun
                                         break VClientMode::Shutdown;
                                     }
                                 }
+                            } else if bytes == 0 {
+                                break VClientMode::Shutdown;
                             }
                         }
                         Err(ref err) if err.kind() == ErrorKind::WouldBlock => {}

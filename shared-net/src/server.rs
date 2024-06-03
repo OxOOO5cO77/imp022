@@ -84,6 +84,8 @@ pub async fn async_server<T>(context: T, external_tx: UnboundedSender<VRoutedMes
                                         Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => false,
                                         Err(_) => true,
                                     }
+                                } else if bytes == 0 {
+                                    error = true;
                                 }
                                 error
                             }
