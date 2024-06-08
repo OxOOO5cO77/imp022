@@ -17,7 +17,7 @@ pub mod sizedbuffers;
 pub enum VRoute {
     None,
     Local,
-    Some(u8),
+    One(u8),
     Any(u8),
     All(u8),
 }
@@ -25,8 +25,8 @@ pub enum VRoute {
 impl VRoute {
     pub fn from_op(op: u8, arg: u8) -> Option<VRoute> {
         match op {
-            op if op == op::Route::None as u8 => Some(VRoute::None),
-            op if op == op::Route::Some as u8 => Some(VRoute::Some(arg)),
+            op if op == op::Route::Local as u8 => Some(VRoute::None),
+            op if op == op::Route::One as u8 => Some(VRoute::One(arg)),
             op if op == op::Route::Any as u8 => Some(VRoute::Any(arg)),
             op if op == op::Route::All as u8 => Some(VRoute::All(arg)),
             _ => None
@@ -39,7 +39,7 @@ impl fmt::Debug for VRoute {
         match self {
             VRoute::None => write!(f, "None"),
             VRoute::Local => write!(f, "Local"),
-            VRoute::Some(id) => write!(f, "Some({})", id),
+            VRoute::One(id) => write!(f, "One({})", id),
             VRoute::Any(flavor) => write!(f, "Any({:?})", op::Flavor::from(*flavor)),
             VRoute::All(flavor) => write!(f, "All({:?})", op::Flavor::from(*flavor)),
         }

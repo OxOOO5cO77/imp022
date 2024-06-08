@@ -96,6 +96,21 @@ impl VSizedBuffer {
         self.push_u16(&push.pull_u16())
     }
 
+    pub fn push_u64(&mut self, push: &u64) -> &mut Self {
+        self.raw[self.wpos..self.wpos + size_of::<u64>()].copy_from_slice(&u64::to_be_bytes(*push));
+        self.stored(size_of::<u64>())
+    }
+    pub fn pull_u64(&mut self) -> u64 {
+        let mut buf = [0_u8; size_of::<u64>()];
+        buf.copy_from_slice(&self.raw[self.rpos..self.rpos + size_of::<u64>()]);
+        let result = u64::from_be_bytes(buf);
+        self.visited(size_of::<u64>());
+        result
+    }
+    pub fn xfer_u64(&mut self, push: &mut VSizedBuffer) -> &mut Self {
+        self.push_u64(&push.pull_u64())
+    }
+
     pub fn push_u128(&mut self, push: &u128) -> &mut Self {
         self.raw[self.wpos..self.wpos + size_of::<u128>()].copy_from_slice(&u128::to_be_bytes(*push));
         self.stored(size_of::<u128>())
@@ -160,11 +175,21 @@ mod test {
         #[test]
         fn test_u16() {
             let mut buf = VSizedBuffer::new(64);
-            buf.push_u128(&1_234_567_890);
-            let result = buf.pull_u128();
+            buf.push_u16(&1_234);
+            let result = buf.pull_u16();
 
-            assert_eq!(buf.size(), 16);
-            assert_eq!(result, 1_234_567_890);
+            assert_eq!(buf.size(), 2);
+            assert_eq!(result, 1_234);
+        }
+
+        #[test]
+        fn test_u64() {
+            let mut buf = VSizedBuffer::new(64);
+            buf.push_u64(&1_234_567);
+            let result = buf.pull_u64();
+
+            assert_eq!(buf.size(), 8);
+            assert_eq!(result, 1_234_567);
         }
 
         #[test]

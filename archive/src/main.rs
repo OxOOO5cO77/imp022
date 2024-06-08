@@ -60,7 +60,7 @@ fn c_invgen(context: Arc<Mutex<Library>>, tx: UnboundedSender<VRoutedMessage>, m
             .execute(&pool).await.is_ok();
         if result {
             let mut out = VSizedBuffer::new(6 + 200 * 16);
-            out.push_route(op::Route::Some);
+            out.push_route(op::Route::One);
             out.push_u8(&gate);
             out.push_command(op::Command::InvList);
             out.push_u8(&vagabond);
@@ -95,7 +95,7 @@ fn c_invlist(context: Arc<Mutex<Library>>, tx: UnboundedSender<VRoutedMessage>, 
             .fetch_all(&pool).await;
         if let Ok(results) = query_result {
             let mut out = VSizedBuffer::new(6 + results.len() * 16);
-            out.push_route(op::Route::Some);
+            out.push_route(op::Route::One);
             out.push_u8(&gate);
             out.push_command(op::Command::InvList);
             out.push_u8(&vagabond);
