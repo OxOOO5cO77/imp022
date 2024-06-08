@@ -5,6 +5,7 @@ pub(crate) enum AppState {
     #[default] Splash,
     LoginDrawbridge,
     LoginGate,
+    ComposeInit,
     Compose,
     Gameplay,
 }

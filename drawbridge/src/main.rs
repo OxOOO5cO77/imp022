@@ -65,7 +65,7 @@ fn c_authorize(tx: &UnboundedSender<VRoutedMessage>, buf: &mut VSizedBuffer) -> 
 
     out.xfer_bytes(buf);
 
-    if tx.send(VRoutedMessage { route: VRoute::Some(route_id), buf: out }).is_err() {
+    if tx.send(VRoutedMessage { route: VRoute::One(route_id), buf: out }).is_err() {
         VClientMode::Disconnect
     } else {
         VClientMode::Continue

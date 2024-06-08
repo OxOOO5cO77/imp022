@@ -57,8 +57,8 @@ impl VSizedBuffer {
 #[cfg_attr(test, derive(EnumIter))]
 pub enum Route {
     NoOp = 0,
-    None = 1,
-    Some = 2,
+    Local = 1,
+    One = 2,
     Any = 3,
     All = 4,
 }
@@ -66,8 +66,8 @@ pub enum Route {
 impl From<u8> for Route {
     fn from(route: u8) -> Self {
         match route {
-            c if c == Route::None as u8 => Route::None,
-            c if c == Route::Some as u8 => Route::Some,
+            c if c == Route::Local as u8 => Route::Local,
+            c if c == Route::One as u8 => Route::One,
             c if c == Route::Any as u8 => Route::Any,
             c if c == Route::All as u8 => Route::All,
             _ => Route::NoOp
@@ -91,21 +91,18 @@ impl VSizedBuffer {
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(test, derive(EnumIter))]
 pub enum Command {
-    NoOp = 0,
-    Register = 1,
-    Authorize = 2,
-    Hello = 3,
-    Chat = 4,
-    InvGen = 5,
-    InvList = 6,
-    UserAttr = 7,
-    DraftList = 8,
-    DraftJoin = 9,
-    DM = 10,
-    DraftStart = 11,
-    DraftCards = 12,
-    DraftPick = 13,
-    DraftEnd = 14,
+    NoOp,
+    Register,
+    Authorize,
+    Hello,
+    UserAttr,
+    Chat,
+    DM,
+    InvGen,
+    InvList,
+    GameStart,
+    GameBuild,
+    GameEnd,
 }
 
 impl From<u8> for Command {
@@ -114,17 +111,14 @@ impl From<u8> for Command {
             c if c == Command::Register as u8 => Command::Register,
             c if c == Command::Authorize as u8 => Command::Authorize,
             c if c == Command::Hello as u8 => Command::Hello,
+            c if c == Command::UserAttr as u8 => Command::UserAttr,
             c if c == Command::Chat as u8 => Command::Chat,
+            c if c == Command::DM as u8 => Command::DM,
             c if c == Command::InvGen as u8 => Command::InvGen,
             c if c == Command::InvList as u8 => Command::InvList,
-            c if c == Command::UserAttr as u8 => Command::UserAttr,
-            c if c == Command::DraftList as u8 => Command::DraftList,
-            c if c == Command::DraftJoin as u8 => Command::DraftJoin,
-            c if c == Command::DM as u8 => Command::DM,
-            c if c == Command::DraftStart as u8 => Command::DraftStart,
-            c if c == Command::DraftCards as u8 => Command::DraftCards,
-            c if c == Command::DraftPick as u8 => Command::DraftPick,
-            c if c == Command::DraftEnd as u8 => Command::DraftEnd,
+            c if c == Command::GameStart as u8 => Command::GameStart,
+            c if c == Command::GameBuild as u8 => Command::GameBuild,
+            c if c == Command::GameEnd as u8 => Command::GameEnd,
             _ => Command::NoOp
         }
     }

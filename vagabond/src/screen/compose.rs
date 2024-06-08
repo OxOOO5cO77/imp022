@@ -1,9 +1,9 @@
 use bevy::prelude::*;
+
 use shared_data::player::part::PlayerPart;
-use rand::RngCore;
-use rand::rngs::ThreadRng;
 
 use crate::manager::BackendManager;
+use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::compose::StatRowKind::{Build, Category};
 use crate::system::app_state::AppState;
 use crate::system::dragdrop::{DragDrag, DragDrop, Dragging, DragTarget, DropTarget};
@@ -15,6 +15,8 @@ impl Plugin for ComposePlugin {
     fn build(&self, app: &mut App) {
         app
             .add_event::<FinishPlayer>()
+            .add_systems(OnEnter(AppState::ComposeInit), composeinit_enter)
+            .add_systems(Update, composeinit_update.run_if(in_state(AppState::ComposeInit)))
             .add_systems(OnEnter(AppState::Compose), compose_enter)
             .add_systems(Update, (dragdrag, dragdrop, finish_player).run_if(in_state(AppState::Compose)))
             .add_systems(OnExit(AppState::Compose), screen_exit)
@@ -333,7 +335,17 @@ fn font_size(asset_server: &Res<AssetServer>, size: f32) -> FontInfo {
 }
 
 fn compose_enter(
+    commands: Commands,
+    bm: Res<BackendManager>,
+    asset_server: Res<AssetServer>,
+    init_handoff: Res<ComposeInitHandoff>,
+) {
+    build_ui_compose(commands, init_handoff, bm, asset_server);
+}
+
+fn build_ui_compose(
     mut commands: Commands,
+    init_handoff: Res<ComposeInitHandoff>,
     bm: Res<BackendManager>,
     asset_server: Res<AssetServer>,
 ) {
@@ -415,8 +427,6 @@ fn compose_enter(
         ..default()
     };
 
-    let mut rng = ThreadRng::default();
-
     commands
         .spawn(ScreenBundle::default())
         .with_children(|parent| {
@@ -426,11 +436,7 @@ fn compose_enter(
                     parent
                         .spawn(part_gutter)
                         .with_children(|parent| {
-                            let mut seeds = [0, 0, 0, 0, 0, 0, 0, 0];
-                            for seed in seeds.iter_mut() {
-                                *seed = rng.next_u64();
-                            }
-                            match bm.fetch_parts(seeds) {
+                            match bm.fetch_parts(&init_handoff.parts) {
                                 Ok(parts) => {
                                     for part in &parts.parts {
                                         spawn_part(parent, part, &font_info_part);
@@ -650,11 +656,34 @@ fn finish_player(
                                 card_text.sections[0].value.clone_from(&card.name);
                             }
                         }
-
                     }
                 }
                 Err(err) => println!("Error: {err}"),
             }
         }
+    }
+}
+
+#[derive(Resource)]
+struct ComposeInitHandoff {
+    parts: Vec<u64>,
+}
+
+fn composeinit_enter(gate: ResMut<GateIFace>) {
+    gate.send_gamestart();
+}
+
+fn composeinit_update(
+    mut commands: Commands,
+    mut gate: ResMut<GateIFace>,
+    mut app_state: ResMut<NextState<AppState>>,
+) {
+    if let Ok(GateCommand::PackContents(parts)) = gate.grx.try_recv() {
+        let init_handoff = ComposeInitHandoff {
+            parts,
+        };
+
+        commands.insert_resource(init_handoff);
+        app_state.set(AppState::Compose)
     }
 }

@@ -69,8 +69,8 @@ fn c_authorize(context: Arc<Mutex<Lookout>>, tx: UnboundedSender<VRoutedMessage>
                 out.push_u8(&vagabond);
 
                 out.push_u128(&guid);
-                out.push_string(&user.name);
                 out.push_u128(&user_hash);
+                out.push_string(&user.name);
 
                 let _ = tx.send(VRoutedMessage { route: VRoute::None, buf: out });
             }

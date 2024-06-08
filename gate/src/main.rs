@@ -39,7 +39,7 @@ async fn main() {
         map: HashMap::new(),
     }));
 
-    let gate = shared_net::async_server(gate_context.clone(), g2v_tx, g2c_rx, iface_to_vagabond, process_gate);
+    let gate = shared_net::async_server(gate_context.clone(), g2v_tx, g2c_rx, iface_to_vagabond, process_vagabond);
     let courtyard_client = shared_net::async_client(gate_context.clone(), op::Flavor::Gate, g2c_tx, g2v_rx, iface_to_courtyard, process_courtyard);
 
     tokio::spawn(gate);
@@ -48,7 +48,7 @@ async fn main() {
     let _ = signal::ctrl_c().await;
 }
 
-fn process_gate(context: Arc<Mutex<Gate>>, tx: UnboundedSender<VRoutedMessage>, msg: VIdMessage) -> bool {
+fn process_vagabond(context: Arc<Mutex<Gate>>, tx: UnboundedSender<VRoutedMessage>, msg: VIdMessage) -> bool {
     let id = msg.id;
     let mut buf = msg.buf;
     let command = buf.pull_command();
@@ -59,9 +59,9 @@ fn process_gate(context: Arc<Mutex<Gate>>, tx: UnboundedSender<VRoutedMessage>, 
         op::Command::DM => v_marshall_username(context, op::Flavor::Forum, command, &tx, &mut buf),
         op::Command::InvGen |
         op::Command::InvList => v_marshall(context, op::Flavor::Archive, command, &tx, id, &mut buf),
-        op::Command::DraftList |
-        op::Command::DraftJoin |
-        op::Command::DraftPick => v_marshall(context, op::Flavor::Hall, command, &tx, id, &mut buf),
+        op::Command::GameStart |
+        op::Command::GameBuild |
+        op::Command::GameEnd => v_marshall(context, op::Flavor::Hall, command, &tx, id, &mut buf),
         _ => false
     }
 }
@@ -90,13 +90,15 @@ fn v_marshall_username(context: Arc<Mutex<Gate>>, flavor: op::Flavor, command: o
 }
 
 fn v_marshall(context: Arc<Mutex<Gate>>, flavor: op::Flavor, command: op::Command, tx: &UnboundedSender<VRoutedMessage>, id: u8, buf: &mut VSizedBuffer) -> bool {
-    if let Some(user) = context.lock().unwrap().map.get(&buf.pull_u128()) {
+    let auth = buf.pull_u128();
+    if let Some(user) = context.lock().unwrap().map.get(&auth) {
         let mut out = VSizedBuffer::new(256);
         out.push_route(op::Route::Any);
         out.push_flavor(flavor);
         out.push_command(command);
         out.push_u8(&id);
         out.push_u128(&user.user);
+        out.push_u128(&auth);
         out.xfer_bytes(buf);
 
         tx.send(VRoutedMessage { route: VRoute::Local, buf: out }).is_ok()
@@ -113,10 +115,7 @@ fn process_courtyard(context: Arc<Mutex<Gate>>, tx: UnboundedSender<VRoutedMessa
         op::Command::DM => c_marshall_name(command, context, &tx, &mut buf),
         op::Command::Chat => c_marshall_all(command, &tx, &mut buf),
         op::Command::InvList |
-        op::Command::DraftList |
-        op::Command::DraftJoin |
-        op::Command::DraftCards |
-        op::Command::DraftPick => c_marshall_one(command, &tx, &mut buf),
+        op::Command::GameStart => c_marshall_one(command, &tx, &mut buf),
         _ => VClientMode::Continue
     }
 }
@@ -131,7 +130,7 @@ fn convert_to_v6(iface: SocketAddr) -> Ipv6Addr {
 fn c_authorize(context: Arc<Mutex<Gate>>, buf: &mut VSizedBuffer) -> VClientMode {
     println!("c_authorize");
     let mut out = VSizedBuffer::new(256);
-    out.push_route(op::Route::Some);
+    out.push_route(op::Route::One);
 
     let _ = buf.pull_u8(); // auth (discard)
     out.xfer_u8(buf);
@@ -139,8 +138,8 @@ fn c_authorize(context: Arc<Mutex<Gate>>, buf: &mut VSizedBuffer) -> VClientMode
     out.xfer_u8(buf);
 
     let authorization = buf.pull_u128();
-    let name = buf.pull_string();
     let user = buf.pull_u128();
+    let name = buf.pull_string();
 
     let mut context = context.lock().unwrap();
 
@@ -180,7 +179,7 @@ fn c_marshall_name(command: op::Command, context: Arc<Mutex<Gate>>, tx: &Unbound
 
     for (_, user) in context.lock().unwrap().map.iter_mut() {
         if user.name == sendee {
-            return send_to_client(VRoute::Some(user.id), command, tx, buf);
+            return send_to_client(VRoute::One(user.id), command, tx, buf);
         }
     }
 
@@ -191,7 +190,7 @@ fn c_marshall_one(command: op::Command, tx: &UnboundedSender<VRoutedMessage>, bu
     let _ = buf.pull_u8(); // sender (discard)
     let vagabond = buf.pull_u8();
 
-    send_to_client(VRoute::Some(vagabond), command, tx, buf)
+    send_to_client(VRoute::One(vagabond), command, tx, buf)
 }
 
 fn c_marshall_all(command: op::Command, tx: &UnboundedSender<VRoutedMessage>, buf: &mut VSizedBuffer) -> VClientMode {

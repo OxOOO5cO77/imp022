@@ -113,7 +113,7 @@ pub async fn async_server<T>(context: T, external_tx: UnboundedSender<VRoutedMes
                         println!("Registered {} as {:?}", id, flavor);
                         let mut out = VSizedBuffer::new(32);
                         out.push_command(op::Command::Hello);
-                        outgoing_tx.send(VRoutedMessage { route: VRoute::Some(id), buf: out }).is_ok()
+                        outgoing_tx.send(VRoutedMessage { route: VRoute::One(id), buf: out }).is_ok()
                     }
                     _ => {
                         msg.buf.rewind();
@@ -134,7 +134,7 @@ pub async fn async_server<T>(context: T, external_tx: UnboundedSender<VRoutedMes
                     VRoute::Local => {
                         let _ = external_tx.send( msg );
                     }
-                    VRoute::Some(msg_id) => {
+                    VRoute::One(msg_id) => {
                         let msg_buf = msg.buf;
                         let mut connections = connections.lock().await;
 

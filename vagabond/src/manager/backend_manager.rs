@@ -35,9 +35,9 @@ impl BackendManager {
         )
     }
 
-    pub fn fetch_parts(&self, seeds: [u64; 8]) -> anyhow::Result<PartResponse> {
+    pub fn fetch_parts(&self, parts: &[u64]) -> anyhow::Result<PartResponse> {
         let request = PartRequest {
-            seeds,
+            seeds: parts.try_into()?,
         };
 
         Ok(
