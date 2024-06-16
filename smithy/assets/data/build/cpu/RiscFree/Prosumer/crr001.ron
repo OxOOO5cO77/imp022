@@ -1,0 +1,22 @@
+BuildInstance(
+    build: CPU(RiscFree(Prosumer)),
+    number: 1,
+    title: "OpenCore 6-X",
+    cards: [
+        CardSlot(Set(1), Common, Number(1)),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Uncommon, Any),
+        CardSlot(Set(1), Uncommon, Any),
+        CardSlot(Set(1), Uncommon, Any),
+        CardSlot(Set(1), Uncommon, Any),
+        CardSlot(Set(1), Rare, Any),
+        CardSlot(Set(1), Rare, Any),
+        CardSlot(Set(1), Legendary, Any),
+    ],
+)

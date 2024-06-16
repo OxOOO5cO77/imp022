@@ -9,14 +9,16 @@ default-run = "vagabond"
 [dependencies]
 anyhow = { version = "1.0.86" }
 bevy = { version = "0.13.2" }
-bevy_egui = { version = "0.27.0", features = ["immutable_ctx"] }
+bevy_egui = { version = "0.27.1", features = ["immutable_ctx"] }
 chrono = { version = "0.4.38", default-features = false, features = ["std", "serde"] }
+fasthash = { version = "0.4.0" }
 reqwest = { version = "0.12.4", features = ["blocking", "json"] }
 rand = { version = "0.8.5" }
 ron = { version = "0.8.1" }
-serde = { version = "1.0.202", features = ["derive"] }
+serde = { version = "1.0.203", features = ["derive"] }
 serde_json = { version = "1.0.117" }
-tokio = { version = "1.37.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.38.0", features = ["macros", "rt-multi-thread"] }
 shared-data = { path = "../shared-data" }
 shared-net = { path = "../shared-net" }
-fasthash = { version = "0.4.0" }
+hall = { path = "../hall" }
+watchtower = { path = "../watchtower" }

@@ -1,33 +1,32 @@
 use std::sync::Arc;
 
 use axum::Router;
-use axum::routing::post;
+use axum::routing::get;
 use tokio::net::TcpListener;
 
-use crate::data::data_manager::DataManager;
+use crate::manager::bio_manager::BioManager;
 
-mod data;
+pub(crate) mod manager;
 mod route;
 
 #[derive(Clone)]
 struct AppState {
-    data_manager: Arc<DataManager>,
+    bio_manager: Arc<BioManager>,
 }
 
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
-    println!("[Backend] START");
+    println!("[Watchtower] START");
 
     let state = AppState {
-        data_manager: Arc::new(DataManager::new()?)
+        bio_manager: Arc::new(BioManager::new()?)
     };
 
-    println!("[Backend] State Initialized");
+    println!("[Watchtower] State Initialized");
 
     let routes = Router::new()
-        .route("/player", post(route::player::post))
-        .route("/part", post(route::part::post))
+        .route("/player/:seed", get(route::player::get))
         .with_state(state)
         ;
 
@@ -35,6 +34,6 @@ async fn main() -> Result<(), std::io::Error> {
 
     axum::serve(listener, routes).await?;
 
-    println!("[Backend] END");
+    println!("[Watchtower] END");
     Ok(())
 }

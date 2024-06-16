@@ -7,7 +7,8 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
-use shared_net::{op, VClientMode, VRoute, VRoutedMessage, VSizedBuffer};
+use shared_net::{op, VClientMode, RoutedMessage, VSizedBuffer};
+use shared_net::op::Route;
 
 pub(crate) struct AuthInfo {
     pub(crate) ip: IpAddr,
@@ -19,7 +20,7 @@ pub(crate) struct AuthInfo {
 pub(crate) struct DrawbridgeIFace {
     pub(crate) username: String,
     pub(crate) password: String,
-    pub(crate) dtx: UnboundedSender<VRoutedMessage>,
+    pub(crate) dtx: UnboundedSender<RoutedMessage>,
     pub(crate) drx: UnboundedReceiver<AuthInfo>,
 }
 
@@ -29,14 +30,14 @@ pub(crate) struct DrawbridgeClient {
 }
 
 impl DrawbridgeClient {
-    pub(crate) fn start(iface: String, auth_tx: UnboundedSender<AuthInfo>, rx: UnboundedReceiver<VRoutedMessage>, runtime: &Runtime) -> Option<JoinHandle<Result<(), ()>>> {
+    pub(crate) fn start(iface: String, auth_tx: UnboundedSender<AuthInfo>, rx: UnboundedReceiver<RoutedMessage>, runtime: &Runtime) -> Option<JoinHandle<Result<(), ()>>> {
         let (dummy_tx, _) = mpsc::unbounded_channel();
         Some(runtime.spawn(shared_net::async_client(DrawbridgeClient { auth_tx }, op::Flavor::Vagabond, dummy_tx, rx, iface, process_drawbridge)))
     }
 }
 
-fn process_drawbridge(context: DrawbridgeClient, _tx: UnboundedSender<VRoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
-    match buf.pull_command() {
+fn process_drawbridge(context: DrawbridgeClient, _tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
+    match buf.pull::<op::Command>() {
         //op::Command::Hello => {},
         op::Command::Authorize => d_authorize(context, buf),
         _ => VClientMode::Continue
@@ -48,8 +49,8 @@ fn d_authorize(context: DrawbridgeClient, mut buf: VSizedBuffer) -> VClientMode 
     ip_buf.copy_from_slice(&buf.pull_bytes_n(16));
     let ip = IpAddr::from(ip_buf);
 
-    let port = buf.pull_u16();
-    let auth = buf.pull_u128();
+    let port = buf.pull::<u16>();
+    let auth = buf.pull::<u128>();
 
     println!("IP: {} Port: {}", ip, port);
 
@@ -62,13 +63,13 @@ fn d_authorize(context: DrawbridgeClient, mut buf: VSizedBuffer) -> VClientMode 
     VClientMode::Shutdown
 }
 
-pub(crate) fn send_authorize(tx: &UnboundedSender<VRoutedMessage>, user: String, pass: String) {
+pub(crate) fn send_authorize(tx: &UnboundedSender<RoutedMessage>, user: String, pass: String) {
     let mut out = VSizedBuffer::new(64);
-    out.push_command(op::Command::Authorize);
-    out.push_u128(&fingerprint128(user.as_bytes()));
-    out.push_u128(&fingerprint128(pass.as_bytes()));
+    out.push(&op::Command::Authorize);
+    out.push(&fingerprint128(user.as_bytes()));
+    out.push(&fingerprint128(pass.as_bytes()));
 
-    let msg = VRoutedMessage { route: VRoute::Local, buf: out };
+    let msg = RoutedMessage { route: Route::Local, buf: out };
 
     let _ = tx.send(msg);
 }

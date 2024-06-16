@@ -1,0 +1,9 @@
+Card(
+    title: "Legendary 2",
+    rarity: Legendary,
+    number: 2,
+    set: 1,
+    kind: Breach,
+    cost: 1,
+    rules: "",
+)

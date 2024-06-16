@@ -6,8 +6,7 @@ use sqlx::types::Uuid;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 
-use shared_net::{VClientMode, VRoute, VRoutedMessage, VSizedBuffer};
-use shared_net::op;
+use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 
 struct Lookout {
     pool: PgPool,
@@ -15,6 +14,8 @@ struct Lookout {
 
 #[tokio::main]
 async fn main() -> Result<(), ()> {
+    println!("[Lookout] START");
+
     let mut args = env::args();
     let _ = args.next(); // program name
     let iface_to_courtyard = args.next().unwrap_or("[::1]:12345".to_string());
@@ -29,11 +30,15 @@ async fn main() -> Result<(), ()> {
 
     let courtyard_client = shared_net::async_client(context, op::Flavor::Lookout, dummy_tx, dummy_rx, iface_to_courtyard, process_courtyard);
 
-    courtyard_client.await
+    let result = courtyard_client.await;
+
+    println!("[Lookout] START");
+
+    result
 }
 
-fn process_courtyard(context: Arc<Mutex<Lookout>>, tx: UnboundedSender<VRoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
-    if buf.pull_command() == op::Command::Authorize { c_authorize(context, tx, &mut buf) }
+fn process_courtyard(context: Arc<Mutex<Lookout>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
+    if buf.pull::<op::Command>() == op::Command::Authorize { c_authorize(context, tx, &mut buf) }
     VClientMode::Continue
 }
 
@@ -43,40 +48,46 @@ struct User {
     pass_uuid: Uuid,
 }
 
-fn c_authorize(context: Arc<Mutex<Lookout>>, tx: UnboundedSender<VRoutedMessage>, buf: &mut VSizedBuffer) {
-    let drawbridge = buf.pull_u8();
-    let vagabond = buf.pull_u8();
-    let user_hash = buf.pull_u128();
-    let pass_hash = buf.pull_u128();
+fn c_authorize(context: Arc<Mutex<Lookout>>, tx: UnboundedSender<RoutedMessage>, buf: &mut VSizedBuffer) {
+    let drawbridge = buf.pull::<u8>();
+    let vagabond = buf.pull::<u8>();
+    let user_hash = buf.pull::<u128>();
+    let pass_hash = buf.pull::<u128>();
 
     let pool = context.lock().unwrap().pool.clone();
 
     let future = async move {
         let user_uuid = Uuid::from_u128(user_hash);
         let query_result = sqlx::query_as::<_, User>("SELECT * FROM users WHERE user_uuid = $1 LIMIT 1").bind(user_uuid).fetch_optional(&pool).await;
-        if let Ok(Some(user)) = query_result {
-            let pass = Uuid::as_u128(&user.pass_uuid);
+        match query_result {
+            Ok(Some(user)) => {
+                let pass = Uuid::as_u128(&user.pass_uuid);
 
-            if pass_hash == pass {
-                println!("[Lookout] Authenticated: {}", user.name);
-                let guid = Uuid::new_v4().as_u128();
+                if pass_hash == pass {
+                    println!("[Lookout] ALLOW: {}", user.name);
+                    let guid = Uuid::new_v4().as_u128();
 
-                let mut out = VSizedBuffer::new(256);
-                out.push_route(op::Route::Any);
-                out.push_flavor(op::Flavor::Gate);
-                out.push_command(op::Command::Authorize);
-                out.push_u8(&drawbridge);
-                out.push_u8(&vagabond);
+                    let mut out = VSizedBuffer::new(256);
+                    out.push(&op::Route::Any(op::Flavor::Gate));
+                    out.push(&op::Command::Authorize);
+                    out.push(&drawbridge);
+                    out.push(&vagabond);
 
-                out.push_u128(&guid);
-                out.push_u128(&user_hash);
-                out.push_string(&user.name);
+                    out.push(&guid);
+                    out.push(&user_hash);
+                    out.push(&user.name);
 
-                let _ = tx.send(VRoutedMessage { route: VRoute::None, buf: out });
+                    let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });
+                } else {
+                    println!("[Lookout] DENY: {}", user.name);
+                }
             }
-        } else {
-            let err = query_result.err().unwrap();
-            println!("[Lookout] ERROR: {:?}", err);
+            Ok(None) => {
+                println!("[Lookout] UNKNOWN: {}", user_hash);
+            }
+            Err(err) => {
+                println!("[Lookout] ERROR: {:?}", err);
+            }
         }
     };
     tokio::spawn(future);

@@ -1,0 +1,22 @@
+BuildInstance(
+    build: DSC(Warehaus(Consumer)),
+    number: 2,
+    title: "Stockpile 40",
+    cards: [
+        CardSlot(Set(1), Common, Number(1)),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Uncommon, Any),
+        CardSlot(Set(1), Uncommon, Any),
+        CardSlot(Set(1), Uncommon, Any),
+        CardSlot(Set(1), Uncommon, Any),
+        CardSlot(Set(1), Rare, Any),
+        CardSlot(Set(1), Rare, Any),
+        CardSlot(Set(1), Legendary, Any),
+    ],
+)

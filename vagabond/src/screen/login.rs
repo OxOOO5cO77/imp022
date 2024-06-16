@@ -1,3 +1,4 @@
+use std::mem::discriminant;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 use tokio::sync::mpsc;
@@ -91,6 +92,7 @@ fn gate_enter(mut commands: Commands, handoff: Res<DrawbridgeHandoff>, mut net: 
     let (gtx, to_gate_rx) = mpsc::unbounded_channel();
     let (from_gate_tx, from_gate_rx) = mpsc::unbounded_channel();
     let gate = GateIFace {
+        game_id: 0,
         auth: handoff.auth,
         gtx,
         grx: from_gate_rx,
@@ -106,9 +108,10 @@ fn gate_enter(mut commands: Commands, handoff: Res<DrawbridgeHandoff>, mut net: 
 }
 
 fn gate_update(mut app_state: ResMut<NextState<AppState>>, mut gate: ResMut<GateIFace>) {
-    if let Ok(cmd) = gate.grx.try_recv() {
-        if cmd == GateCommand::Hello {
-            app_state.set(AppState::ComposeInit);
+    if let Ok(gate_command) = gate.grx.try_recv() {
+        match gate_command {
+            GateCommand::Hello => app_state.set(AppState::ComposeInit),
+            _ => println!("[Login] Unexpected command received {:?}", discriminant(&gate_command))
         }
     }
 }

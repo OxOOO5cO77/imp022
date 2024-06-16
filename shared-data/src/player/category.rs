@@ -1,6 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+pub type NumberType = u8;
+pub type ValueType = u8;
+
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Academic {
     Any,
     CompSci,
@@ -9,7 +13,8 @@ pub enum Academic {
     Theoretical,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Bureaucratic {
     Any,
     Africa,
@@ -18,7 +23,8 @@ pub enum Bureaucratic {
     Europe,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Corporate {
     Any,
     Consumer,
@@ -27,7 +33,8 @@ pub enum Corporate {
     Military,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Decentralized {
     Any,
     Activist,
@@ -36,7 +43,7 @@ pub enum Decentralized {
     OpenSource,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Institution {
     Any,
     Academic(Academic),
@@ -45,7 +52,8 @@ pub enum Institution {
     Decentralized(Decentralized),
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Developer {
     Any,
     Art,
@@ -54,7 +62,8 @@ pub enum Developer {
     QA,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum IT {
     Any,
     DevOps,
@@ -63,7 +72,8 @@ pub enum IT {
     Support,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum People {
     Any,
     Accounting,
@@ -72,7 +82,8 @@ pub enum People {
     Marketing,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Physical {
     Any,
     Maintenance,
@@ -81,7 +92,7 @@ pub enum Physical {
     Trades,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Role {
     Any,
     Developer(Developer),
@@ -90,7 +101,8 @@ pub enum Role {
     Physical(Physical),
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Office {
     Any,
     Campus,
@@ -99,16 +111,18 @@ pub enum Office {
     Tower,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Public {
     Any,
     Commercial,
     Education,
-    Gastronomy,
+    Hospitality,
     Municipal,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Residence {
     Any,
     Apartment,
@@ -117,7 +131,8 @@ pub enum Residence {
     Shared,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Unauthorized {
     Any,
     Infrastructure,
@@ -126,7 +141,7 @@ pub enum Unauthorized {
     Residential,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Location {
     Any,
     Office(Office),
@@ -135,7 +150,8 @@ pub enum Location {
     Unauthorized(Unauthorized),
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Consumer {
     Any,
     Casual,
@@ -144,7 +160,8 @@ pub enum Consumer {
     Productivity,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Fringe {
     Any,
     Exotic,
@@ -153,7 +170,8 @@ pub enum Fringe {
     Source,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Hardened {
     Any,
     Anonymous,
@@ -162,7 +180,8 @@ pub enum Hardened {
     Industry,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Restricted {
     Any,
     Access,
@@ -171,7 +190,7 @@ pub enum Restricted {
     Use,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Distro {
     Any,
     Consumer(Consumer),
@@ -180,9 +199,9 @@ pub enum Distro {
     Restricted(Restricted),
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Default, Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Category {
-    Any,
+    #[default] Any,
     Institution(Institution),
     Role(Role),
     Location(Location),

@@ -5,7 +5,7 @@ use sqlx::postgres::{PgPool, PgPoolOptions};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 
-use shared_net::{VClientMode, VRoutedMessage, VSizedBuffer};
+use shared_net::{VClientMode, RoutedMessage, VSizedBuffer};
 use shared_net::op;
 
 struct Bazaar {
@@ -14,6 +14,8 @@ struct Bazaar {
 
 #[tokio::main]
 async fn main() -> Result<(), ()> {
+    println!("[Bazaar] START");
+
     let mut args = env::args();
     let _ = args.next(); // program name
     let iface_to_courtyard = args.next().unwrap_or("[::1]:12345".to_string());
@@ -29,10 +31,14 @@ async fn main() -> Result<(), ()> {
 
     let courtyard_client = shared_net::async_client(context, op::Flavor::Bazaar, dummy_tx, dummy_rx, iface_to_courtyard, process_courtyard);
 
-    courtyard_client.await
+    let result = courtyard_client.await;
+
+    println!("[Bazaar] END");
+
+    result
 }
 
-fn process_courtyard(_context: Arc<Mutex<Bazaar>>, _tx: UnboundedSender<VRoutedMessage>, _buf: VSizedBuffer) -> VClientMode {
+fn process_courtyard(_context: Arc<Mutex<Bazaar>>, _tx: UnboundedSender<RoutedMessage>, _buf: VSizedBuffer) -> VClientMode {
     VClientMode::Continue
 }
 

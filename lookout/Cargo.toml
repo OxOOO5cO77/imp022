@@ -6,7 +6,7 @@ edition = "2021"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 
 [dependencies]
-tokio = { version = "1.37.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.38.0", features = ["macros", "rt-multi-thread"] }
 sqlx = { version = "0.7.4", features = ["postgres", "macros", "uuid", "runtime-tokio-rustls"] }
 uuid = { version = "1.8.0", features = ["v4"] }
 shared-net = { path = "../shared-net" }

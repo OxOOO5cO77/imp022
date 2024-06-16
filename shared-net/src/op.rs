@@ -1,7 +1,75 @@
+use std::fmt;
+use std::mem::size_of;
+
 #[cfg(test)]
 use strum_macros::EnumIter;
 
+use crate::sizedbuffers::Bufferable;
 use crate::VSizedBuffer;
+
+#[derive(PartialEq)]
+pub enum Route {
+    None,
+    Local,
+    One(u8),
+    Any(Flavor),
+    All(Flavor),
+}
+
+impl Bufferable for Route {
+    fn push_into(&self, buf: &mut VSizedBuffer) {
+        match *self {
+            Route::None => 0_u8.push_into(buf),
+            Route::Local => 1_u8.push_into(buf),
+            Route::One(destination) => {
+                2_u8.push_into(buf);
+                destination.push_into(buf);
+            }
+            Route::Any(flavor) => {
+                3_u8.push_into(buf);
+                flavor.push_into(buf);
+            }
+            Route::All(flavor) => {
+                4_u8.push_into(buf);
+                flavor.push_into(buf);
+            }
+        }
+    }
+
+    fn pull_from(buf: &mut VSizedBuffer) -> Self {
+        let route = u8::pull_from(buf);
+        match route {
+            1 => Route::Local,
+            2 => Route::One(u8::pull_from(buf)),
+            3 => Route::Any(Flavor::pull_from(buf)),
+            4 => Route::All(Flavor::pull_from(buf)),
+            _ => Route::None
+        }
+    }
+
+    fn size_in_buffer(&self) -> usize {
+        match *self {
+            Route::None => size_of::<u8>(),
+            Route::Local => size_of::<u8>(),
+            Route::One(_) => size_of::<u8>() + size_of::<u8>(),
+            Route::Any(_) => size_of::<u8>() + size_of::<u8>(),
+            Route::All(_) => size_of::<u8>() + size_of::<u8>(),
+        }
+    }
+}
+
+impl fmt::Debug for Route {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Route::None => write!(f, "None"),
+            Route::Local => write!(f, "Local"),
+            Route::One(id) => write!(f, "One({})", id),
+            Route::Any(flavor) => write!(f, "Any({:?})", flavor),
+            Route::All(flavor) => write!(f, "All({:?})", flavor),
+        }
+    }
+}
+
 
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -21,8 +89,13 @@ pub enum Flavor {
     Watchtower = 23,
 }
 
-impl From<u8> for Flavor {
-    fn from(flavor: u8) -> Self {
+impl Bufferable for Flavor {
+    fn push_into(&self, buf: &mut VSizedBuffer) {
+        (*self as u8).push_into(buf);
+    }
+
+    fn pull_from(buf: &mut VSizedBuffer) -> Self {
+        let flavor = u8::pull_from(buf);
         match flavor {
             c if c == Flavor::Archive as u8 => Flavor::Archive,
             c if c == Flavor::Bazaar as u8 => Flavor::Bazaar,
@@ -38,52 +111,9 @@ impl From<u8> for Flavor {
             _ => Flavor::NoOp
         }
     }
-}
 
-impl VSizedBuffer {
-    pub fn push_flavor(&mut self, push: Flavor) -> &mut Self {
-        self.push_u8(&(push as u8))
-    }
-    pub fn pull_flavor(&mut self) -> Flavor {
-        Flavor::from(self.pull_u8())
-    }
-    pub fn xfer_flavor(&mut self, push: &mut VSizedBuffer) -> &mut Self {
-        self.push_u8(&push.pull_u8())
-    }
-}
-
-#[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq)]
-#[cfg_attr(test, derive(EnumIter))]
-pub enum Route {
-    NoOp = 0,
-    Local = 1,
-    One = 2,
-    Any = 3,
-    All = 4,
-}
-
-impl From<u8> for Route {
-    fn from(route: u8) -> Self {
-        match route {
-            c if c == Route::Local as u8 => Route::Local,
-            c if c == Route::One as u8 => Route::One,
-            c if c == Route::Any as u8 => Route::Any,
-            c if c == Route::All as u8 => Route::All,
-            _ => Route::NoOp
-        }
-    }
-}
-
-impl VSizedBuffer {
-    pub fn push_route(&mut self, push: Route) -> &mut Self {
-        self.push_u8(&(push as u8))
-    }
-    pub fn pull_route(&mut self) -> Route {
-        Route::from(self.pull_u8())
-    }
-    pub fn xfer_route(&mut self, push: &mut VSizedBuffer) -> &mut Self {
-        self.push_u8(&push.pull_u8())
+    fn size_in_buffer(&self) -> usize {
+        size_of::<u8>()
     }
 }
 
@@ -105,8 +135,13 @@ pub enum Command {
     GameEnd,
 }
 
-impl From<u8> for Command {
-    fn from(command: u8) -> Self {
+impl Bufferable for Command {
+    fn push_into(&self, buf: &mut VSizedBuffer) {
+        (*self as u8).push_into(buf);
+    }
+
+    fn pull_from(buf: &mut VSizedBuffer) -> Self {
+        let command = u8::pull_from(buf);
         match command {
             c if c == Command::Register as u8 => Command::Register,
             c if c == Command::Authorize as u8 => Command::Authorize,
@@ -122,17 +157,9 @@ impl From<u8> for Command {
             _ => Command::NoOp
         }
     }
-}
 
-impl VSizedBuffer {
-    pub fn push_command(&mut self, push: Command) -> &mut Self {
-        self.push_u8(&(push as u8))
-    }
-    pub fn pull_command(&mut self) -> Command {
-        Command::from(self.pull_u8())
-    }
-    pub fn xfer_command(&mut self, push: &mut VSizedBuffer) -> &mut Self {
-        self.push_u8(&push.pull_u8())
+    fn size_in_buffer(&self) -> usize {
+        size_of::<u8>()
     }
 }
 
@@ -141,40 +168,41 @@ mod test {
     mod test_vsizedbuffer {
         use strum::IntoEnumIterator;
 
-        use crate::op::Command;
+        use crate::op::{Command, Route};
         use crate::op::Flavor;
-        use crate::op::Route;
         use crate::VSizedBuffer;
+
+        #[test]
+        fn route() {
+            let mut buf1 = VSizedBuffer::new(32);
+
+            let route = Route::Any(Flavor::Courtyard);
+
+            buf1.push(&route);
+            buf1.push(&route);
+
+            assert_eq!(route, buf1.pull::<Route>());
+
+            let mut buf2 = VSizedBuffer::new(32);
+            buf2.xfer::<Route>(&mut buf1);
+
+            assert_eq!(route, buf2.pull::<Route>());
+        }
 
         #[test]
         fn flavor() {
             for flavor in Flavor::iter() {
                 let mut buf1 = VSizedBuffer::new(32);
-                buf1.push_flavor(flavor);
-                buf1.push_flavor(flavor);
 
-                assert_eq!(flavor, buf1.pull_flavor());
+                buf1.push(&flavor);
+                buf1.push(&flavor);
 
-                let mut buf2 = VSizedBuffer::new(32);
-                buf2.xfer_flavor(&mut buf1);
-
-                assert_eq!(flavor, buf2.pull_flavor());
-            }
-        }
-
-        #[test]
-        fn route() {
-            for route in Route::iter() {
-                let mut buf1 = VSizedBuffer::new(32);
-                buf1.push_route(route);
-                buf1.push_route(route);
-
-                assert_eq!(route, buf1.pull_route());
+                assert_eq!(flavor, buf1.pull::<Flavor>());
 
                 let mut buf2 = VSizedBuffer::new(32);
-                buf2.xfer_route(&mut buf1);
+                buf2.xfer::<Flavor>(&mut buf1);
 
-                assert_eq!(route, buf2.pull_route());
+                assert_eq!(flavor, buf2.pull::<Flavor>());
             }
         }
 
@@ -182,15 +210,15 @@ mod test {
         fn command() {
             for command in Command::iter() {
                 let mut buf1 = VSizedBuffer::new(32);
-                buf1.push_command(command);
-                buf1.push_command(command);
+                buf1.push(&command);
+                buf1.push(&command);
 
-                assert_eq!(command, buf1.pull_command());
+                assert_eq!(command, buf1.pull::<Command>());
 
                 let mut buf2 = VSizedBuffer::new(32);
-                buf2.xfer_command(&mut buf1);
+                buf2.xfer::<Command>(&mut buf1);
 
-                assert_eq!(command, buf2.pull_command());
+                assert_eq!(command, buf2.pull::<Command>());
             }
         }
     }

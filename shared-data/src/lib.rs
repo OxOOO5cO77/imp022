@@ -1,3 +1,3 @@
-pub mod rest;
 pub mod player;
 pub mod mission;
+pub mod types;

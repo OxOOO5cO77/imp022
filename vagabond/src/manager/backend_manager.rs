@@ -1,7 +1,6 @@
 use bevy::prelude::Resource;
 
-use shared_data::rest::part::{PartRequest, PartResponse};
-use shared_data::rest::player::{PlayerRequest, PlayerResponse};
+use watchtower::rest::player::PlayerBioResponse;
 
 #[derive(Resource)]
 pub(crate) struct BackendManager {
@@ -15,36 +14,12 @@ impl BackendManager {
         }
     }
 
-    pub fn fetch_player(&self, parts: [u64; 8]) -> anyhow::Result<PlayerResponse> {
-        let request = PlayerRequest {
-            access: parts[0],
-            breach: parts[1],
-            compute: parts[2],
-            disrupt: parts[3],
-            build: parts[4],
-            build_values: parts[5],
-            category: parts[6],
-            category_values: parts[7],
-        };
-
-        Ok(
-            self.client.post("http://127.0.0.1:23235/player")
-                .json(&request)
+    pub fn fetch_player(&self, seed: u64) -> anyhow::Result<PlayerBioResponse> {
+        let response =
+            self.client.get(format!("http://127.0.0.1:23235/player/{seed:X}"))
                 .send()?
-                .json::<PlayerResponse>()?
-        )
-    }
-
-    pub fn fetch_parts(&self, parts: &[u64]) -> anyhow::Result<PartResponse> {
-        let request = PartRequest {
-            seeds: parts.try_into()?,
-        };
-
-        Ok(
-            self.client.post("http://127.0.0.1:23235/part")
-                .json(&request)
-                .send()?
-                .json::<PartResponse>()?
-        )
+                .json::<PlayerBioResponse>()?
+            ;
+        Ok(response)
     }
 }

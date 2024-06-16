@@ -2,7 +2,10 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+pub type NumberType = u8;
+pub type ValueType = u8;
+
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Market {
     Any,
     Consumer,
@@ -11,7 +14,7 @@ pub enum Market {
     Professional,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum ANT {
     Any,
     EXM(Market),
@@ -20,7 +23,7 @@ pub enum ANT {
     Uplink(Market),
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum BRD {
     Any,
     Axis(Market),
@@ -29,7 +32,7 @@ pub enum BRD {
     Wasbleibt(Market),
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum CPU {
     Any,
     CCC(Market),
@@ -38,7 +41,7 @@ pub enum CPU {
     Visor(Market),
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum DSC {
     Any,
     Evoke(Market),
@@ -47,9 +50,9 @@ pub enum DSC {
     Warehaus(Market),
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Default, Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Build {
-    Any,
+    #[default] Any,
     ANT(ANT),
     BRD(BRD),
     CPU(CPU),

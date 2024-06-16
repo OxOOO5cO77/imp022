@@ -1,14 +1,12 @@
 use std::env;
 use std::sync::{Arc, Mutex};
 
+use sqlx::postgres::{PgPool, PgPoolOptions};
+use sqlx::types::Uuid;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 
-use sqlx::postgres::{PgPool, PgPoolOptions};
-use sqlx::types::Uuid;
-use shared_net::{VClientMode, VRoute, VRoutedMessage, VSizedBuffer};
-use shared_net::op;
-use shared_net::op::Flavor;
+use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 
 struct Library {
     pool: PgPool,
@@ -16,6 +14,8 @@ struct Library {
 
 #[tokio::main]
 async fn main() -> Result<(), ()> {
+    println!("[Archive] START");
+
     let mut args = env::args();
     let _ = args.next(); // program name
     let iface_to_courtyard = args.next().unwrap_or("[::1]:12345".to_string());
@@ -29,13 +29,17 @@ async fn main() -> Result<(), ()> {
 
     let (dummy_tx, dummy_rx) = mpsc::unbounded_channel();
 
-    let courtyard_client = shared_net::async_client(context, Flavor::Archive, dummy_tx, dummy_rx, iface_to_courtyard, process_courtyard);
+    let courtyard_client = shared_net::async_client(context, op::Flavor::Archive, dummy_tx, dummy_rx, iface_to_courtyard, process_courtyard);
 
-    courtyard_client.await
+    let result = courtyard_client.await;
+    
+    println!("[Archive] END");
+    
+    result
 }
 
-fn process_courtyard(context: Arc<Mutex<Library>>, tx: UnboundedSender<VRoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
-    match buf.pull_command() {
+fn process_courtyard(context: Arc<Mutex<Library>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
+    match buf.pull::<op::Command>() {
         op::Command::InvGen => c_invgen(context, tx, buf),
         op::Command::InvList => c_invlist(context, tx, buf),
         _ => {}
@@ -43,11 +47,11 @@ fn process_courtyard(context: Arc<Mutex<Library>>, tx: UnboundedSender<VRoutedMe
     VClientMode::Continue
 }
 
-fn c_invgen(context: Arc<Mutex<Library>>, tx: UnboundedSender<VRoutedMessage>, mut buf: VSizedBuffer) {
-    let gate = buf.pull_u8();
-    let vagabond = buf.pull_u8();
-    let user_hash = buf.pull_u128();
-    let _ob_type = buf.pull_u8();
+fn c_invgen(context: Arc<Mutex<Library>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
+    let gate = buf.pull::<u8>();
+    let vagabond = buf.pull::<u8>();
+    let user_hash = buf.pull::<u128>();
+    let _ob_type = buf.pull::<u8>();
 
     let pool = context.lock().unwrap().pool.clone();
 
@@ -60,15 +64,14 @@ fn c_invgen(context: Arc<Mutex<Library>>, tx: UnboundedSender<VRoutedMessage>, m
             .execute(&pool).await.is_ok();
         if result {
             let mut out = VSizedBuffer::new(6 + 200 * 16);
-            out.push_route(op::Route::One);
-            out.push_u8(&gate);
-            out.push_command(op::Command::InvList);
-            out.push_u8(&vagabond);
+            out.push(&op::Route::One(gate));
+            out.push(&op::Command::InvList);
+            out.push(&vagabond);
 
-            out.push_u16(&1);
-            out.push_u128(&object_uuid.as_u128());
+            out.push(&1_u16);
+            out.push(&object_uuid.as_u128());
 
-            let _ = tx.send(VRoutedMessage { route: VRoute::None, buf: out });
+            let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });
         }
     };
     tokio::spawn(future);
@@ -79,11 +82,11 @@ struct Object {
     ob_uuid: Uuid,
 }
 
-fn c_invlist(context: Arc<Mutex<Library>>, tx: UnboundedSender<VRoutedMessage>, mut buf: VSizedBuffer) {
-    let gate = buf.pull_u8();
-    let vagabond = buf.pull_u8();
-    let user_hash = buf.pull_u128();
-    let _ob_type = buf.pull_u8();
+fn c_invlist(context: Arc<Mutex<Library>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
+    let gate = buf.pull::<u8>();
+    let vagabond = buf.pull::<u8>();
+    let user_hash = buf.pull::<u128>();
+    let _ob_type = buf.pull::<u8>();
 
     let pool = context.lock().unwrap().pool.clone();
 
@@ -95,16 +98,15 @@ fn c_invlist(context: Arc<Mutex<Library>>, tx: UnboundedSender<VRoutedMessage>, 
             .fetch_all(&pool).await;
         if let Ok(results) = query_result {
             let mut out = VSizedBuffer::new(6 + results.len() * 16);
-            out.push_route(op::Route::One);
-            out.push_u8(&gate);
-            out.push_command(op::Command::InvList);
-            out.push_u8(&vagabond);
-            out.push_u16(&(results.len() as u16));
+            out.push(&op::Route::One(gate));
+            out.push(&op::Command::InvList);
+            out.push(&vagabond);
+            out.push(&(results.len() as u16));
             for ob in results {
-                out.push_u128(&ob.ob_uuid.as_u128());
+                out.push(&ob.ob_uuid.as_u128());
             }
 
-            let _ = tx.send(VRoutedMessage { route: VRoute::None, buf: out });
+            let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });
         }
     };
     tokio::spawn(future);

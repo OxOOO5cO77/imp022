@@ -1,26 +1,26 @@
 use std::collections::{HashMap, VecDeque};
-use shared_data::player::card::{Card, Kind};
-use shared_data::player::Player;
 
 use rand::{Rng, seq::SliceRandom};
 
+use hall::data::hall_card::HallCard;
+use hall::data::player::Player;
+use shared_data::player::card::{CostType, Kind};
+
 pub struct PlayerState {
     pub player: Player,
-    deck: VecDeque<Card>,
-    discard: Vec<Card>,
-    hand: Vec<Card>,
-    pub erg: HashMap<Kind, u32>,
+    deck: VecDeque<HallCard>,
+    discard: Vec<HallCard>,
+    hand: Vec<HallCard>,
+    pub erg: HashMap<Kind, CostType>,
     pub pick: Option<Kind>,
-    play: Vec<Card>,
+    play: Vec<HallCard>,
 }
 
 impl PlayerState {
     pub fn from_player(player: Player) -> Self {
-        let deck = player.deck.clone();
-
         PlayerState {
             player,
-            deck,
+            deck: VecDeque::new(),
             discard: Vec::new(),
             hand: Vec::new(),
             erg: HashMap::new(),

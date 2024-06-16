@@ -1,0 +1,22 @@
+CategoryInstance(
+    category: Role(IT(DevOps)),
+    number: 1,
+    title: "Database Admin",
+    cards: [
+        CardSlot(Set(1), Common, Number(1)),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Uncommon, Any),
+        CardSlot(Set(1), Uncommon, Any),
+        CardSlot(Set(1), Uncommon, Any),
+        CardSlot(Set(1), Uncommon, Any),
+        CardSlot(Set(1), Rare, Any),
+        CardSlot(Set(1), Rare, Any),
+        CardSlot(Set(1), Legendary, Any),
+    ],
+)

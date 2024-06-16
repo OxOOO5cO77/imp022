@@ -1,0 +1,22 @@
+BuildInstance(
+    build: DSC(Kollectiv(Prosumer)),
+    number: 3,
+    title: "AdvCollab PX3A",
+    cards: [
+        CardSlot(Set(1), Common, Number(1)),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Common, Any),
+        CardSlot(Set(1), Uncommon, Any),
+        CardSlot(Set(1), Uncommon, Any),
+        CardSlot(Set(1), Uncommon, Any),
+        CardSlot(Set(1), Uncommon, Any),
+        CardSlot(Set(1), Rare, Any),
+        CardSlot(Set(1), Rare, Any),
+        CardSlot(Set(1), Legendary, Any),
+    ],
+)

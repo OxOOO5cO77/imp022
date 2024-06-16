@@ -8,7 +8,7 @@ use tokio::signal;
 use tokio::sync::{mpsc, Mutex};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
-use crate::{VIdMessage, VRoute, VRoutedMessage, VSizedBuffer};
+use crate::{IdMessage, Route, RoutedMessage, VSizedBuffer};
 use crate::op;
 use crate::util::write_buf;
 
@@ -19,9 +19,9 @@ struct VConnection<T> {
 
 type VConnectionMap<T> = HashMap<u8, VConnection<T>>;
 
-type FnProcess<T> = fn(context: T, UnboundedSender<VRoutedMessage>, msg: VIdMessage) -> bool;
+type FnProcess<T> = fn(context: T, UnboundedSender<RoutedMessage>, msg: IdMessage) -> bool;
 
-pub async fn async_server<T>(context: T, external_tx: UnboundedSender<VRoutedMessage>, mut external_rx: UnboundedReceiver<VRoutedMessage>, interface: String, process: FnProcess<T>) -> Result<(), ()> where T: Clone {
+pub async fn async_server<T>(context: T, external_tx: UnboundedSender<RoutedMessage>, mut external_rx: UnboundedReceiver<RoutedMessage>, interface: String, process: FnProcess<T>) -> Result<(), ()> where T: Clone {
     let listener = TcpListener::bind(interface).await.unwrap();
 
     let connections = Arc::new(Mutex::new(VConnectionMap::new()));
@@ -78,7 +78,7 @@ pub async fn async_server<T>(context: T, external_tx: UnboundedSender<VRoutedMes
                                                 true
                                             } else {
                                                 buf.set_size(expected_bytes);
-                                                incoming_tx.send( VIdMessage { id, buf } ).is_err()
+                                                incoming_tx.send( IdMessage { id, buf } ).is_err()
                                             }
                                         }
                                         Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => false,
@@ -101,19 +101,19 @@ pub async fn async_server<T>(context: T, external_tx: UnboundedSender<VRoutedMes
             Some(msg) = incoming_rx.recv() => {
                 let mut msg = msg;
                 let id = msg.id;
-                let builtin = msg.buf.pull_command();
+                let builtin = msg.buf.pull::<op::Command>();
                 let is_ok = match builtin {
                     op::Command::NoOp => false,
                     op::Command::Register => {
-                        let flavor = msg.buf.pull_flavor();
+                        let flavor = msg.buf.pull::<op::Flavor>();
                         let mut connections = connections.lock().await;
                         if let Some(cx) = connections.get_mut(&id) {
                             cx.flavor = Some(flavor);
                         }
                         println!("Registered {} as {:?}", id, flavor);
                         let mut out = VSizedBuffer::new(32);
-                        out.push_command(op::Command::Hello);
-                        outgoing_tx.send(VRoutedMessage { route: VRoute::One(id), buf: out }).is_ok()
+                        out.push(&op::Command::Hello);
+                        outgoing_tx.send(RoutedMessage { route: Route::One(id), buf: out }).is_ok()
                     }
                     _ => {
                         msg.buf.rewind();
@@ -131,10 +131,10 @@ pub async fn async_server<T>(context: T, external_tx: UnboundedSender<VRoutedMes
             Some(msg) = outgoing_rx.recv() => {
                 // handle outgoing
                 match msg.route {
-                    VRoute::Local => {
+                    Route::Local => {
                         let _ = external_tx.send( msg );
                     }
-                    VRoute::One(msg_id) => {
+                    Route::One(msg_id) => {
                         let msg_buf = msg.buf;
                         let mut connections = connections.lock().await;
 
@@ -145,8 +145,7 @@ pub async fn async_server<T>(context: T, external_tx: UnboundedSender<VRoutedMes
                             }
                         }
                     }
-                    VRoute::Any(flavor) => {
-                        let flavor = op::Flavor::from(flavor);
+                    Route::Any(flavor) => {
                         let msg_buf = msg.buf;
                         let mut connections = connections.lock().await;
                         if let Some((id,cx)) = connections.iter_mut().find(|(_,cx)| cx.flavor == Some(flavor)) {
@@ -155,8 +154,7 @@ pub async fn async_server<T>(context: T, external_tx: UnboundedSender<VRoutedMes
                             }
                         }
                     }
-                    VRoute::All(flavor) => {
-                        let flavor = op::Flavor::from(flavor);
+                    Route::All(flavor) => {
                         let msg_buf = msg.buf;
                         let mut connections = connections.lock().await;
                         for (id,cx) in connections.iter_mut().filter(|(_,cx)| cx.flavor == Some(flavor)) {
@@ -165,7 +163,7 @@ pub async fn async_server<T>(context: T, external_tx: UnboundedSender<VRoutedMes
                             }
                         }
                     }
-                    VRoute::None => {}
+                    Route::None => {}
                 }
             }
             _ = signal::ctrl_c() => {

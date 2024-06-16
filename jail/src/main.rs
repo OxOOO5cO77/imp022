@@ -3,7 +3,7 @@ use std::env;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 
-use shared_net::{VClientMode, VRoutedMessage, VSizedBuffer};
+use shared_net::{VClientMode, RoutedMessage, VSizedBuffer};
 use shared_net::op;
 use shared_net::op::Flavor;
 
@@ -12,6 +12,8 @@ struct NoContext;
 
 #[tokio::main]
 async fn main() -> Result<(), ()> {
+    println!("[Jail] START");
+
     let mut args = env::args();
     let _ = args.next(); // program name
     let iface_to_courtyard = args.next().unwrap_or("[::1]:12345".to_string());
@@ -20,22 +22,26 @@ async fn main() -> Result<(), ()> {
 
     let courtyard_client = shared_net::async_client(NoContext, Flavor::Jail, dummy_tx, dummy_rx, iface_to_courtyard, process_courtyard);
 
-    courtyard_client.await
+    let result = courtyard_client.await;
+
+    println!("[Jail] END");
+
+    result
 }
 
-fn process_courtyard(_context: NoContext, _tx: UnboundedSender<VRoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
-    if let op::Command::UserAttr = buf.pull_command() {
+fn process_courtyard(_context: NoContext, _tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
+    if let op::Command::UserAttr = buf.pull::<op::Command>() {
         c_userattr(buf)
     }
     VClientMode::Continue
 }
 
 fn c_userattr(mut buf: VSizedBuffer) {
-    let _ = buf.pull_u8(); // gate (discard)
+    let _ = buf.pull::<u8>(); // gate (discard)
 
-    let user = buf.pull_u128();
-    let attr = buf.pull_string();
-    let time = buf.pull_u128();
+    let user = buf.pull::<u128>();
+    let attr = buf.pull::<String>();
+    let time = buf.pull::<u128>();
 
     println!("[{}] {}: {}", user, attr, time);
 }

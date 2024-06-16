@@ -1,0 +1,9 @@
+Card(
+    title: "Legendary 3",
+    rarity: Legendary,
+    number: 3,
+    set: 1,
+    kind: Compute,
+    cost: 1,
+    rules: "",
+)

@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
-use shared_data::player::part::PlayerPart;
+use vagabond::data::vagabond_part::VagabondPart;
 
-use crate::manager::BackendManager;
+use crate::manager::{BackendManager, DataManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::compose::StatRowKind::{Build, Category};
 use crate::system::app_state::AppState;
@@ -18,11 +18,46 @@ impl Plugin for ComposePlugin {
             .add_systems(OnEnter(AppState::ComposeInit), composeinit_enter)
             .add_systems(Update, composeinit_update.run_if(in_state(AppState::ComposeInit)))
             .add_systems(OnEnter(AppState::Compose), compose_enter)
-            .add_systems(Update, (dragdrag, dragdrop, finish_player).run_if(in_state(AppState::Compose)))
+            .add_systems(Update, (dragdrag, dragdrop, finish_player, compose_update).run_if(in_state(AppState::Compose)))
             .add_systems(OnExit(AppState::Compose), screen_exit)
         ;
     }
 }
+
+#[derive(Resource)]
+struct ComposeInitHandoff {
+    parts: [VagabondPart; 8],
+}
+
+fn composeinit_enter(gate: ResMut<GateIFace>) {
+    gate.send_gamestart();
+}
+
+fn composeinit_update(
+    mut commands: Commands,
+    mut gate: ResMut<GateIFace>,
+    mut app_state: ResMut<NextState<AppState>>,
+    dm: Res<DataManager>,
+) {
+    if let Ok(GateCommand::GameStart(response)) = gate.grx.try_recv() {
+        let init_handoff = ComposeInitHandoff {
+            parts: [
+                dm.convert_part(&response.parts[0]).unwrap_or_default(),
+                dm.convert_part(&response.parts[1]).unwrap_or_default(),
+                dm.convert_part(&response.parts[2]).unwrap_or_default(),
+                dm.convert_part(&response.parts[3]).unwrap_or_default(),
+                dm.convert_part(&response.parts[4]).unwrap_or_default(),
+                dm.convert_part(&response.parts[5]).unwrap_or_default(),
+                dm.convert_part(&response.parts[6]).unwrap_or_default(),
+                dm.convert_part(&response.parts[7]).unwrap_or_default(),
+            ]
+        };
+        gate.game_id = response.game_id;
+        commands.insert_resource(init_handoff);
+        app_state.set(AppState::Compose)
+    }
+}
+
 
 #[derive(Event)]
 struct FinishPlayer;
@@ -45,7 +80,7 @@ enum PlayerPartHolderKind {
 }
 
 #[derive(Component, Clone)]
-struct PlayerPartHolder(Option<PlayerPart>);
+struct PlayerPartHolder(Option<VagabondPart>);
 
 #[derive(Component, Clone)]
 struct CardHolder(usize);
@@ -239,7 +274,7 @@ fn attrib_row(parent: &mut ChildBuilder, kind: StatRowKind, font_info: &FontInfo
     ;
 }
 
-fn spawn_part(parent: &mut ChildBuilder, part: &PlayerPart, font_info: &FontInfo) {
+fn spawn_part(parent: &mut ChildBuilder, part: &VagabondPart, font_info: &FontInfo) {
     let part_display = NodeBundle {
         style: Style {
             display: Display::Grid,
@@ -287,7 +322,7 @@ fn spawn_part(parent: &mut ChildBuilder, part: &PlayerPart, font_info: &FontInfo
                 .spawn(label_container.clone())
                 .with_children(|parent| {
                     for build in &part.build {
-                        text_children.push(parent.spawn(text(build.1.clone(), font_info)).id());
+                        text_children.push(parent.spawn(text(build.title.clone(), font_info)).id());
                     }
                 })
             ;
@@ -298,7 +333,7 @@ fn spawn_part(parent: &mut ChildBuilder, part: &PlayerPart, font_info: &FontInfo
                 .spawn(label_container.clone())
                 .with_children(|parent| {
                     for category in &part.category {
-                        text_children.push(parent.spawn(text(category.1.clone(), font_info)).id());
+                        text_children.push(parent.spawn(text(category.title.clone(), font_info)).id());
                     }
                 })
             ;
@@ -335,18 +370,18 @@ fn font_size(asset_server: &Res<AssetServer>, size: f32) -> FontInfo {
 }
 
 fn compose_enter(
-    commands: Commands,
-    bm: Res<BackendManager>,
+    mut commands: Commands,
     asset_server: Res<AssetServer>,
     init_handoff: Res<ComposeInitHandoff>,
 ) {
-    build_ui_compose(commands, init_handoff, bm, asset_server);
+    let parts = init_handoff.parts.clone();
+    commands.remove_resource::<ComposeInitHandoff>();
+    build_ui_compose(commands, parts, asset_server);
 }
 
 fn build_ui_compose(
     mut commands: Commands,
-    init_handoff: Res<ComposeInitHandoff>,
-    bm: Res<BackendManager>,
+    parts: [VagabondPart; 8],
     asset_server: Res<AssetServer>,
 ) {
     let font_info_val = font_size(&asset_server, 48.0);
@@ -436,15 +471,8 @@ fn build_ui_compose(
                     parent
                         .spawn(part_gutter)
                         .with_children(|parent| {
-                            match bm.fetch_parts(&init_handoff.parts) {
-                                Ok(parts) => {
-                                    for part in &parts.parts {
-                                        spawn_part(parent, part, &font_info_part);
-                                    }
-                                }
-                                Err(err) => {
-                                    println!("Error: {err}");
-                                }
+                            for part in &parts {
+                                spawn_part(parent, part, &font_info_part);
                             }
                         })
                     ;
@@ -554,7 +582,8 @@ fn dragdrag(
 }
 
 fn populate_children<F>(kids: &TextChildren, holder: &PlayerPartHolder, text_q: &mut Query<&mut Text>, func: F)
-    where F: Fn(&PlayerPart, usize) -> String
+where
+    F: Fn(&VagabondPart, usize) -> String,
 {
     let holder = holder.0.as_ref();
     for (i, kid) in kids.0.iter().enumerate() {
@@ -568,10 +597,10 @@ fn populate_children<F>(kids: &TextChildren, holder: &PlayerPartHolder, text_q: 
 fn update_part_holder(kind: &PlayerPartHolderKind, kids: Option<&TextChildren>, holder: &PlayerPartHolder, text_q: &mut Query<&mut Text>) {
     if let Some(kids) = kids {
         let func = match kind {
-            PlayerPartHolderKind::StatRow(_) => |o: &PlayerPart, i: usize| o.values[i].to_string(),
-            PlayerPartHolderKind::Build => |o: &PlayerPart, i: usize| o.build[i].1.clone(),
-            PlayerPartHolderKind::Category => |o: &PlayerPart, i: usize| o.category[i].1.clone(),
-            PlayerPartHolderKind::Unallocated => |_: &PlayerPart, _: usize| "".to_owned(),
+            PlayerPartHolderKind::StatRow(_) => |o: &VagabondPart, i: usize| o.values[i].to_string(),
+            PlayerPartHolderKind::Build => |o: &VagabondPart, i: usize| o.build[i].title.clone(),
+            PlayerPartHolderKind::Category => |o: &VagabondPart, i: usize| o.category[i].title.clone(),
+            PlayerPartHolderKind::Unallocated => |_: &VagabondPart, _: usize| "".to_owned(),
         };
         populate_children(kids, holder, text_q, func);
     }
@@ -613,77 +642,65 @@ fn seed_from_holder(holder: &PlayerPartHolder) -> u64 {
 fn finish_player(
     receive: EventReader<FinishPlayer>,
     holder_q: Query<(&PlayerPartHolder, &PlayerPartHolderKind)>,
-    mut deck_q: Query<(&mut Text, &CardHolder), Without<InfoKind>>,
-    mut info_q: Query<(&mut Text, &InfoKind), Without<CardHolder>>,
-    bm: Res<BackendManager>,
+    gate: Res<GateIFace>,
 ) {
     if !receive.is_empty() {
-        let mut seeds = [0, 0, 0, 0, 0, 0, 0, 0, ];
+        let mut parts = [0, 0, 0, 0, 0, 0, 0, 0, ];
 
         for (holder, holder_kind) in holder_q.iter() {
             match holder_kind {
                 PlayerPartHolderKind::StatRow(row) => {
                     match row {
-                        StatRowKind::Access => seeds[0] = seed_from_holder(holder),
-                        StatRowKind::Breach => seeds[1] = seed_from_holder(holder),
-                        StatRowKind::Compute => seeds[2] = seed_from_holder(holder),
-                        StatRowKind::Disrupt => seeds[3] = seed_from_holder(holder),
-                        Build => seeds[5] = seed_from_holder(holder),
-                        Category => seeds[7] = seed_from_holder(holder),
+                        StatRowKind::Access => parts[0] = seed_from_holder(holder),
+                        StatRowKind::Breach => parts[1] = seed_from_holder(holder),
+                        StatRowKind::Compute => parts[2] = seed_from_holder(holder),
+                        StatRowKind::Disrupt => parts[3] = seed_from_holder(holder),
+                        Build => parts[5] = seed_from_holder(holder),
+                        Category => parts[7] = seed_from_holder(holder),
                     }
                 }
-                PlayerPartHolderKind::Build => seeds[4] = seed_from_holder(holder),
-                PlayerPartHolderKind::Category => seeds[6] = seed_from_holder(holder),
+                PlayerPartHolderKind::Build => parts[4] = seed_from_holder(holder),
+                PlayerPartHolderKind::Category => parts[6] = seed_from_holder(holder),
                 PlayerPartHolderKind::Unallocated => {}
             }
         }
 
-        if seeds.iter().all(|&o| o != 0) {
-            match bm.fetch_player(seeds) {
-                Ok(response) => {
-                    if let Some(player) = response.player {
-                        for (mut info, info_kind) in info_q.iter_mut() {
-                            match info_kind {
-                                InfoKind::Name => info.sections[0].value.clone_from(&player.name),
-                                InfoKind::ID => info.sections[0].value.clone_from(&player.id),
-                                InfoKind::Birthplace => info.sections[0].value = player.birthplace(),
-                                InfoKind::DoB => info.sections[0].value = player.age().to_string(),
-                            }
-                        }
-
-                        for (idx, card) in player.deck.iter().enumerate() {
-                            if let Some((mut card_text, _)) = deck_q.iter_mut().find(|o| o.1.0 == idx) {
-                                card_text.sections[0].value.clone_from(&card.name);
-                            }
-                        }
-                    }
-                }
-                Err(err) => println!("Error: {err}"),
-            }
+        if parts.iter().all(|&o| o != 0) {
+            gate.send_gamebuild(gate.game_id, parts);
         }
     }
 }
 
-#[derive(Resource)]
-struct ComposeInitHandoff {
-    parts: Vec<u64>,
-}
-
-fn composeinit_enter(gate: ResMut<GateIFace>) {
-    gate.send_gamestart();
-}
-
-fn composeinit_update(
-    mut commands: Commands,
+fn compose_update(
     mut gate: ResMut<GateIFace>,
-    mut app_state: ResMut<NextState<AppState>>,
+    mut deck_q: Query<(&mut Text, &CardHolder), Without<InfoKind>>,
+    mut info_q: Query<(&mut Text, &InfoKind), Without<CardHolder>>,
+    bm: Res<BackendManager>,
+    dm: Res<DataManager>,
 ) {
-    if let Ok(GateCommand::PackContents(parts)) = gate.grx.try_recv() {
-        let init_handoff = ComposeInitHandoff {
-            parts,
-        };
+    if let Ok(GateCommand::PlayerBuild(gate_response)) = gate.grx.try_recv() {
+        match bm.fetch_player(gate_response.seed) {
+            Ok(backend_response) => {
+                if let Some(player_bio) = backend_response.player_bio {
+                    for (mut info, info_kind) in info_q.iter_mut() {
+                        match info_kind {
+                            InfoKind::Name => info.sections[0].value.clone_from(&player_bio.name),
+                            InfoKind::ID => info.sections[0].value.clone_from(&player_bio.id),
+                            InfoKind::Birthplace => info.sections[0].value = player_bio.birthplace(),
+                            InfoKind::DoB => info.sections[0].value = player_bio.age().to_string(),
+                        }
+                    }
 
-        commands.insert_resource(init_handoff);
-        app_state.set(AppState::Compose)
+                    let deck = dm.convert_deck(gate_response.deck);
+
+                    for (idx, card) in deck.iter().enumerate() {
+                        if let Some((mut card_text, _)) = deck_q.iter_mut().find(|o| o.1.0 == idx) {
+                            card_text.sections[0].value.clone_from(&card.title);
+                        }
+                    }
+                }
+            }
+            Err(err) => println!("Error: {err}"),
+        }
     }
 }

@@ -1,7 +1,0 @@
-Card(
-    id: (Set(1), Rare, 3),
-    name: "Rare 3",
-    text: "",
-    kind: Compute,
-    cost: 1,
-)

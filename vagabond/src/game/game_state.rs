@@ -1,16 +1,17 @@
 use std::cmp::{Ordering, Reverse};
 use std::collections::HashMap;
 use std::iter::zip;
-use shared_data::player::card::Kind;
+use shared_data::player::card::{CostType, Kind};
 
 use rand::{distributions::Uniform, Rng, rngs::ThreadRng};
+use shared_data::player::attribute::ValueType;
 
 use crate::game::player_state::PlayerState;
 
 struct GameState {
     protagonist: PlayerState,
     antagonist: PlayerState,
-    erg_roll: [u32; 4],
+    erg_roll: [CostType; 4],
     rng: ThreadRng,
 }
 
@@ -30,12 +31,12 @@ impl GameState {
         }
     }
 
-    fn increment(alloc: &mut (u32, u32), erg: u32) {
+    fn increment(alloc: &mut (CostType, CostType), erg: CostType) {
         alloc.0 += 1;
         alloc.1 += erg;
     }
 
-    pub fn resolve_matchups(erg_roll: &[u32], p_kind: Kind, p_attr: &[u8], p_erg: &mut HashMap<Kind, u32>, a_kind: Kind, a_attr: &[u8], a_erg: &mut HashMap<Kind, u32>) {
+    pub fn resolve_matchups(erg_roll: &[CostType], p_kind: Kind, p_attr: &[ValueType], p_erg: &mut HashMap<Kind, CostType>, a_kind: Kind, a_attr: &[ValueType], a_erg: &mut HashMap<Kind, CostType>) {
         let mut matchups = zip(erg_roll, zip(p_attr, a_attr)).collect::<Vec<_>>();
         matchups.sort_unstable_by_key(|(erg, (_, _))| Reverse(*erg));
 
@@ -78,14 +79,14 @@ impl GameState {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use shared_data::player::card::Kind;
+    use shared_data::player::card::{CostType, Kind};
 
     use crate::game::game_state::GameState;
 
     #[test]
     fn test_resolve() {
-        let mut protag_erg = HashMap::<Kind, u32>::new();
-        let mut antag_erg = HashMap::<Kind, u32>::new();
+        let mut protag_erg = HashMap::<Kind, CostType>::new();
+        let mut antag_erg = HashMap::<Kind, CostType>::new();
 
         let protag_a_attr = [9, 1, 9, 1];
         let protag_b_attr = [5, 5, 5, 5];

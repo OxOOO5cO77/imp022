@@ -4,14 +4,15 @@ use tokio::signal;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 
-use shared_net::{VClientMode, VIdMessage, VRoute, VRoutedMessage, VSizedBuffer};
-use shared_net::op;
+use shared_net::{op, VClientMode, IdMessage, RoutedMessage, VSizedBuffer};
 
 #[derive(Clone)]
 struct NoContext;
 
 #[tokio::main]
 async fn main() {
+    println!("[Drawbridge] START");
+
     let mut args = env::args();
     let _ = args.next(); // program name
     let iface_to_courtyard = args.next().unwrap_or("[::1]:12345".to_string());
@@ -26,46 +27,47 @@ async fn main() {
     tokio::spawn(courtyard_client);
 
     let _ = signal::ctrl_c().await;
+    
+    println!("[Drawbridge] END");
 }
 
-fn process_drawbridge(_context: NoContext, tx: UnboundedSender<VRoutedMessage>, msg: VIdMessage) -> bool {
+fn process_drawbridge(_context: NoContext, tx: UnboundedSender<RoutedMessage>, msg: IdMessage) -> bool {
     let id = msg.id;
     let mut buf = msg.buf;
-    match buf.pull_command() {
+    match buf.pull::<op::Command>() {
         op::Command::Authorize => v_authorize(&tx, id, &mut buf),
         _ => false
     }
 }
 
-fn v_authorize(tx: &UnboundedSender<VRoutedMessage>, id: u8, buf: &mut VSizedBuffer) -> bool {
+fn v_authorize(tx: &UnboundedSender<RoutedMessage>, id: u8, buf: &mut VSizedBuffer) -> bool {
     let mut out = VSizedBuffer::new(256);
-    out.push_route(op::Route::Any);
-    out.push_flavor(op::Flavor::Lookout);
-    out.push_command(op::Command::Authorize);
-    out.push_u8(&id);
+    out.push(&op::Route::Any(op::Flavor::Lookout));
+    out.push(&op::Command::Authorize);
+    out.push(&id);
     out.xfer_bytes(buf);
 
-    tx.send(VRoutedMessage { route: VRoute::Local, buf: out }).is_ok()
+    tx.send(RoutedMessage { route: op::Route::Local, buf: out }).is_ok()
 }
 
-fn process_courtyard(_context: NoContext, tx: UnboundedSender<VRoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
-    if let op::Command::Authorize = buf.pull_command() {
+fn process_courtyard(_context: NoContext, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
+    if let op::Command::Authorize = buf.pull::<op::Command>() {
         c_authorize(&tx, &mut buf)
     } else {
         VClientMode::Continue
     }
 }
 
-fn c_authorize(tx: &UnboundedSender<VRoutedMessage>, buf: &mut VSizedBuffer) -> VClientMode {
+fn c_authorize(tx: &UnboundedSender<RoutedMessage>, buf: &mut VSizedBuffer) -> VClientMode {
     let mut out = VSizedBuffer::new(256);
-    out.push_command(op::Command::Authorize);
+    out.push(&op::Command::Authorize);
 
-    let _ = buf.pull_u8();//discard
-    let route_id = buf.pull_u8();
+    let _ = buf.pull::<u8>();//discard
+    let route_id = buf.pull::<u8>();
 
     out.xfer_bytes(buf);
 
-    if tx.send(VRoutedMessage { route: VRoute::One(route_id), buf: out }).is_err() {
+    if tx.send(RoutedMessage { route: op::Route::One(route_id), buf: out }).is_err() {
         VClientMode::Disconnect
     } else {
         VClientMode::Continue

@@ -1,13 +1,19 @@
 use std::cmp::min;
 use std::mem::size_of;
 
-type SizeType = u16;
+pub trait Bufferable {
+    fn push_into(&self, buf: &mut VSizedBuffer);
+    fn pull_from(buf: &mut VSizedBuffer) -> Self;
+    fn size_in_buffer(&self) -> usize;
+}
 
 pub struct VSizedBuffer {
     pub(crate) raw: Vec<u8>,
     rpos: usize,
     wpos: usize,
 }
+
+type SizeMarkerType = u16;
 
 impl VSizedBuffer {
     pub fn new(size: usize) -> Self {
@@ -19,13 +25,13 @@ impl VSizedBuffer {
     }
 
     pub const fn sizesize() -> usize {
-        size_of::<SizeType>()
+        size_of::<SizeMarkerType>()
     }
 
     pub fn extract_size(buf: &[u8]) -> usize {
-        let mut size_buf = [0_u8; size_of::<SizeType>()];
-        size_buf.copy_from_slice(&buf[..size_of::<SizeType>()]);
-        SizeType::from_be_bytes(size_buf) as usize
+        let mut size_buf = [0_u8; size_of::<SizeMarkerType>()];
+        size_buf.copy_from_slice(&buf[..size_of::<SizeMarkerType>()]);
+        SizeMarkerType::from_be_bytes(size_buf) as usize
     }
 
     pub fn rewind(&mut self) -> &mut Self {
@@ -52,7 +58,7 @@ impl VSizedBuffer {
     }
 
     pub fn set_size(&mut self, new_size: usize) -> &mut Self {
-        self.raw[..size_of::<SizeType>()].copy_from_slice(&SizeType::to_be_bytes(new_size as SizeType));
+        self.raw[..size_of::<SizeMarkerType>()].copy_from_slice(&SizeMarkerType::to_be_bytes(new_size as SizeMarkerType));
         self
     }
 
@@ -68,64 +74,6 @@ impl VSizedBuffer {
         self
     }
 
-    pub fn push_u8(&mut self, push: &u8) -> &mut Self {
-        self.raw[self.wpos] = *push;
-        self.stored(size_of::<u8>())
-    }
-    pub fn pull_u8(&mut self) -> u8 {
-        let result = self.raw[self.rpos];
-        self.visited(size_of::<u8>());
-        result
-    }
-    pub fn xfer_u8(&mut self, push: &mut VSizedBuffer) -> &mut Self {
-        self.push_u8(&push.pull_u8())
-    }
-
-    pub fn push_u16(&mut self, push: &u16) -> &mut Self {
-        self.raw[self.wpos..self.wpos + size_of::<u16>()].copy_from_slice(&u16::to_be_bytes(*push));
-        self.stored(size_of::<u16>())
-    }
-    pub fn pull_u16(&mut self) -> u16 {
-        let mut buf = [0_u8; size_of::<u16>()];
-        buf.copy_from_slice(&self.raw[self.rpos..self.rpos + size_of::<u16>()]);
-        let result = u16::from_be_bytes(buf);
-        self.visited(size_of::<u16>());
-        result
-    }
-    pub fn xfer_u16(&mut self, push: &mut VSizedBuffer) -> &mut Self {
-        self.push_u16(&push.pull_u16())
-    }
-
-    pub fn push_u64(&mut self, push: &u64) -> &mut Self {
-        self.raw[self.wpos..self.wpos + size_of::<u64>()].copy_from_slice(&u64::to_be_bytes(*push));
-        self.stored(size_of::<u64>())
-    }
-    pub fn pull_u64(&mut self) -> u64 {
-        let mut buf = [0_u8; size_of::<u64>()];
-        buf.copy_from_slice(&self.raw[self.rpos..self.rpos + size_of::<u64>()]);
-        let result = u64::from_be_bytes(buf);
-        self.visited(size_of::<u64>());
-        result
-    }
-    pub fn xfer_u64(&mut self, push: &mut VSizedBuffer) -> &mut Self {
-        self.push_u64(&push.pull_u64())
-    }
-
-    pub fn push_u128(&mut self, push: &u128) -> &mut Self {
-        self.raw[self.wpos..self.wpos + size_of::<u128>()].copy_from_slice(&u128::to_be_bytes(*push));
-        self.stored(size_of::<u128>())
-    }
-    pub fn pull_u128(&mut self) -> u128 {
-        let mut buf = [0_u8; size_of::<u128>()];
-        buf.copy_from_slice(&self.raw[self.rpos..self.rpos + size_of::<u128>()]);
-        let result = u128::from_be_bytes(buf);
-        self.visited(size_of::<u128>());
-        result
-    }
-    pub fn xfer_u128(&mut self, push: &mut VSizedBuffer) -> &mut Self {
-        self.push_u128(&push.pull_u128())
-    }
-
     pub fn push_bytes(&mut self, push: &[u8]) -> &mut Self {
         let smaller = min(self.capacity(), push.len());
         self.raw[self.wpos..smaller + self.wpos].copy_from_slice(&push[..smaller]);
@@ -137,76 +85,129 @@ impl VSizedBuffer {
         self.visited(bytes);
         slice
     }
-    pub fn pull_bytes(&mut self) -> Vec<u8> {
+    pub fn drain_bytes(&mut self) -> Vec<u8> {
         self.pull_bytes_n(self.remaining())
     }
     pub fn xfer_bytes(&mut self, push: &mut VSizedBuffer) -> &mut Self {
-        self.push_bytes(&push.pull_bytes())
+        self.push_bytes(&push.drain_bytes())
     }
 
-    pub fn push_string(&mut self, push: &str) -> &mut Self {
-        self.push_u8(&(push.len() as u8));
-        self.push_bytes(push.as_bytes())
+    pub fn push<T: Bufferable>(&mut self, ob: &T) -> &mut Self {
+        ob.push_into(self);
+        self
     }
-    pub fn pull_string(&mut self) -> String {
-        let len = self.pull_u8() as usize;
-        String::from_utf8(self.pull_bytes_n(len)).unwrap_or_default()
+    pub fn pull<T: Bufferable>(&mut self) -> T {
+        T::pull_from(self)
     }
-    pub fn xfer_string(&mut self, push: &mut VSizedBuffer) -> &mut Self {
-        self.push_string(&push.pull_string())
+    pub fn xfer<T: Bufferable>(&mut self, other: &mut VSizedBuffer) -> &mut Self {
+        self.push(&other.pull::<T>())
+    }
+}
+
+macro_rules! bufferable_ints {
+    (for $($t:ty),+) => {
+        $(
+        impl Bufferable for $t {
+            fn push_into(&self, buf: &mut VSizedBuffer) {
+                buf.raw[buf.wpos..buf.wpos + size_of::<Self>()].copy_from_slice(&Self::to_be_bytes(*self));
+                buf.stored(size_of::<Self>());
+            }
+
+            fn pull_from(buf: &mut VSizedBuffer) -> Self {
+                let mut temp_buf = [0_u8; size_of::<Self>()];
+                temp_buf.copy_from_slice(&buf.raw[buf.rpos..buf.rpos + size_of::<Self>()]);
+                let result = Self::from_be_bytes(temp_buf);
+                buf.visited(size_of::<Self>());
+                result
+            }
+
+            fn size_in_buffer(&self) -> usize {
+                size_of::<Self>()
+            }
+        }
+        )*
+    }
+}
+
+bufferable_ints!(for u8, u16, u32, u64, u128);
+
+impl Bufferable for String {
+    fn push_into(&self, buf: &mut VSizedBuffer) {
+        (self.len() as u8).push_into(buf);
+        let smaller = min(buf.capacity(), self.len());
+        let bytes = self.as_bytes();
+        buf.raw[buf.wpos..smaller + buf.wpos].copy_from_slice(&bytes[..smaller]);
+        buf.stored(bytes.len());
+    }
+
+    fn pull_from(buf: &mut VSizedBuffer) -> String {
+        let len = u8::pull_from(buf) as usize;
+        let mut slice = vec![0; len];
+        slice.copy_from_slice(&buf.raw[buf.rpos..buf.rpos + len]);
+        buf.visited(len);
+        String::from_utf8(slice).unwrap_or_default()
+    }
+
+    fn size_in_buffer(&self) -> usize {
+        self.len() + 1
     }
 }
 
 #[cfg(test)]
 mod test {
     mod test_vsizedbuffer {
+        use crate::sizedbuffers::Bufferable;
         use crate::VSizedBuffer;
 
         #[test]
         fn test_u8() {
             let mut buf = VSizedBuffer::new(64);
-            buf.push_u8(&123);
-            let result = buf.pull_u8();
+            let orig = 123_u8;
+            buf.push(&orig);
+            let result = buf.pull::<u8>();
 
-            assert_eq!(buf.size(), 1);
-            assert_eq!(result, 123);
+            assert_eq!(buf.size(), orig.size_in_buffer());
+            assert_eq!(orig, result);
         }
 
         #[test]
         fn test_u16() {
             let mut buf = VSizedBuffer::new(64);
-            buf.push_u16(&1_234);
-            let result = buf.pull_u16();
+            let orig = 1_234_u16;
+            buf.push(&orig);
+            let result = buf.pull::<u16>();
 
-            assert_eq!(buf.size(), 2);
-            assert_eq!(result, 1_234);
+            assert_eq!(buf.size(), orig.size_in_buffer());
+            assert_eq!(orig, result);
         }
 
         #[test]
         fn test_u64() {
             let mut buf = VSizedBuffer::new(64);
-            buf.push_u64(&1_234_567);
-            let result = buf.pull_u64();
+            let orig = 1_234_567_u64;
+            buf.push(&orig);
+            let result = buf.pull::<u64>();
 
-            assert_eq!(buf.size(), 8);
-            assert_eq!(result, 1_234_567);
+            assert_eq!(buf.size(), orig.size_in_buffer());
+            assert_eq!(orig, result);
         }
 
         #[test]
         fn test_u128() {
             let mut buf = VSizedBuffer::new(64);
-            buf.push_u128(&1_234_567_890);
-            let result = buf.pull_u128();
+            let orig = 1_234_567_890_u128;
+            buf.push(&orig);
+            let result = buf.pull::<u128>();
 
-            assert_eq!(buf.size(), 16);
-            assert_eq!(result, 1_234_567_890);
+            assert_eq!(buf.size(), orig.size_in_buffer());
+            assert_eq!(orig, result);
         }
 
         #[test]
         fn test_bytes() {
             let mut target = VSizedBuffer::new(64);
             target.push_bytes(&[1, 2, 3, 4, 5, 6, 7, 8, 9]);
-            let result = target.pull_bytes();
+            let result = target.drain_bytes();
 
             assert_eq!(target.size(), 9);
             assert_eq!(result, &[1, 2, 3, 4, 5, 6, 7, 8, 9]);
@@ -225,7 +226,7 @@ mod test {
             target.xfer_bytes(&mut source);
             assert_eq!(target.size(), 9);
 
-            let result = target.pull_bytes();
+            let result = target.drain_bytes();
 
             assert_eq!(result.len(), 9);
             assert_eq!(result, &[1, 2, 3, 4, 5, 6, 7, 8, 9]);
@@ -245,7 +246,7 @@ mod test {
             assert_eq!(source.remaining(), 2);
             assert_eq!(target.size(), 7);
 
-            let result = target.pull_bytes();
+            let result = target.drain_bytes();
 
             assert_eq!(result.len(), 7);
             assert_eq!(result, &[1, 2, 3, 4, 5, 6, 7]);
@@ -256,21 +257,21 @@ mod test {
             let mut source = VSizedBuffer::new(64);
             let mut target = VSizedBuffer::new(64);
 
-            source.push_string("This is a test");
+            source.push(&"This is a test".to_string());
             let mut total_len = "This is a test".len() + 1;
             assert_eq!(source.size(), total_len);
 
-            source.push_string(String::from("So is this").as_str());
+            source.push(&String::from("So is this"));
             total_len += "So is this".len() + 1;
             assert_eq!(source.size(), total_len);
 
-            let test1 = source.pull_string();
-            assert_eq!(test1, "This is a test");
+            let test1 = source.pull::<String>();
+            assert_eq!("This is a test", test1);
 
-            target.xfer_string(&mut source);
+            target.xfer::<String>(&mut source);
 
-            let test2 = target.pull_string();
-            assert_eq!(test2, "So is this");
+            let test2 = target.pull::<String>();
+            assert_eq!("So is this", test2);
         }
     }
 }

@@ -1,0 +1,14 @@
+[package]
+name = "smithy"
+description = "Data manipulator"
+version = "0.1.0"
+edition = "2021"
+authors = ["Scott Barcik <oxooo5co77@impending.org>"]
+
+[dependencies]
+ron = { version = "0.8.1" }
+serde = { version = "1.0.203", features = ["derive"] }
+walkdir = { version = "2.5.0" }
+shared-data = { path = "../shared-data" }
+hall = { path = "../hall" }
+vagabond = { path = "../vagabond" }

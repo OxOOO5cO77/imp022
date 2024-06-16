@@ -1,7 +1,0 @@
-Card(
-    id: (Set(1), Common, 1),
-    name: "Common 1",
-    text: "",
-    kind: Analyze,
-    cost: 1,
-)

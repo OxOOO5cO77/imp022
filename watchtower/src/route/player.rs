@@ -1,55 +1,36 @@
-use axum::extract::State;
+use std::collections::HashMap;
+
+use axum::extract::{Path, State};
 use axum::Json;
 use axum::response::IntoResponse;
+use shared_data::types::SeedType;
 
-use shared_data::rest::player::{PlayerRequest, PlayerResponse};
+use watchtower::rest::player::PlayerBioResponse;
 
 use crate::AppState;
-use crate::data::player::player_builder::{PlayerBuilder, PlayerPartBuilder};
 
-pub(crate) async fn post(State(state): State<AppState>, Json(request): Json<PlayerRequest>) -> impl IntoResponse {
-    let player = PlayerBuilder {
-        access: PlayerPartBuilder::new(&state.data_manager, request.access),
-        breach: PlayerPartBuilder::new(&state.data_manager, request.breach),
-        compute: PlayerPartBuilder::new(&state.data_manager, request.compute),
-        disrupt: PlayerPartBuilder::new(&state.data_manager, request.disrupt),
-        build: PlayerPartBuilder::new(&state.data_manager, request.build),
-        build_values: PlayerPartBuilder::new(&state.data_manager, request.build_values),
-        category: PlayerPartBuilder::new(&state.data_manager, request.category),
-        category_values: PlayerPartBuilder::new(&state.data_manager, request.category_values),
-    }.build_player(&state.data_manager);
+pub(crate) async fn get(State(state): State<AppState>, Path(params): Path<HashMap<String, String>>) -> impl IntoResponse {
+    let seed_string = params.get("seed").cloned().unwrap_or_default();
+    let seed = SeedType::from_str_radix(&seed_string,16).unwrap_or_default();
+    let player_bio = state.bio_manager.generate_bio(seed);
 
-    match &player {
-        Some(p) => println!("[Backend] /player => {} ({},{},{})", p.name, p.birthplace.0, p.birthplace.1, p.birthplace.2),
-        None => println!("[Backend] /player => INVALID"),
+    match &player_bio {
+        Some(p) => println!("[Watchtower] /player/{seed_string} => {} ({},{},{})", p.name, p.birthplace.0, p.birthplace.1, p.birthplace.2),
+        None => println!("[Watchtower] /player/{seed_string} => INVALID"),
     }
 
-    Json(PlayerResponse {
-        player
+    Json(PlayerBioResponse {
+        player_bio
     })
 }
 
 #[cfg(test)]
 mod test {
-    use crate::route::player::PlayerRequest;
-
     #[tokio::test]
     async fn test_player() -> Result<(), httpc_test::Error> {
         let client = httpc_test::new_client("http://127.0.0.1:23235")?;
 
-        let request = PlayerRequest {
-            access: 1234567890,
-            breach: 1234567891,
-            compute: 1234567892,
-            disrupt: 1234567893,
-            build: 1234567894,
-            build_values: 1234567895,
-            category: 1234567896,
-            category_values: 1234567897,
-        };
-
-        let payload = serde_json::to_string(&request)?;
-        client.do_post("/player", (payload, "application/json")).await?.print().await?;
+        client.do_get("/player/1234567890").await?.print().await?;
 
         Ok(())
     }

@@ -7,7 +7,7 @@ use tokio::signal;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::time::{Duration, sleep};
 
-use crate::{VRoutedMessage, VSizedBuffer};
+use crate::{RoutedMessage, VSizedBuffer};
 use crate::op;
 use crate::util::write_buf;
 
@@ -18,9 +18,9 @@ pub enum VClientMode {
     Shutdown,
 }
 
-type FnProcess<T> = fn(context: T, UnboundedSender<VRoutedMessage>, msg: VSizedBuffer) -> VClientMode;
+type FnProcess<T> = fn(context: T, UnboundedSender<RoutedMessage>, msg: VSizedBuffer) -> VClientMode;
 
-pub async fn async_client<T>(context: T, flavor: op::Flavor, external_tx: UnboundedSender<VRoutedMessage>, mut external_rx: UnboundedReceiver<VRoutedMessage>, interface: String, process: FnProcess<T>) -> Result<(),()> where T: Clone {
+pub async fn async_client<T>(context: T, flavor: op::Flavor, external_tx: UnboundedSender<RoutedMessage>, mut external_rx: UnboundedReceiver<RoutedMessage>, interface: String, process: FnProcess<T>) -> Result<(),()> where T: Clone {
     let mut addr = interface.to_socket_addrs().expect("Invalid interface for async_client");
     let addr = addr.next().unwrap();
 
@@ -84,8 +84,8 @@ async fn handle_client_connection(addr: &SocketAddr, flavor: op::Flavor) -> Opti
     loop {
         if let Ok(mut stream) = TcpStream::connect(addr).await {
             let mut buf = VSizedBuffer::new(32);
-            buf.push_command(op::Command::Register);
-            buf.push_flavor(flavor);
+            buf.push(&op::Command::Register);
+            buf.push(&flavor);
 
             if write_buf(&mut stream, &buf).await.is_err() {
                 let _ = stream.shutdown().await;

@@ -3,13 +3,16 @@ use std::env;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 
-use shared_net::{VIdMessage, VRoute, VRoutedMessage, VSizedBuffer};
+use shared_net::{op, IdMessage, RoutedMessage, VSizedBuffer};
+use shared_net::sizedbuffers::Bufferable;
 
 #[derive(Clone)]
 struct NoContext;
 
 #[tokio::main]
 async fn main() {
+    println!("[Courtyard] START");
+
     let mut args = env::args();
     let _ = args.next(); // program name
     let interface = args.next().unwrap_or("[::]:12345".to_string());
@@ -17,23 +20,21 @@ async fn main() {
     let (dummy_tx, dummy_rx) = mpsc::unbounded_channel();
 
     let _ = shared_net::async_server(NoContext, dummy_tx, dummy_rx, interface, process).await;
+
+    println!("[Courtyard] END");
 }
 
-fn process(_context: NoContext, tx: UnboundedSender<VRoutedMessage>, msg: VIdMessage) -> bool {
+fn process(_context: NoContext, tx: UnboundedSender<RoutedMessage>, msg: IdMessage) -> bool {
     let mut in_buf = msg.buf;
-    let op = in_buf.pull_u8();
-    let arg = in_buf.pull_u8();
+    let route = in_buf.pull::<op::Route>();
+    let command = in_buf.pull::<op::Command>();
 
-    if let Some(route) = VRoute::from_op(op, arg) {
-        let mut buf = VSizedBuffer::new(in_buf.remaining() + 2);
-        buf.xfer_u8(&mut in_buf);
-        buf.push_u8(&msg.id);
-        buf.xfer_bytes(&mut in_buf);
+    let mut out_buf = VSizedBuffer::new(command.size_in_buffer() + msg.id.size_in_buffer() + in_buf.remaining());
+    out_buf.push(&command);
+    out_buf.push(&msg.id);
+    out_buf.xfer_bytes(&mut in_buf);
 
-        println!("[Courtyard] [{}] {:?} ==> {:?} **{} bytes**", msg.id, buf.pull_command(), route, buf.size());
+    println!("[Courtyard] [{}] {:?} ==> {:?} **{} bytes**", msg.id, command, route, out_buf.size());
 
-        tx.send(VRoutedMessage { route, buf }).is_ok()
-    } else {
-        false
-    }
+    tx.send(RoutedMessage { route, buf: out_buf }).is_ok()
 }
