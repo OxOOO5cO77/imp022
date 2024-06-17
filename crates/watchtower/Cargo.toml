@@ -1,6 +1,6 @@
 [package]
 name = "watchtower"
-description = "REST API for data objects"
+description = "Watchtower is the REST API for string data objects."
 version = "0.1.0"
 edition = "2021"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]

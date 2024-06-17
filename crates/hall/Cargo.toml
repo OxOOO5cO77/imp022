@@ -1,6 +1,6 @@
 [package]
 name = "hall"
-description = "Game service"
+description = "Hall is the main gameplay service."
 version = "0.1.0"
 edition = "2021"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]

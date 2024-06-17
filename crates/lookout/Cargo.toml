@@ -1,6 +1,6 @@
 [package]
 name = "lookout"
-description = "User authentication service"
+description = "Lookout is the user authentication service."
 version = "0.1.0"
 edition = "2021"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]

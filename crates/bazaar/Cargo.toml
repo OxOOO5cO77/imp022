@@ -1,6 +1,6 @@
 [package]
 name = "bazaar"
-description = "Commerce service"
+description = "Bazaar is the game object commerce service."
 version = "0.1.0"
 edition = "2021"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]

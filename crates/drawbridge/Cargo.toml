@@ -1,6 +1,6 @@
 [package]
 name = "drawbridge"
-description = "Client connection service"
+description = "Drawbridge is the client login service."
 version = "0.1.0"
 edition = "2021"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]
