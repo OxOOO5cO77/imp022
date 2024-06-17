@@ -2,6 +2,7 @@ use std::mem::discriminant;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 use tokio::sync::mpsc;
+use shared_data::types::AuthType;
 
 use crate::manager::NetworkManager;
 use crate::network::client_drawbridge;
@@ -27,7 +28,7 @@ impl Plugin for LoginPlugin {
 #[derive(Resource)]
 struct DrawbridgeHandoff {
     iface: String,
-    auth: u128,
+    auth: AuthType,
 }
 
 impl DrawbridgeHandoff {

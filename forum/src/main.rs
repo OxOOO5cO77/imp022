@@ -2,6 +2,7 @@ use std::env;
 
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
+use shared_data::types::NodeType;
 
 use shared_net::{op, VClientMode, RoutedMessage, VSizedBuffer};
 
@@ -37,7 +38,7 @@ fn process_courtyard(_context: NoContext, tx: UnboundedSender<RoutedMessage>, mu
 }
 
 fn c_chat(tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
-    let _gate = buf.pull::<u8>(); // discard gate id
+    let _gate = buf.pull::<NodeType>(); // discard gate id
 
     let mut out = VSizedBuffer::new(256);
     out.push(&op::Route::All(op::Flavor::Gate));
@@ -48,7 +49,7 @@ fn c_chat(tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
 }
 
 fn c_dm(tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
-    let _gate = buf.pull::<u8>();
+    let _gate = buf.pull::<NodeType>();
 
     let sender = buf.pull::<String>();
     let sendee = buf.pull::<String>();

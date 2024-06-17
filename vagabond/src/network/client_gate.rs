@@ -6,6 +6,7 @@ use tokio::task::JoinHandle;
 
 use hall::message::gamebuild::{GameBuildRequest, GameBuildResponse};
 use hall::message::gamestart::{GameStartRequest, GameStartResponse};
+use shared_data::types::{AuthType, GameIdType, PartType};
 use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 use shared_net::sizedbuffers::Bufferable;
 
@@ -17,8 +18,8 @@ pub(crate) enum GateCommand {
 
 #[derive(Resource)]
 pub(crate) struct GateIFace {
-    pub(crate) auth: u128,
-    pub(crate) game_id: u128,
+    pub(crate) auth: AuthType,
+    pub(crate) game_id: GameIdType,
     pub(crate) gtx: UnboundedSender<RoutedMessage>,
     pub(crate) grx: UnboundedReceiver<GateCommand>,
 }
@@ -120,7 +121,7 @@ impl GateIFace {
         self.send(out);
     }
 
-    pub fn send_gamebuild(&self, game_id: u128, parts: [u64; 8]) {
+    pub fn send_gamebuild(&self, game_id: GameIdType, parts: [PartType; 8]) {
         let command = op::Command::GameBuild;
         let request = GameBuildRequest {
             game_id,

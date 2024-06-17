@@ -6,6 +6,7 @@ use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
+use shared_data::types::AuthType;
 
 use shared_net::{op, VClientMode, RoutedMessage, VSizedBuffer};
 use shared_net::op::Route;
@@ -13,7 +14,7 @@ use shared_net::op::Route;
 pub(crate) struct AuthInfo {
     pub(crate) ip: IpAddr,
     pub(crate) port: u16,
-    pub(crate) auth: u128,
+    pub(crate) auth: AuthType,
 }
 
 #[derive(Resource)]
@@ -50,7 +51,7 @@ fn d_authorize(context: DrawbridgeClient, mut buf: VSizedBuffer) -> VClientMode 
     let ip = IpAddr::from(ip_buf);
 
     let port = buf.pull::<u16>();
-    let auth = buf.pull::<u128>();
+    let auth = buf.pull::<AuthType>();
 
     println!("IP: {} Port: {}", ip, port);
 

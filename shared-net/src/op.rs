@@ -70,7 +70,6 @@ impl fmt::Debug for Route {
     }
 }
 
-
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(test, derive(EnumIter))]

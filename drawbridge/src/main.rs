@@ -3,6 +3,7 @@ use std::env;
 use tokio::signal;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
+use shared_data::types::NodeType;
 
 use shared_net::{op, VClientMode, IdMessage, RoutedMessage, VSizedBuffer};
 
@@ -27,7 +28,7 @@ async fn main() {
     tokio::spawn(courtyard_client);
 
     let _ = signal::ctrl_c().await;
-    
+
     println!("[Drawbridge] END");
 }
 
@@ -62,8 +63,8 @@ fn c_authorize(tx: &UnboundedSender<RoutedMessage>, buf: &mut VSizedBuffer) -> V
     let mut out = VSizedBuffer::new(256);
     out.push(&op::Command::Authorize);
 
-    let _ = buf.pull::<u8>();//discard
-    let route_id = buf.pull::<u8>();
+    let _ = buf.pull::<NodeType>();//discard
+    let route_id = buf.pull::<NodeType>();
 
     out.xfer_bytes(buf);
 

@@ -8,12 +8,14 @@ use tokio::signal;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 
+use gate::message::gate_header::GateHeader;
+use shared_data::types::{AuthType, NodeType, TimestampType, UserType};
 use shared_net::{IdMessage, op, RoutedMessage, VClientMode, VSizedBuffer};
 
 struct GateUser {
     name: String,
-    user: u128,
-    id: u8,
+    user: UserType,
+    vagabond: NodeType,
 }
 
 struct Gate {
@@ -73,11 +75,13 @@ fn process_vagabond(context: Arc<Mutex<Gate>>, tx: UnboundedSender<RoutedMessage
 }
 
 fn v_hello(context: Arc<Mutex<Gate>>, id: u8, buf: &mut VSizedBuffer) -> bool {
-    let auth = buf.pull::<u128>();
+    let auth = buf.pull::<AuthType>();
     if let Some(user) = context.lock().unwrap().map.get_mut(&auth) {
-        user.id = id;
+        user.vagabond = id;
         true
-    } else { false }
+    } else {
+        false
+    }
 }
 
 fn v_marshall_username(context: Arc<Mutex<Gate>>, flavor: op::Flavor, command: op::Command, tx: &UnboundedSender<RoutedMessage>, buf: &mut VSizedBuffer) -> bool {
@@ -95,14 +99,12 @@ fn v_marshall_username(context: Arc<Mutex<Gate>>, flavor: op::Flavor, command: o
 }
 
 fn v_marshall(context: Arc<Mutex<Gate>>, flavor: op::Flavor, command: op::Command, tx: &UnboundedSender<RoutedMessage>, id: u8, buf: &mut VSizedBuffer) -> bool {
-    let auth = buf.pull::<u128>();
+    let auth = buf.pull::<AuthType>();
     if let Some(user) = context.lock().unwrap().map.get(&auth) {
         let mut out = VSizedBuffer::new(256);
         out.push(&op::Route::Any(flavor));
         out.push(&command);
-        out.push(&id);
-        out.push(&user.user);
-        out.push(&auth);
+        out.push(&GateHeader::new(id, user.user, auth));
         out.xfer_bytes(buf);
 
         tx.send(RoutedMessage { route: op::Route::Local, buf: out }).is_ok()
@@ -138,23 +140,22 @@ fn convert_to_v6(iface: SocketAddr) -> Ipv6Addr {
 }
 
 fn c_authorize(context: Arc<Mutex<Gate>>, buf: &mut VSizedBuffer) -> VClientMode {
-    println!("c_authorize");
-    let _ = buf.pull::<u8>(); // auth (discard)
+    let _ = buf.pull::<NodeType>(); // auth (discard)
 
     let mut out = VSizedBuffer::new(256);
 
-    let id = buf.pull::<u8>();
+    let id = buf.pull::<NodeType>();
     out.push(&op::Route::One(id));
     out.push(&op::Command::Authorize);
-    out.xfer::<u8>(buf);
+    out.xfer::<NodeType>(buf);
 
-    let auth = buf.pull::<u128>();
-    let user = buf.pull::<u128>();
+    let user = buf.pull::<UserType>();
+    let auth = buf.pull::<AuthType>();
     let name = buf.pull::<String>();
 
     let mut context = context.lock().unwrap();
 
-    context.map.insert(auth, GateUser { name, user, id: 0 });
+    context.map.insert(auth, GateUser { name, user, vagabond: 0 });
 
     let ipv6 = convert_to_v6(context.myface);
     out.push_bytes(&ipv6.octets());
@@ -172,7 +173,7 @@ fn c_authorize(context: Arc<Mutex<Gate>>, buf: &mut VSizedBuffer) -> VClientMode
     update.push(&user);
     update.push(&"login".to_string());
 
-    let now = Utc::now().timestamp() as u128;
+    let now = Utc::now().timestamp() as TimestampType;
     update.push(&now);
 
     if context.reply.send(RoutedMessage { route: op::Route::Local, buf: update }).is_err() {
@@ -183,13 +184,13 @@ fn c_authorize(context: Arc<Mutex<Gate>>, buf: &mut VSizedBuffer) -> VClientMode
 }
 
 fn c_marshall_name(command: op::Command, context: Arc<Mutex<Gate>>, tx: &UnboundedSender<RoutedMessage>, buf: &mut VSizedBuffer) -> VClientMode {
-    let _ = buf.pull::<u8>(); // forum (discard)
+    let _ = buf.pull::<NodeType>(); // forum (discard)
 
     let sendee = buf.pull::<String>();
 
     for (_, user) in context.lock().unwrap().map.iter_mut() {
         if user.name == sendee {
-            return send_to_client(op::Route::One(user.id), command, tx, buf);
+            return send_to_client(op::Route::One(user.vagabond), command, tx, buf);
         }
     }
 
@@ -197,14 +198,14 @@ fn c_marshall_name(command: op::Command, context: Arc<Mutex<Gate>>, tx: &Unbound
 }
 
 fn c_marshall_one(command: op::Command, tx: &UnboundedSender<RoutedMessage>, buf: &mut VSizedBuffer) -> VClientMode {
-    let _ = buf.pull::<u8>(); // sender (discard)
-    let vagabond = buf.pull::<u8>();
+    let _ = buf.pull::<NodeType>(); // sender (discard)
+    let vagabond = buf.pull::<NodeType>();
 
     send_to_client(op::Route::One(vagabond), command, tx, buf)
 }
 
 fn c_marshall_all(command: op::Command, tx: &UnboundedSender<RoutedMessage>, buf: &mut VSizedBuffer) -> VClientMode {
-    let _ = buf.pull::<u8>(); // sender (discard)
+    let _ = buf.pull::<NodeType>(); // sender (discard)
 
     send_to_client(op::Route::All(op::Flavor::Vagabond), command, tx, buf)
 }

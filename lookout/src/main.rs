@@ -5,6 +5,7 @@ use sqlx::postgres::{PgPool, PgPoolOptions};
 use sqlx::types::Uuid;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
+use shared_data::types::{PasswordType, NodeType, UserType};
 
 use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 
@@ -49,10 +50,10 @@ struct User {
 }
 
 fn c_authorize(context: Arc<Mutex<Lookout>>, tx: UnboundedSender<RoutedMessage>, buf: &mut VSizedBuffer) {
-    let drawbridge = buf.pull::<u8>();
-    let vagabond = buf.pull::<u8>();
-    let user_hash = buf.pull::<u128>();
-    let pass_hash = buf.pull::<u128>();
+    let drawbridge = buf.pull::<NodeType>();
+    let vagabond = buf.pull::<NodeType>();
+    let user_hash = buf.pull::<UserType>();
+    let pass_hash = buf.pull::<PasswordType>();
 
     let pool = context.lock().unwrap().pool.clone();
 
@@ -65,7 +66,7 @@ fn c_authorize(context: Arc<Mutex<Lookout>>, tx: UnboundedSender<RoutedMessage>,
 
                 if pass_hash == pass {
                     println!("[Lookout] ALLOW: {}", user.name);
-                    let guid = Uuid::new_v4().as_u128();
+                    let auth = Uuid::new_v4().as_u128();
 
                     let mut out = VSizedBuffer::new(256);
                     out.push(&op::Route::Any(op::Flavor::Gate));
@@ -73,8 +74,8 @@ fn c_authorize(context: Arc<Mutex<Lookout>>, tx: UnboundedSender<RoutedMessage>,
                     out.push(&drawbridge);
                     out.push(&vagabond);
 
-                    out.push(&guid);
                     out.push(&user_hash);
+                    out.push(&auth);
                     out.push(&user.name);
 
                     let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });

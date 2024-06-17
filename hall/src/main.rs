@@ -7,9 +7,11 @@ use rand::prelude::*;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 
+use gate::message::gate_header::GateHeader;
 use hall::data::player::Player;
 use hall::message::gamebuild::{GameBuildRequest, GameBuildResponse};
 use hall::message::gamestart::{GameStartRequest, GameStartResponse};
+use shared_data::types::{AuthType, GameIdType, PartType, NodeType, UserType};
 use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 use shared_net::sizedbuffers::Bufferable;
 
@@ -19,17 +21,17 @@ use crate::manager::player_builder::PlayerBuilder;
 pub(crate) mod manager;
 
 struct Hall {
-    games: HashMap<u128, Game>,
+    games: HashMap<GameIdType, Game>,
     data_manager: DataManager,
 }
 
 struct Game {
-    users: HashMap<u128, User>,
+    users: HashMap<UserType, User>,
 }
 
 struct User {
-    auth: u128,
-    parts: Vec<u64>,
+    auth: AuthType,
+    parts: Vec<PartType>,
     player: Option<Player>,
 }
 
@@ -46,14 +48,12 @@ fn process_courtyard(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessag
 fn c_gamestart(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
     let mut context = context.lock().unwrap();
 
-    let gate = buf.pull::<u8>();
-    let vagabond = buf.pull::<u8>();
-    let user_hash = buf.pull::<u128>();
-    let auth = buf.pull::<u128>();
+    let gate = buf.pull::<NodeType>();
+    let header = buf.pull::<GateHeader>();
     let request = buf.pull::<GameStartRequest>();
 
     let user = User {
-        auth,
+        auth: header.auth,
         parts: thread_rng().gen_iter().take(8).collect(),
         player: None,
     };
@@ -69,9 +69,9 @@ fn c_gamestart(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mu
     }
     let game = context.games.entry(game_id).or_insert_with(|| Game { users: Default::default() });
 
-    game.users.insert(user_hash, user);
+    game.users.insert(header.user, user);
 
-    println!("[Hall] [{:X}] Sending parts to G({})=>V({})", game_id, gate, vagabond);
+    println!("[Hall] [{:X}] Sending parts to G({})=>V({})", game_id, gate, header.vagabond);
 
     let parts = [
         temp_builder.access.convert_to_player_part(),
@@ -91,12 +91,12 @@ fn c_gamestart(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mu
         parts,
     };
 
-    let mut out = VSizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + vagabond.size_in_buffer() + response.size_in_buffer());
+    let mut out = VSizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + header.vagabond.size_in_buffer() + response.size_in_buffer());
 
 
     out.push(&route);
     out.push(&command);
-    out.push(&vagabond);
+    out.push(&header.vagabond);
     out.push(&response);
 
     let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });
@@ -105,10 +105,8 @@ fn c_gamestart(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mu
 fn c_gamebuild(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
     let context = context.lock().unwrap();
 
-    let gate = buf.pull::<u8>();
-    let vagabond = buf.pull::<u8>();
-    let _user = buf.pull::<u128>();
-    let _auth = buf.pull::<u128>();
+    let gate = buf.pull::<NodeType>();
+    let header = buf.pull::<GateHeader>();
     let request = buf.pull::<GameBuildRequest>();
 
     let builder = PlayerBuilder::new(&request.parts, &context.data_manager);
@@ -124,16 +122,16 @@ fn c_gamebuild(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mu
         }
     };
 
-    println!("[Hall] Sending build to G({})=>V({})", gate, vagabond);
+    println!("[Hall] Sending build to G({})=>V({})", gate, header.vagabond);
 
     let route = op::Route::One(gate);
     let command = op::Command::GameBuild;
 
-    let mut out = VSizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + vagabond.size_in_buffer() + response.size_in_buffer());
+    let mut out = VSizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + header.vagabond.size_in_buffer() + response.size_in_buffer());
 
     out.push(&route);
     out.push(&command);
-    out.push(&vagabond);
+    out.push(&header.vagabond);
     out.push(&response);
 
     let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });
@@ -143,15 +141,13 @@ fn c_gamebuild(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mu
 fn c_gameend(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
     let mut context = context.lock().unwrap();
 
-    let gate = buf.pull::<u8>();
-    let vagabond = buf.pull::<u8>();
-    let user_hash = buf.pull::<u128>();
-    let auth = buf.pull::<u128>();
-    let game_id = buf.pull::<u128>();
+    let gate = buf.pull::<NodeType>();
+    let header = buf.pull::<GateHeader>();
+    let game_id = buf.pull::<GameIdType>();
 
     if let Some(game) = context.games.get_mut(&game_id) {
-        match game.users.entry(user_hash) {
-            Entry::Occupied(user) if user.get().auth == auth => game.users.remove(&user_hash),
+        match game.users.entry(header.user) {
+            Entry::Occupied(user) if user.get().auth == header.auth => game.users.remove(&header.user),
             _ => None,
         };
 
@@ -164,7 +160,7 @@ fn c_gameend(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut 
 
     out.push(&op::Route::One(gate));
     out.push(&op::Command::GameEnd);
-    out.push(&vagabond);
+    out.push(&header.vagabond);
 
     let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });
 }

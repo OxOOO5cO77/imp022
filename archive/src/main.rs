@@ -5,6 +5,8 @@ use sqlx::postgres::{PgPool, PgPoolOptions};
 use sqlx::types::Uuid;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
+use gate::message::gate_header::GateHeader;
+use shared_data::types::NodeType;
 
 use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 
@@ -32,9 +34,9 @@ async fn main() -> Result<(), ()> {
     let courtyard_client = shared_net::async_client(context, op::Flavor::Archive, dummy_tx, dummy_rx, iface_to_courtyard, process_courtyard);
 
     let result = courtyard_client.await;
-    
+
     println!("[Archive] END");
-    
+
     result
 }
 
@@ -48,15 +50,14 @@ fn process_courtyard(context: Arc<Mutex<Library>>, tx: UnboundedSender<RoutedMes
 }
 
 fn c_invgen(context: Arc<Mutex<Library>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
-    let gate = buf.pull::<u8>();
-    let vagabond = buf.pull::<u8>();
-    let user_hash = buf.pull::<u128>();
+    let gate = buf.pull::<NodeType>();
+    let header = buf.pull::<GateHeader>();
     let _ob_type = buf.pull::<u8>();
 
     let pool = context.lock().unwrap().pool.clone();
 
     let future = async move {
-        let user_uuid = Uuid::from_u128(user_hash);
+        let user_uuid = Uuid::from_u128(header.user);
         let object_uuid = Uuid::new_v4();
         let result = sqlx::query("INSERT INTO objects(user_uuid,ob_uuid) VALUES ( $1, $2 )")
             .bind(user_uuid)
@@ -66,7 +67,7 @@ fn c_invgen(context: Arc<Mutex<Library>>, tx: UnboundedSender<RoutedMessage>, mu
             let mut out = VSizedBuffer::new(6 + 200 * 16);
             out.push(&op::Route::One(gate));
             out.push(&op::Command::InvList);
-            out.push(&vagabond);
+            out.push(&header.vagabond);
 
             out.push(&1_u16);
             out.push(&object_uuid.as_u128());
@@ -83,15 +84,14 @@ struct Object {
 }
 
 fn c_invlist(context: Arc<Mutex<Library>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
-    let gate = buf.pull::<u8>();
-    let vagabond = buf.pull::<u8>();
-    let user_hash = buf.pull::<u128>();
+    let gate = buf.pull::<NodeType>();
+    let header = buf.pull::<GateHeader>();
     let _ob_type = buf.pull::<u8>();
 
     let pool = context.lock().unwrap().pool.clone();
 
     let future = async move {
-        let user_uuid = Uuid::from_u128(user_hash);
+        let user_uuid = Uuid::from_u128(header.user);
 
         let query_result = sqlx::query_as::<_, Object>("SELECT (ob_uuid) FROM objects WHERE user_uuid = $1")
             .bind(user_uuid)
@@ -100,7 +100,7 @@ fn c_invlist(context: Arc<Mutex<Library>>, tx: UnboundedSender<RoutedMessage>, m
             let mut out = VSizedBuffer::new(6 + results.len() * 16);
             out.push(&op::Route::One(gate));
             out.push(&op::Command::InvList);
-            out.push(&vagabond);
+            out.push(&header.vagabond);
             out.push(&(results.len() as u16));
             for ob in results {
                 out.push(&ob.ob_uuid.as_u128());
