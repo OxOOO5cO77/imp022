@@ -7,5 +7,5 @@ RUN cargo build --release --bin courtyard
 # We do not need the Rust toolchain to run the binary!
 FROM debian:stable-slim AS runtime
 WORKDIR /courtyard
-COPY --from=builder /courtyard/target/release/courtyard /usr/local/bin
+COPY --from=builder /crates/courtyard/target/release/courtyard /usr/local/bin
 ENTRYPOINT ["/usr/local/bin/courtyard"]

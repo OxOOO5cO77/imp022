@@ -1,3 +1,16 @@
 [workspace]
-members = ["archive", "bazaar", "courtyard", "drawbridge", "forum", "gate", "hall", "jail", "lookout", "smithy", "vagabond", "watchtower"]
+members = [
+    "crates/archive",
+    "crates/bazaar",
+    "crates/courtyard",
+    "crates/drawbridge",
+    "crates/forum",
+    "crates/gate",
+    "crates/hall",
+    "crates/jail",
+    "crates/lookout",
+    "crates/smithy",
+    "crates/vagabond",
+    "crates/watchtower"
+]
 resolver = "2"
