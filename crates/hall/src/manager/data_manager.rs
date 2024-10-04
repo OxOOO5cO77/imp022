@@ -6,8 +6,8 @@ use rand::prelude::*;
 use hall::data::hall_build::HallBuild;
 use hall::data::hall_card::HallCard;
 use hall::data::hall_category::HallCategory;
-use shared_data::player::build::{ANT, BRD, Build, CPU, DSC};
-use shared_data::player::card::CardSlot;
+use shared_data::game::card::CardSlot;
+use shared_data::player::build::{Build, ANT, BRD, CPU, DSC};
 use shared_data::player::category::{Category, Distro, Institution, Location, Role};
 
 pub(crate) struct DataManager {

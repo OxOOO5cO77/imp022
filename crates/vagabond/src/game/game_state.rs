@@ -1,7 +1,7 @@
 use std::cmp::{Ordering, Reverse};
 use std::collections::HashMap;
 use std::iter::zip;
-use shared_data::player::card::{CostType, Kind};
+use shared_data::game::card::{CostType, Kind};
 
 use rand::{distributions::Uniform, Rng, rngs::ThreadRng};
 use shared_data::player::attribute::ValueType;
@@ -79,7 +79,7 @@ impl GameState {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use shared_data::player::card::{CostType, Kind};
+    use shared_data::game::card::{CostType, Kind};
 
     use crate::game::game_state::GameState;
 

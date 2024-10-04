@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use shared_data::player::card::{CostType, Kind, NumberType, Rarity, SetType};
+use shared_data::game::card::*;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Card {
@@ -9,5 +9,8 @@ pub struct Card {
     pub set: SetType,
     pub kind: Kind,
     pub cost: CostType,
-    pub rules: String,
+    pub queue: DelayType,
+    pub priority: PriorityType,
+    pub launch_rules: String,
+    pub run_rules: String,
 }

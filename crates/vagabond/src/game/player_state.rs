@@ -4,7 +4,7 @@ use rand::{Rng, seq::SliceRandom};
 
 use hall::data::hall_card::HallCard;
 use hall::data::player::Player;
-use shared_data::player::card::{CostType, Kind};
+use shared_data::game::card::{CostType, Kind};
 
 pub struct PlayerState {
     pub player: Player,

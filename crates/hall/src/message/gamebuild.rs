@@ -5,7 +5,7 @@ use shared_data::types::{GameIdType, PartType, SeedType};
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 
-use crate::data::player_card::{PackedCardType, PlayerCard};
+use crate::data::player::player_card::{PackedCardType, PlayerCard};
 
 const PART_COUNT: usize = 8;
 
@@ -76,12 +76,12 @@ impl Bufferable for GameBuildResponse {
 
 #[cfg(test)]
 mod test {
-    use shared_data::player::card;
-    use shared_data::player::card::Rarity::Legendary;
+    use shared_data::game::card;
+    use shared_data::game::card::Rarity::Legendary;
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
 
-    use crate::data::player_card::PlayerCard;
+    use crate::data::player::player_card::PlayerCard;
     use crate::message::gamebuild::{CARD_COUNT, GameBuildRequest, GameBuildResponse};
 
     #[test]

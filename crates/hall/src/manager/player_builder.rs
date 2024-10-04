@@ -1,17 +1,16 @@
 use std::collections::VecDeque;
 use std::iter::zip;
 
-use rand::distributions::Uniform;
 use rand::prelude::*;
 
 use hall::data::hall_build::HallBuild;
 use hall::data::hall_card::HallCard;
 use hall::data::hall_category::HallCategory;
 use hall::data::player::Player;
-use hall::data::player_build::PlayerBuild;
-use hall::data::player_card::PlayerCard;
-use hall::data::player_category::PlayerCategory;
-use hall::data::player_part::PlayerPart;
+use hall::data::player::player_build::PlayerBuild;
+use hall::data::player::player_card::PlayerCard;
+use hall::data::player::player_category::PlayerCategory;
+use hall::data::player::player_part::PlayerPart;
 use shared_data::player::attribute::Attributes;
 use shared_data::types::{PartType, SeedType};
 
@@ -27,12 +26,12 @@ pub(crate) struct PlayerPartBuilder {
 
 impl PlayerPartBuilder {
     fn pick_values(rng: &mut impl Rng) -> [u8; 4] {
-        let v1 = Uniform::new_inclusive(1, 9).unwrap().sample(rng);
-        let v2 = Uniform::new_inclusive(1, 9).unwrap().sample(rng);
+        let v1 = rng.gen_range(1..=9);
+        let v2 = rng.gen_range(1..=9);
         let remain = 20 - v1 - v2;
         let v3_lower = remain.max(10) - 9;
         let v3_upper = (remain - 1).min(9);
-        let v3 = Uniform::new_inclusive(v3_lower, v3_upper).unwrap().sample(rng);
+        let v3 = rng.gen_range(v3_lower..=v3_upper);
         let v4 = remain - v3;
 
         [v1, v2, v3, v4]
@@ -53,7 +52,7 @@ impl PlayerPartBuilder {
             seed: self.seed,
             values: self.values,
             build: [
-            self.build[0].to_player(&0),
+                self.build[0].to_player(&0),
                 self.build[1].to_player(&0),
                 self.build[2].to_player(&0),
                 self.build[3].to_player(&0),

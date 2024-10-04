@@ -1,13 +1,12 @@
-use std::io::Error;
-
-use hall::data::hall_build::HallBuild;
-use hall::data::hall_card::HallCard;
-use hall::data::hall_category::HallCategory;
-
 use crate::data::build_instance::BuildInstance;
 use crate::data::card::Card;
 use crate::data::category_instance::CategoryInstance;
 use crate::save_load::save_data_single;
+use hall::data::hall_build::HallBuild;
+use hall::data::hall_card::HallCard;
+use hall::data::hall_category::HallCategory;
+use shared_data::game::opcode::OpCode;
+use std::io::Error;
 
 fn make_hall_card(card: &Card) -> HallCard {
     HallCard {
@@ -16,8 +15,15 @@ fn make_hall_card(card: &Card) -> HallCard {
         set: card.set,
         kind: card.kind,
         cost: card.cost,
-        rules: card.rules.clone(),
+        delay: card.queue,
+        priority: card.priority,
+        launch_code: parse_rules(&card.launch_rules),
+        run_code: parse_rules(&card.run_rules),
     }
+}
+
+fn parse_rules(rules: &str) -> Vec<OpCode> {
+    rules.chars().map(OpCode::from).collect()
 }
 
 pub(crate) fn output_cards_for_hall(cards: &[Card]) -> Result<(), Error> {

@@ -2,8 +2,11 @@ Card(
     title: "Common 1",
     rarity: Common,
     number: 1,
-    set: 1,    
+    set: 1,
     kind: Analyze,
     cost: 1,
-    rules: "",
+    queue: 1,
+    priority: 99,
+    launch_rules: "",
+    run_rules: "",
 )

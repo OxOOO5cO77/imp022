@@ -1,7 +1,7 @@
 use serde::Deserialize;
 
 use shared_data::player::build::{Build, NumberType};
-use shared_data::player::card::CardSlot;
+use shared_data::game::card::CardSlot;
 
 #[derive(Deserialize)]
 pub(crate) struct BuildInstance {

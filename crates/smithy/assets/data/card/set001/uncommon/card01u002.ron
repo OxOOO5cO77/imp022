@@ -5,5 +5,8 @@ Card(
     set: 1,
     kind: Breach,
     cost: 1,
-    rules: "",
+    queue: 1,
+    priority: 99,
+    launch_rules: "",
+    run_rules: "",
 )

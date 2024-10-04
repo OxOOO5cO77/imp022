@@ -1,9 +1,9 @@
 use serde::Deserialize;
-use crate::mission::mission_node::MissionNode;
-use crate::mission::mission_objective::MissionObjective;
+use crate::mission::node::MissionNode;
+use crate::mission::objective::MissionObjective;
 
-mod mission_node;
-mod mission_objective;
+mod node;
+mod objective;
 
 #[derive(Clone, Deserialize)]
 pub struct Mission {

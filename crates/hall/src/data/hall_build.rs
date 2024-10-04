@@ -3,8 +3,8 @@ use std::mem::discriminant;
 use serde::{Deserialize, Serialize};
 
 use shared_data::player::build::{Build, NumberType};
-use shared_data::player::card::CardSlot;
-use crate::data::player_build::PlayerBuild;
+use shared_data::game::card::CardSlot;
+use crate::data::player::player_build::PlayerBuild;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HallBuild {

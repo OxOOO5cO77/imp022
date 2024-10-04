@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 pub type SetType = u8;
 pub type NumberType = u8;
 pub type CostType = u16;
+pub type PriorityType = u8;
+pub type DelayType = u8;
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct Set(pub SetType);

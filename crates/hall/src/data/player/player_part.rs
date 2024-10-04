@@ -7,8 +7,8 @@ use shared_data::types::SeedType;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 
-use crate::data::player_build::{PackedBuildType, PlayerBuild};
-use crate::data::player_category::{PackedCategoryType, PlayerCategory};
+use crate::data::player::player_build::{PackedBuildType, PlayerBuild};
+use crate::data::player::player_category::{PackedCategoryType, PlayerCategory};
 
 #[derive(Default, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq, Debug))]
@@ -73,9 +73,9 @@ mod test {
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
 
-    use crate::data::player_build::PlayerBuild;
-    use crate::data::player_category::PlayerCategory;
-    use crate::data::player_part::PlayerPart;
+    use crate::data::player::player_build::PlayerBuild;
+    use crate::data::player::player_category::PlayerCategory;
+    use crate::data::player::player_part::PlayerPart;
 
     #[test]
     fn test_player_part() {

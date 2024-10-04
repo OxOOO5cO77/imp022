@@ -1,5 +1,4 @@
 use std::collections::{HashMap, VecDeque};
-use std::collections::hash_map::Entry;
 use std::env;
 use std::sync::{Arc, Mutex};
 
@@ -8,12 +7,13 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 
 use gate::message::gate_header::GateHeader;
-use hall::data::player::Player;
+use hall::data::game::GameState;
+use hall::data::game::GameUser;
 use hall::message::gamebuild::{GameBuildRequest, GameBuildResponse};
 use hall::message::gamestart::{GameStartRequest, GameStartResponse};
-use shared_data::types::{AuthType, GameIdType, PartType, NodeType, UserType};
-use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
+use shared_data::types::{GameIdType, NodeType};
 use shared_net::sizedbuffers::Bufferable;
+use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 
 use crate::manager::data_manager::DataManager;
 use crate::manager::player_builder::PlayerBuilder;
@@ -21,18 +21,34 @@ use crate::manager::player_builder::PlayerBuilder;
 pub(crate) mod manager;
 
 struct Hall {
-    games: HashMap<GameIdType, Game>,
+    games: HashMap<GameIdType, GameState>,
     data_manager: DataManager,
 }
 
-struct Game {
-    users: HashMap<UserType, User>,
-}
+#[tokio::main]
+async fn main() -> Result<(), ()> {
+    println!("[Hall] START");
 
-struct User {
-    auth: AuthType,
-    parts: Vec<PartType>,
-    player: Option<Player>,
+    let mut args = env::args();
+    let _ = args.next(); // program name
+    let iface_to_courtyard = args.next().unwrap_or("[::1]:12345".to_string());
+
+    let (dummy_tx, dummy_rx) = mpsc::unbounded_channel();
+
+    let context = Hall {
+        games: HashMap::new(),
+        data_manager: DataManager::new().expect("[Hall] Unable to initialize DataManager"),
+    };
+
+    let context = Arc::new(Mutex::new(context));
+
+    let courtyard_client = shared_net::async_client(context, op::Flavor::Hall, dummy_tx, dummy_rx, iface_to_courtyard, process_courtyard);
+
+    let result = courtyard_client.await;
+
+    println!("[Hall] END");
+
+    result
 }
 
 fn process_courtyard(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
@@ -52,24 +68,20 @@ fn c_gamestart(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mu
     let header = buf.pull::<GateHeader>();
     let request = buf.pull::<GameStartRequest>();
 
-    let user = User {
-        auth: header.auth,
-        parts: thread_rng().gen_iter().take(8).collect(),
-        player: None,
-    };
+    let user = GameUser::new(header.auth);
 
     let temp_builder = PlayerBuilder::new(&user.parts, &context.data_manager);
 
     let mut game_id = request.game_id;
     while game_id == 0 {
-        let new_id = thread_rng().gen::<u128>();
+        let new_id = thread_rng().random::<u128>();
         if !context.games.contains_key(&new_id) {
             game_id = new_id;
         }
     }
-    let game = context.games.entry(game_id).or_insert_with(|| Game { users: Default::default() });
 
-    game.users.insert(header.user, user);
+    let game = context.games.entry(game_id).or_default();
+    game.user_add(header.user, user);
 
     println!("[Hall] [{:X}] Sending parts to G({})=>V({})", game_id, gate, header.vagabond);
 
@@ -92,7 +104,6 @@ fn c_gamestart(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mu
     };
 
     let mut out = VSizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + header.vagabond.size_in_buffer() + response.size_in_buffer());
-
 
     out.push(&route);
     out.push(&command);
@@ -146,12 +157,8 @@ fn c_gameend(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut 
     let game_id = buf.pull::<GameIdType>();
 
     if let Some(game) = context.games.get_mut(&game_id) {
-        match game.users.entry(header.user) {
-            Entry::Occupied(user) if user.get().auth == header.auth => game.users.remove(&header.user),
-            _ => None,
-        };
 
-        if game.users.is_empty() {
+        if game.is_empty() {
             context.games.remove(&game_id);
         }
     }
@@ -163,30 +170,4 @@ fn c_gameend(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut 
     out.push(&header.vagabond);
 
     let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });
-}
-
-#[tokio::main]
-async fn main() -> Result<(), ()> {
-    println!("[Hall] START");
-
-    let mut args = env::args();
-    let _ = args.next(); // program name
-    let iface_to_courtyard = args.next().unwrap_or("[::1]:12345".to_string());
-
-    let (dummy_tx, dummy_rx) = mpsc::unbounded_channel();
-
-    let context = Hall {
-        games: HashMap::new(),
-        data_manager: DataManager::new().expect("[Hall] Unable to initialize DataManager"),
-    };
-
-    let context = Arc::new(Mutex::new(context));
-
-    let courtyard_client = shared_net::async_client(context, op::Flavor::Hall, dummy_tx, dummy_rx, iface_to_courtyard, process_courtyard);
-
-    let result = courtyard_client.await;
-
-    println!("[Hall] END");
-
-    result
 }

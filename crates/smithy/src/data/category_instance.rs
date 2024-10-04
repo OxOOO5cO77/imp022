@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use shared_data::player::card::CardSlot;
+use shared_data::game::card::CardSlot;
 use shared_data::player::category::{Category, NumberType};
 
 #[derive(Deserialize)]

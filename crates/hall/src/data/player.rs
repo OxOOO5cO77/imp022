@@ -4,10 +4,15 @@ use serde::{Deserialize, Serialize};
 
 use shared_data::player::attribute::Attributes;
 use shared_data::types::SeedType;
-use crate::data::player_build::PlayerBuild;
+use player_build::PlayerBuild;
 
-use crate::data::player_card::PlayerCard;
-use crate::data::player_category::PlayerCategory;
+use player_card::PlayerCard;
+use player_category::PlayerCategory;
+
+pub mod player_part;
+pub mod player_card;
+pub mod player_build;
+pub mod player_category;
 
 #[derive(Serialize, Deserialize)]
 pub struct Player {

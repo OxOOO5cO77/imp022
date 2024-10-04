@@ -2,10 +2,10 @@ use std::mem::discriminant;
 
 use serde::{Deserialize, Serialize};
 
-use shared_data::player::card::CardSlot;
+use shared_data::game::card::CardSlot;
 use shared_data::player::category::{Category, NumberType};
 
-use crate::data::player_category::PlayerCategory;
+use crate::data::player::player_category::PlayerCategory;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HallCategory {

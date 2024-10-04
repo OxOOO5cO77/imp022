@@ -4,10 +4,10 @@ use std::path::Path;
 
 use bevy::prelude::Resource;
 
-use hall::data::player_build::PlayerBuild;
-use hall::data::player_card::PlayerCard;
-use hall::data::player_category::PlayerCategory;
-use hall::data::player_part::PlayerPart;
+use hall::data::player::player_build::PlayerBuild;
+use hall::data::player::player_card::PlayerCard;
+use hall::data::player::player_category::PlayerCategory;
+use hall::data::player::player_part::PlayerPart;
 use vagabond::data::vagabond_build::VagabondBuild;
 use vagabond::data::vagabond_card::VagabondCard;
 use vagabond::data::vagabond_category::VagabondCategory;

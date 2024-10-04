@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use shared_data::player::card::{CardSlot, CostType, Kind, NumberType, Rarity, SetType, Slot};
+use shared_data::game::card::*;
+use shared_data::game::opcode::OpCode;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HallCard {
@@ -9,7 +10,10 @@ pub struct HallCard {
     pub set: SetType,
     pub kind: Kind,
     pub cost: CostType,
-    pub rules: String,
+    pub delay: DelayType,
+    pub launch_code: Vec<OpCode>,
+    pub priority: PriorityType,
+    pub run_code: Vec<OpCode>,
 }
 
 
@@ -24,3 +28,4 @@ impl HallCard {
         set_match && rarity_match && slot_match
     }
 }
+

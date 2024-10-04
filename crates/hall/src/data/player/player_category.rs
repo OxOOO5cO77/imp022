@@ -327,7 +327,7 @@ mod test {
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
 
-    use crate::data::player_category::PlayerCategory;
+    use crate::data::player::player_category::PlayerCategory;
 
     #[test]
     fn test_player_category() {

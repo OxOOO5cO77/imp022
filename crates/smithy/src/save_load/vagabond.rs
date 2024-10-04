@@ -16,7 +16,10 @@ fn make_vagabond_card(card: &Card) -> VagabondCard {
         set: card.set,
         kind: card.kind,
         cost: card.cost,
-        rules: card.rules.clone(),
+        queue: card.queue,
+        priority: card.priority,
+        launch_rules: card.launch_rules.clone(),
+        run_rules: card.launch_rules.clone(),
     }
 }
 

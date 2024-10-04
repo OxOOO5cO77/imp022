@@ -4,7 +4,7 @@ use shared_data::types::GameIdType;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 
-use crate::data::player_part::PlayerPart;
+use crate::data::player::player_part::PlayerPart;
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameStartRequest {
@@ -68,9 +68,9 @@ mod test {
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
 
-    use crate::data::player_build::PlayerBuild;
-    use crate::data::player_category::PlayerCategory;
-    use crate::data::player_part::PlayerPart;
+    use crate::data::player::player_build::PlayerBuild;
+    use crate::data::player::player_category::PlayerCategory;
+    use crate::data::player::player_part::PlayerPart;
     use crate::message::gamestart::{GameStartRequest, GameStartResponse};
 
     #[test]

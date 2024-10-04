@@ -2,8 +2,8 @@ use std::mem::size_of;
 
 use serde::{Deserialize, Serialize};
 
-use shared_data::player::card;
-use shared_data::player::card::Rarity;
+use shared_data::game::card;
+use shared_data::game::card::Rarity;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 
@@ -74,9 +74,9 @@ impl Bufferable for PlayerCard {
 
 #[cfg(test)]
 mod test {
-    use shared_data::player::card::Rarity;
+    use shared_data::game::card::Rarity;
     use shared_net::VSizedBuffer;
-    use crate::data::player_card::PlayerCard;
+    use crate::data::player::player_card::PlayerCard;
 
     #[test]
     fn test_player_card() {
