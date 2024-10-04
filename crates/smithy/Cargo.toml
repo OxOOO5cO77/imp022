@@ -6,8 +6,9 @@ edition = "2021"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 
 [dependencies]
+clap = { version = "4.5.19", features = ["derive"] }
 ron = { version = "0.8.1" }
-serde = { version = "1.0.203", features = ["derive"] }
+serde = { version = "1.0.210", features = ["derive"] }
 walkdir = { version = "2.5.0" }
 shared-data = { path = "../shared-data" }
 hall = { path = "../hall" }

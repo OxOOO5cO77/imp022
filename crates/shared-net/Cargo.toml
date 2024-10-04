@@ -6,8 +6,8 @@ edition = "2021"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 
 [dependencies]
-tokio = { version = "1.38.0", features = ["io-util", "macros", "net", "rt", "signal", "sync", "time"] }
+tokio = { version = "1.40.0", features = ["io-util", "macros", "net", "rt", "signal", "sync", "time"] }
 
 [dev-dependencies]
 strum_macros = "0.26.4"
-strum = "0.26.2"
+strum = "0.26.3"
