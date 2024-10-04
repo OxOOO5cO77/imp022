@@ -102,7 +102,7 @@ const PART_DISPLAY_VAL: Val = Val::Px(128.0);
 const ATTRIB_VAL: Val = Val::Px(ATTRIB_SIZE);
 const LABEL_VAL: Val = Val::Px(160.0);
 
-fn h_vals(bg: Color) -> NodeBundle {
+fn h_vals(bg: Srgba) -> NodeBundle {
     NodeBundle {
         style: Style {
             display: Display::Grid,
@@ -130,12 +130,12 @@ fn v_vals(width: Val) -> NodeBundle {
             row_gap: Val::Px(ROW_GAP),
             ..default()
         },
-        background_color: Color::NAVY.into(),
+        background_color: bevy::color::palettes::css::NAVY.into(),
         ..default()
     }
 }
 
-fn node(w: Val, color: Color) -> NodeBundle {
+fn node(w: Val, color: Srgba) -> NodeBundle {
     NodeBundle {
         style: Style {
             display: Display::Grid,
@@ -178,7 +178,7 @@ fn spawn_with_text(parent: &mut ChildBuilder, node: NodeBundle, string: impl Int
 }
 
 fn spawn_labelled(parent: &mut ChildBuilder, header: impl Into<String>, font_info: &FontInfo) -> Entity {
-    let v_label = node(LABEL_VAL, Color::SILVER);
+    let v_label = node(LABEL_VAL, bevy::color::palettes::css::SILVER);
 
     let mut header_font_info = font_info.clone();
     header_font_info.size *= 0.6;
@@ -195,7 +195,7 @@ fn spawn_labelled(parent: &mut ChildBuilder, header: impl Into<String>, font_inf
 }
 
 fn spawn_info(parent: &mut ChildBuilder, header: impl Into<String>, info: InfoKind, font_info: &FontInfo) {
-    let v_label = node(LABEL_VAL, Color::DARK_GRAY);
+    let v_label = node(LABEL_VAL, bevy::color::palettes::css::DARK_GRAY);
 
     let mut header_font_info = font_info.clone();
     header_font_info.size *= 0.6;
@@ -210,8 +210,8 @@ fn spawn_info(parent: &mut ChildBuilder, header: impl Into<String>, info: InfoKi
 }
 
 fn attrib_header(parent: &mut ChildBuilder, font_info: &FontInfo) {
-    let h_vals = h_vals(Color::NONE);
-    let val = node(ATTRIB_VAL, Color::DARK_GRAY);
+    let h_vals = h_vals(Srgba::NONE);
+    let val = node(ATTRIB_VAL, bevy::color::palettes::css::DARK_GRAY);
 
     parent
         .spawn(h_vals.clone())
@@ -229,8 +229,8 @@ fn spawn_val_label(parent: &mut ChildBuilder, val_kind: PlayerPartHolderKind, fo
     parent
         .spawn((v_vals(ATTRIB_VAL), DropTarget, val_kind, PlayerPartHolder(None)))
         .with_children(|parent| {
-            let val = node(ATTRIB_VAL, Color::SILVER);
-            parent.spawn(node(ATTRIB_VAL, Color::NONE));
+            let val = node(ATTRIB_VAL, bevy::color::palettes::css::SILVER);
+            parent.spawn(node(ATTRIB_VAL, Srgba::NONE));
             val_children.push(spawn_with_text(parent, val.clone(), "-", font_info_val));
             val_children.push(spawn_with_text(parent, val.clone(), "-", font_info_val));
             val_children.push(spawn_with_text(parent, val.clone(), "-", font_info_val));
@@ -243,7 +243,7 @@ fn spawn_val_label(parent: &mut ChildBuilder, val_kind: PlayerPartHolderKind, fo
     parent
         .spawn((v_vals(HUNDRED), DropTarget, label_kind, PlayerPartHolder(None)))
         .with_children(|parent| {
-            parent.spawn(node(ATTRIB_VAL, Color::NONE));
+            parent.spawn(node(ATTRIB_VAL, Srgba::NONE));
             label_children.push(spawn_labelled(parent, headers[0], font_info_label));
             label_children.push(spawn_labelled(parent, headers[1], font_info_label));
             label_children.push(spawn_labelled(parent, headers[2], font_info_label));
@@ -257,8 +257,8 @@ fn spawn_val_label(parent: &mut ChildBuilder, val_kind: PlayerPartHolderKind, fo
 struct TextChildren(Vec<Entity>);
 
 fn attrib_row(parent: &mut ChildBuilder, kind: StatRowKind, font_info: &FontInfo) {
-    let h_vals = h_vals(Color::DARK_GREEN);
-    let val = node(ATTRIB_VAL, Color::SILVER);
+    let h_vals = h_vals(Srgba::rgb(0.0, 0.5, 0.0));
+    let val = node(ATTRIB_VAL, bevy::color::palettes::css::SILVER);
 
     let mut text_children = Vec::with_capacity(4);
 
@@ -284,7 +284,7 @@ fn spawn_part(parent: &mut ChildBuilder, part: &VagabondPart, font_info: &FontIn
             grid_template_rows: vec![GridTrack::min_content(), GridTrack::min_content(), GridTrack::min_content(), GridTrack::flex(1.0), GridTrack::min_content()],
             ..default()
         },
-        background_color: Color::SILVER.into(),
+        background_color: bevy::color::palettes::css::SILVER.into(),
         ..default()
     };
 
@@ -297,7 +297,7 @@ fn spawn_part(parent: &mut ChildBuilder, part: &VagabondPart, font_info: &FontIn
             grid_template_rows: RepeatedGridTrack::max_content(4),
             ..default()
         },
-        background_color: Color::SILVER.into(),
+        background_color: bevy::color::palettes::css::SILVER.into(),
         ..default()
     };
 
@@ -310,7 +310,7 @@ fn spawn_part(parent: &mut ChildBuilder, part: &VagabondPart, font_info: &FontIn
             grid_template_rows: GridTrack::max_content(),
             ..default()
         },
-        background_color: Color::SILVER.into(),
+        background_color: bevy::color::palettes::css::SILVER.into(),
         ..default()
     };
 
@@ -422,7 +422,7 @@ fn build_ui_compose(
             grid_row: GridPlacement::span(3),
             ..default()
         },
-        background_color: Color::DARK_GRAY.into(),
+        background_color: bevy::color::palettes::css::DARK_GRAY.into(),
         ..default()
     };
     let spacer = NodeBundle {
@@ -444,7 +444,7 @@ fn build_ui_compose(
             grid_template_rows: GridTrack::auto(),
             ..default()
         },
-        background_color: Color::NAVY.into(),
+        background_color: bevy::color::palettes::css::NAVY.into(),
         ..default()
     };
     let compose_attribs = NodeBundle {
@@ -458,7 +458,7 @@ fn build_ui_compose(
             column_gap: Val::Px(COL_GAP),
             ..default()
         },
-        background_color: Color::MIDNIGHT_BLUE.into(),
+        background_color: bevy::color::palettes::css::MIDNIGHT_BLUE.into(),
         ..default()
     };
 
@@ -496,8 +496,8 @@ fn build_ui_compose(
                                     parent
                                         .spawn(v_vals(ATTRIB_VAL))
                                         .with_children(|parent| {
-                                            let val = node(ATTRIB_VAL, Color::DARK_GRAY);
-                                            parent.spawn(node(ATTRIB_VAL, Color::NONE));
+                                            let val = node(ATTRIB_VAL, bevy::color::palettes::css::DARK_GRAY);
+                                            parent.spawn(node(ATTRIB_VAL, Srgba::NONE));
                                             spawn_with_text(parent, val.clone(), "A", &font_info_val);
                                             spawn_with_text(parent, val.clone(), "B", &font_info_val);
                                             spawn_with_text(parent, val.clone(), "C", &font_info_val);
@@ -516,7 +516,7 @@ fn build_ui_compose(
                                     ;
                                 })
                             ;
-                            parent.spawn(node(ATTRIB_VAL, Color::NONE));
+                            parent.spawn(node(ATTRIB_VAL, Srgba::NONE));
                             parent
                                 .spawn(compose_attribs.clone())
                                 .with_children(|parent| {
@@ -524,7 +524,7 @@ fn build_ui_compose(
                                     spawn_val_label(parent, PlayerPartHolderKind::StatRow(Build), &font_info_val, PlayerPartHolderKind::Build, &font_info_label, headers);
                                 })
                             ;
-                            parent.spawn(node(ATTRIB_VAL, Color::NONE));
+                            parent.spawn(node(ATTRIB_VAL, Srgba::NONE));
                             parent
                                 .spawn(compose_attribs.clone())
                                 .with_children(|parent| {
@@ -532,14 +532,14 @@ fn build_ui_compose(
                                     spawn_val_label(parent, PlayerPartHolderKind::StatRow(Category), &font_info_val, PlayerPartHolderKind::Category, &font_info_label, headers);
                                 })
                             ;
-                            parent.spawn(node(ATTRIB_VAL, Color::NONE));
+                            parent.spawn(node(ATTRIB_VAL, Srgba::NONE));
                             parent
                                 .spawn(compose_attribs)
                                 .with_children(|parent| {
                                     parent
                                         .spawn(v_vals(HUNDRED))
                                         .with_children(|parent| {
-                                            parent.spawn(node(ATTRIB_VAL, Color::NONE));
+                                            parent.spawn(node(ATTRIB_VAL, Srgba::NONE));
                                             spawn_info(parent, "ID", InfoKind::ID, &font_info_label);
                                             spawn_info(parent, "Name", InfoKind::Name, &font_info_label);
                                             spawn_info(parent, "Birthplace", InfoKind::Birthplace, &font_info_label);
@@ -570,7 +570,7 @@ fn dragdrag(
         if let Some(part) = &holder.0 {
             commands
                 .spawn((
-                    filled_rect(Val::Px(transform.x - 64.0), Val::Px(transform.y - 64.0), Val::Px(128.0), Val::Px(128.0), Color::ALICE_BLUE),
+                    filled_rect(Val::Px(transform.x - 64.0), Val::Px(transform.y - 64.0), Val::Px(128.0), Val::Px(128.0), bevy::color::palettes::css::ALICE_BLUE),
                     Dragging(dragdrag.src)
                 ))
                 .with_children(|parent| {

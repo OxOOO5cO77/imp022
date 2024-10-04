@@ -13,7 +13,7 @@ impl Default for ScreenBundle {
     fn default() -> Self {
         Self {
             screen: Screen,
-            node: filled_rect(ZERO, ZERO, HUNDRED, HUNDRED, Color::BLACK),
+            node: filled_rect(ZERO, ZERO, HUNDRED, HUNDRED, Srgba::BLACK),
         }
     }
 }
@@ -25,7 +25,7 @@ pub(crate) fn screen_exit(mut commands: Commands, screen_q: Query<Entity, With<S
     commands.entity(screen_q.single()).despawn_recursive();
 }
 
-pub(crate) fn filled_rect(left: Val, top: Val, width: Val, height: Val, color: Color) -> NodeBundle {
+pub(crate) fn filled_rect(left: Val, top: Val, width: Val, height: Val, color: Srgba) -> NodeBundle {
     NodeBundle {
         style: Style {
             position_type: PositionType::Absolute,
