@@ -1,3 +1,4 @@
-pub(crate) mod build_instance;
-pub(crate) mod category_instance;
+pub(crate) mod build;
+pub(crate) mod category;
 pub(crate) mod card;
+mod common;
