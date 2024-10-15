@@ -1,0 +1,27 @@
+services:
+  archive:
+    image: registry.impending.org:5050/archive:latest
+  bazaar:
+    image: registry.impending.org:5050/bazaar:latest
+  courtyard:
+    image: registry.impending.org:5050/courtyard:latest
+    ports:
+      - "[::1]:12345:12345"
+  drawbridge:
+    image: registry.impending.org:5050/drawbridge:latest
+    ports:
+      - "[::1]:23450:23450"
+  forum:
+    image: registry.impending.org:5050/forum:latest
+  gate:
+    image: registry.impending.org:5050/gate:latest
+    ports:
+      - "[::1]:23451:23451"
+  hall:
+    image: registry.impending.org:5050/hall:latest
+  jail:
+    image: registry.impending.org:5050/jail:latest
+  lookout:
+    image: registry.impending.org:5050/lookout:latest
+  warehouse:
+    image: registry.impending.org:5050/warehouse:latest

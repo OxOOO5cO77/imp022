@@ -1,6 +1,6 @@
 use bevy::prelude::Resource;
 
-use watchtower::rest::player::PlayerBioResponse;
+use warehouse::rest::player::PlayerBioResponse;
 
 #[derive(Resource)]
 pub(crate) struct BackendManager {
