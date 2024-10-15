@@ -4,9 +4,7 @@ use axum::extract::{Path, State};
 use axum::Json;
 use axum::response::IntoResponse;
 use shared_data::types::SeedType;
-
-use watchtower::rest::player::PlayerBioResponse;
-
+use warehouse::rest::player::PlayerBioResponse;
 use crate::AppState;
 
 pub(crate) async fn get(State(state): State<AppState>, Path(params): Path<HashMap<String, String>>) -> impl IntoResponse {
@@ -15,8 +13,8 @@ pub(crate) async fn get(State(state): State<AppState>, Path(params): Path<HashMa
     let player_bio = state.bio_manager.generate_bio(seed);
 
     match &player_bio {
-        Some(p) => println!("[Watchtower] /player/{seed_string} => {} ({},{},{})", p.name, p.birthplace.0, p.birthplace.1, p.birthplace.2),
-        None => println!("[Watchtower] /player/{seed_string} => INVALID"),
+        Some(p) => println!("[Warehouse] /player/{seed_string} => {} ({},{},{})", p.name, p.birthplace.0, p.birthplace.1, p.birthplace.2),
+        None => println!("[Warehouse] /player/{seed_string} => INVALID"),
     }
 
     Json(PlayerBioResponse {

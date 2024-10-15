@@ -24,8 +24,8 @@ Jail is the user attribute service.
 Lookout is the user authentication service.  
 ### Vagabond  
 Vagabond is the Bevy-based game client.  
-### Watchtower  
-Watchtower is the REST API for string data objects.  
+### Warehouse  
+Warehouse is the REST API for string data objects.  
 ## Messaging  
 TODO
 ## Tools

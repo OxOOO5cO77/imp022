@@ -17,13 +17,13 @@ struct AppState {
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
-    println!("[Watchtower] START");
+    println!("[Warehouse] START");
 
     let state = AppState {
         bio_manager: Arc::new(BioManager::new()?)
     };
 
-    println!("[Watchtower] State Initialized");
+    println!("[Warehouse] State Initialized");
 
     let routes = Router::new()
         .route("/player/:seed", get(route::player::get))
@@ -34,6 +34,6 @@ async fn main() -> Result<(), std::io::Error> {
 
     axum::serve(listener, routes).await?;
 
-    println!("[Watchtower] END");
+    println!("[Warehouse] END");
     Ok(())
 }
