@@ -3,7 +3,7 @@ use std::io::{Error, ErrorKind};
 use std::path::Path;
 
 use chrono::NaiveDate;
-use rand::prelude::{SliceRandom, StdRng};
+use rand::prelude::{IndexedRandom, StdRng};
 use rand::{Rng, SeedableRng};
 use serde::Deserialize;
 use warehouse::data::player_bio::PlayerBio;
@@ -35,7 +35,7 @@ fn is_leap_year(year: i32) -> bool {
 }
 
 impl BioManager {
-    pub fn new() -> Result<Self,Error> {
+    pub fn new() -> Result<Self, Error> {
         Ok(
             BioManager {
                 country: load_data_single("assets/data/bio/country.ron")?,
