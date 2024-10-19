@@ -12,7 +12,7 @@ pub mod op;
 pub mod util;
 pub mod sizedbuffers;
 
-
+#[derive(Clone)]
 pub struct RoutedMessage {
     pub route: Route,
     pub buf: VSizedBuffer,

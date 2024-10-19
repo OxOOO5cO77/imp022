@@ -7,6 +7,7 @@ pub trait Bufferable {
     fn size_in_buffer(&self) -> usize;
 }
 
+#[derive(Clone)]
 pub struct VSizedBuffer {
     pub(crate) raw: Vec<u8>,
     rpos: usize,
@@ -131,6 +132,22 @@ macro_rules! bufferable_ints {
 
 bufferable_ints!(for u8, u16, u32, u64, u128);
 
+impl Bufferable for bool {
+    fn push_into(&self, buf: &mut VSizedBuffer) {
+        let as_byte = if *self { 1u8 } else { 0 };
+        as_byte.push_into(buf);
+    }
+
+    fn pull_from(buf: &mut VSizedBuffer) -> Self {
+        let as_byte = u8::pull_from(buf);
+        as_byte != 0
+    }
+
+    fn size_in_buffer(&self) -> usize {
+        size_of::<u8>()
+    }
+}
+
 impl Bufferable for String {
     fn push_into(&self, buf: &mut VSizedBuffer) {
         (self.len() as u8).push_into(buf);
@@ -149,7 +166,52 @@ impl Bufferable for String {
     }
 
     fn size_in_buffer(&self) -> usize {
-        self.len() + 1
+        size_of::<u8>() + self.len()
+    }
+}
+
+impl<T: Bufferable + Default> Bufferable for Vec<T> {
+    fn push_into(&self, buf: &mut VSizedBuffer) {
+        (self.len() as u8).push_into(buf);
+        for item in self {
+            item.push_into(buf);
+        }
+    }
+
+    fn pull_from(buf: &mut VSizedBuffer) -> Self {
+        let len = u8::pull_from(buf) as usize;
+        let mut vec = Vec::with_capacity(len);
+        for _ in 0..len {
+            let item = T::pull_from(buf);
+            vec.push(item);
+        }
+        vec
+    }
+
+    fn size_in_buffer(&self) -> usize {
+        let dummy = T::default();
+        size_of::<u8>() + dummy.size_in_buffer() * self.len()
+    }
+}
+
+impl<T: Bufferable + Default + Copy, const N:usize> Bufferable for [T; N] {
+    fn push_into(&self, buf: &mut VSizedBuffer) {
+        for item in self {
+            item.push_into(buf);
+        }
+    }
+
+    fn pull_from(buf: &mut VSizedBuffer) -> Self {
+        let mut this = [T::default(); N];
+        for item in &mut this {
+            *item = T::pull_from(buf);
+        }
+        this
+    }
+
+    fn size_in_buffer(&self) -> usize {
+        let dummy = T::default();
+        dummy.size_in_buffer() * N
     }
 }
 
@@ -272,6 +334,31 @@ mod test {
 
             let test2 = target.pull::<String>();
             assert_eq!("So is this", test2);
+        }
+
+        #[test]
+        fn test_vec() {
+            let mut buf = VSizedBuffer::new(64);
+            let orig = vec![0u32, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+            buf.push(&orig);
+            let result = Vec::<u32>::pull_from(&mut buf);
+
+            assert_eq!(orig.len(), result.len());
+            assert_eq!(orig, result);
+        }
+
+        #[test]
+        fn test_array() {
+            type TestArray = [u32; 10];
+            let mut buf = VSizedBuffer::new(64);
+            let orig: TestArray = [0u32, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+            buf.push(&orig);
+            let result = TestArray::pull_from(&mut buf);
+
+            assert_eq!(orig.len(), result.len());
+            assert_eq!(orig, result);
         }
     }
 }

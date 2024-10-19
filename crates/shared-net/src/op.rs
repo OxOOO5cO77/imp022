@@ -7,7 +7,7 @@ use strum_macros::EnumIter;
 use crate::sizedbuffers::Bufferable;
 use crate::VSizedBuffer;
 
-#[derive(PartialEq)]
+#[derive(Clone,PartialEq)]
 pub enum Route {
     None,
     Local,
@@ -85,7 +85,7 @@ pub enum Flavor {
     Jail = 10,
     Lookout = 12,
     Vagabond = 22,
-    Watchtower = 23,
+    Warehouse = 23,
 }
 
 impl Bufferable for Flavor {
@@ -106,7 +106,7 @@ impl Bufferable for Flavor {
             c if c == Flavor::Jail as u8 => Flavor::Jail,
             c if c == Flavor::Lookout as u8 => Flavor::Lookout,
             c if c == Flavor::Vagabond as u8 => Flavor::Vagabond,
-            c if c == Flavor::Watchtower as u8 => Flavor::Watchtower,
+            c if c == Flavor::Warehouse as u8 => Flavor::Warehouse,
             _ => Flavor::NoOp
         }
     }
@@ -129,8 +129,19 @@ pub enum Command {
     DM,
     InvGen,
     InvList,
-    GameStart,
+    GameActivate,
     GameBuild,
+    GameCommitDeck,
+    GameStartGame,
+    GameStartTurn,
+    GameRoll,
+    GameChooseAttr,
+    GameResources,
+    GamePlayCard,
+    GameResolveCard,
+    GameEndTurn,
+    GameTick,
+    GameUpdateState,
     GameEnd,
 }
 
@@ -150,8 +161,21 @@ impl Bufferable for Command {
             c if c == Command::DM as u8 => Command::DM,
             c if c == Command::InvGen as u8 => Command::InvGen,
             c if c == Command::InvList as u8 => Command::InvList,
-            c if c == Command::GameStart as u8 => Command::GameStart,
+            c if c == Command::GameActivate as u8 => Command::GameActivate,
             c if c == Command::GameBuild as u8 => Command::GameBuild,
+            c if c == Command::GameCommitDeck as u8 => Command::GameCommitDeck,
+            c if c == Command::GameStartGame as u8 => Command::GameStartGame,
+            c if c == Command::GameStartTurn as u8 => Command::GameStartTurn,
+            c if c == Command::GameRoll as u8 => Command::GameRoll,
+            c if c == Command::GameChooseAttr as u8 => Command::GameChooseAttr,
+            c if c == Command::GameResources as u8 => Command::GameResources,
+            c if c == Command::GamePlayCard as u8 => Command::GamePlayCard,
+            c if c == Command::GameResolveCard as u8 => Command::GameResolveCard,
+            c if c == Command::GameEndTurn as u8 => Command::GameEndTurn,
+            c if c == Command::GameTick as u8 => Command::GameTick,
+            c if c == Command::GameUpdateState as u8 => Command::GameUpdateState,
+            c if c == Command::GameEnd as u8 => Command::GameEnd,
+            c if c == Command::GamePlayCard as u8 => Command::GamePlayCard,
             c if c == Command::GameEnd as u8 => Command::GameEnd,
             _ => Command::NoOp
         }
