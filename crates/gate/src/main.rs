@@ -9,12 +9,12 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 
 use gate::message::gate_header::GateHeader;
-use shared_data::types::{AuthType, NodeType, TimestampType, UserType};
-use shared_net::{IdMessage, op, RoutedMessage, VClientMode, VSizedBuffer};
+use shared_data::types::{AuthType, NodeType, TimestampType, UserIdType};
+use shared_net::{op, IdMessage, RoutedMessage, VClientMode, VSizedBuffer};
 
 struct GateUser {
     name: String,
-    user: UserType,
+    user: UserIdType,
     vagabond: NodeType,
 }
 
@@ -64,12 +64,23 @@ fn process_vagabond(context: Arc<Mutex<Gate>>, tx: UnboundedSender<RoutedMessage
         op::Command::DM => v_marshall_username(context, op::Flavor::Forum, command, &tx, &mut buf),
         op::Command::InvGen |
         op::Command::InvList => v_marshall(context, op::Flavor::Archive, command, &tx, id, &mut buf),
-        op::Command::GameStart |
+        op::Command::GameActivate |
         op::Command::GameBuild |
-        op::Command::GameEnd => v_marshall(context, op::Flavor::Hall, command, &tx, id, &mut buf),
+        op::Command::GameCommitDeck |
+        op::Command::GameStartTurn |
+        op::Command::GameChooseAttr |
+        op::Command::GamePlayCard |
+        op::Command::GameEndTurn => v_marshall(context, op::Flavor::Hall, command, &tx, id, &mut buf),
         op::Command::NoOp |
         op::Command::Register |
         op::Command::Authorize |
+        op::Command::GameStartGame |
+        op::Command::GameRoll |
+        op::Command::GameResources |
+        op::Command::GameResolveCard |
+        op::Command::GameEnd |
+        op::Command::GameTick |
+        op::Command::GameUpdateState |
         op::Command::UserAttr => false,
     }
 }
@@ -121,8 +132,19 @@ fn process_courtyard(context: Arc<Mutex<Gate>>, tx: UnboundedSender<RoutedMessag
         op::Command::DM => c_marshall_name(command, context, &tx, &mut buf),
         op::Command::Chat => c_marshall_all(command, &tx, &mut buf),
         op::Command::InvList |
+        op::Command::GameActivate |
         op::Command::GameBuild |
-        op::Command::GameStart |
+        op::Command::GameCommitDeck |
+        op::Command::GameStartGame |
+        op::Command::GameStartTurn |
+        op::Command::GameRoll |
+        op::Command::GameChooseAttr |
+        op::Command::GameResources |
+        op::Command::GamePlayCard |
+        op::Command::GameResolveCard |
+        op::Command::GameEndTurn |
+        op::Command::GameTick |
+        op::Command::GameUpdateState |
         op::Command::GameEnd => c_marshall_one(command, &tx, &mut buf),
         op::Command::NoOp |
         op::Command::Register |
@@ -149,7 +171,7 @@ fn c_authorize(context: Arc<Mutex<Gate>>, buf: &mut VSizedBuffer) -> VClientMode
     out.push(&op::Command::Authorize);
     out.xfer::<NodeType>(buf);
 
-    let user = buf.pull::<UserType>();
+    let user = buf.pull::<UserIdType>();
     let auth = buf.pull::<AuthType>();
     let name = buf.pull::<String>();
 

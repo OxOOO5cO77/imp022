@@ -5,7 +5,7 @@ use sqlx::postgres::{PgPool, PgPoolOptions};
 use sqlx::types::Uuid;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
-use shared_data::types::{PasswordType, NodeType, UserType};
+use shared_data::types::{PasswordType, NodeType, UserIdType};
 
 use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 
@@ -52,7 +52,7 @@ struct User {
 fn c_authorize(context: Arc<Mutex<Lookout>>, tx: UnboundedSender<RoutedMessage>, buf: &mut VSizedBuffer) {
     let drawbridge = buf.pull::<NodeType>();
     let vagabond = buf.pull::<NodeType>();
-    let user_hash = buf.pull::<UserType>();
+    let user_hash = buf.pull::<UserIdType>();
     let pass_hash = buf.pull::<PasswordType>();
 
     let pool = context.lock().unwrap().pool.clone();

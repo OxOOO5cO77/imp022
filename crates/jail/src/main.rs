@@ -2,7 +2,7 @@ use std::env;
 
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
-use shared_data::types::{NodeType, TimestampType, UserType};
+use shared_data::types::{NodeType, TimestampType, UserIdType};
 
 use shared_net::{VClientMode, RoutedMessage, VSizedBuffer};
 use shared_net::op;
@@ -40,7 +40,7 @@ fn process_courtyard(_context: NoContext, _tx: UnboundedSender<RoutedMessage>, m
 fn c_userattr(mut buf: VSizedBuffer) {
     let _ = buf.pull::<NodeType>(); // gate (discard)
 
-    let user = buf.pull::<UserType>();
+    let user = buf.pull::<UserIdType>();
     let attr = buf.pull::<String>();
     let time = buf.pull::<TimestampType>();
 
