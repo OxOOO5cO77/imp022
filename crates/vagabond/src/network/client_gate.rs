@@ -4,8 +4,8 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
-use hall::message::gamebuild::{GameBuildRequest, GameBuildResponse};
-use hall::message::gamestart::{GameStartRequest, GameStartResponse};
+use hall::message::game_build::{GameBuildRequest, GameBuildResponse};
+use hall::message::game_start::{GameStartRequest, GameStartResponse};
 use shared_data::types::{AuthType, GameIdType, PartType};
 use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 use shared_net::sizedbuffers::Bufferable;
@@ -42,7 +42,7 @@ fn process_gate(context: GateClient, _tx: UnboundedSender<RoutedMessage>, mut bu
         op::Command::Chat => g_chat(&mut buf),
         op::Command::DM => g_dm(&mut buf),
         op::Command::InvList => g_invlist(&mut buf),
-        op::Command::GameStart => g_gamestart(context, &mut buf),
+        op::Command::GameActivate => g_gamestart(context, &mut buf),
         op::Command::GameBuild => g_gamebuild(context, &mut buf),
         op::Command::GameEnd => g_gameend(&mut buf),
         _ => VClientMode::Continue
@@ -108,7 +108,7 @@ impl GateIFace {
     }
 
     pub fn send_gamestart(&self) {
-        let command = op::Command::GameStart;
+        let command = op::Command::GameActivate;
         let request = GameStartRequest {
           game_id: 0
         };

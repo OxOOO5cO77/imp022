@@ -1,6 +1,7 @@
 pub(crate) mod game_code;
 pub(crate) mod game_machine;
 pub(crate) mod game_process;
+pub(crate) mod game_stage;
 pub(crate) mod game_state;
 pub(crate) mod game_user;
 

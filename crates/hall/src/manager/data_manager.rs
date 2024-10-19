@@ -3,9 +3,10 @@ use std::path::Path;
 
 use rand::prelude::*;
 
-use hall::data::hall_build::HallBuild;
-use hall::data::hall_card::HallCard;
-use hall::data::hall_category::HallCategory;
+use hall::data::hall::hall_build::HallBuild;
+use hall::data::hall::hall_card::HallCard;
+use hall::data::hall::hall_category::HallCategory;
+use hall::data::player::player_card::PlayerCard;
 use shared_data::game::card::CardSlot;
 use shared_data::player::build::{Build, ANT, BRD, CPU, DSC};
 use shared_data::player::category::{Category, Distro, Institution, Location, Role};
@@ -92,6 +93,10 @@ impl DataManager {
         slots.iter()
             .filter_map(|slot| self.pick_card(rng, slot))
             .collect()
+    }
+
+    pub(crate) fn lookup_player_card(&self, player_card: &PlayerCard) -> Option<HallCard> {
+        self.card.iter().find(|o| o.set == player_card.set && o.rarity == player_card.rarity && o.number == player_card.number).cloned()
     }
 }
 

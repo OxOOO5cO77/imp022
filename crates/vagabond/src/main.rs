@@ -6,7 +6,6 @@ use system::app_state::AppState;
 mod manager;
 mod screen;
 mod system;
-mod game;
 mod network;
 
 fn main() {

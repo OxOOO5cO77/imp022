@@ -1,42 +1,34 @@
-use std::collections::VecDeque;
-use std::mem::size_of;
-
 use shared_data::types::{GameIdType, PartType, SeedType};
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 
-use crate::data::player::player_card::{PackedCardType, PlayerCard};
+use crate::data::player::player_card::PlayerCard;
 
-const PART_COUNT: usize = 8;
+type PartsArray = [PartType; 8];
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameBuildRequest {
     pub game_id: GameIdType,
-    pub parts: [PartType; PART_COUNT],
+    pub parts: PartsArray,
 }
 
 impl Bufferable for GameBuildRequest {
     fn push_into(&self, buf: &mut VSizedBuffer) {
         self.game_id.push_into(buf);
-        for part in &self.parts {
-            part.push_into(buf);
-        }
+        self.parts.push_into(buf);
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
         let game_id = GameIdType::pull_from(buf);
-        let mut result = Self {
+        let parts = PartsArray::pull_from(buf);
+        Self {
             game_id,
-            parts: [0; PART_COUNT],
-        };
-        for i in 0..result.parts.len() {
-            result.parts[i] = PartType::pull_from(buf);
+            parts,
         }
-        result
     }
 
     fn size_in_buffer(&self) -> usize {
-        size_of::<GameIdType>() + (size_of::<PartType>() * self.parts.len())
+        self.game_id.size_in_buffer() + self.parts.size_in_buffer()
     }
 }
 
@@ -44,33 +36,26 @@ pub const CARD_COUNT: usize = 40;
 
 pub struct GameBuildResponse {
     pub seed: SeedType,
-    pub deck: VecDeque<PlayerCard>,
+    pub deck: Vec<PlayerCard>,
 }
 
 impl Bufferable for GameBuildResponse {
     fn push_into(&self, buf: &mut VSizedBuffer) {
         self.seed.push_into(buf);
-        (self.deck.len() as u8).push_into(buf);
-        for card in &self.deck {
-            card.push_into(buf);
-        }
+        self.deck.push_into(buf);
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
         let seed = SeedType::pull_from(buf);
-        let mut result = Self {
+        let deck = Vec::<PlayerCard>::pull_from(buf);
+        Self {
             seed,
-            deck: VecDeque::new(),
-        };
-        let len = u8::pull_from(buf);
-        for _ in 0..len {
-            result.deck.push_back(PlayerCard::pull_from(buf));
+            deck,
         }
-        result
     }
 
     fn size_in_buffer(&self) -> usize {
-        size_of::<SeedType>() + size_of::<u8>() +(size_of::<PackedCardType>() * CARD_COUNT)
+        self.seed.size_in_buffer() + self.deck.size_in_buffer()
     }
 }
 
@@ -82,7 +67,7 @@ mod test {
     use shared_net::VSizedBuffer;
 
     use crate::data::player::player_card::PlayerCard;
-    use crate::message::gamebuild::{CARD_COUNT, GameBuildRequest, GameBuildResponse};
+    use crate::message::game_build::{GameBuildRequest, GameBuildResponse, CARD_COUNT};
 
     #[test]
     fn test_request() {
@@ -103,10 +88,10 @@ mod test {
     fn test_response() {
         let mut orig = GameBuildResponse {
             seed: 1234567890,
-            deck: Default::default(),
+            deck: Vec::default(),
         };
         for i in 0..CARD_COUNT {
-            orig.deck.push_back(PlayerCard {
+            orig.deck.push(PlayerCard {
                 rarity: Legendary,
                 number: i as card::NumberType,
                 set: 1,

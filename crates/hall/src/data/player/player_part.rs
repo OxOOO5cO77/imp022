@@ -1,5 +1,3 @@
-use std::mem::size_of;
-
 use serde::{Deserialize, Serialize};
 
 use shared_data::player::attribute;
@@ -7,52 +5,35 @@ use shared_data::types::SeedType;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 
-use crate::data::player::player_build::{PackedBuildType, PlayerBuild};
-use crate::data::player::player_category::{PackedCategoryType, PlayerCategory};
+use crate::data::player::player_build::PlayerBuild;
+use crate::data::player::player_category::PlayerCategory;
+
+type AttributeArray = [attribute::ValueType; 4];
+type BuildArray = [PlayerBuild; 4];
+type CategoryArray = [PlayerCategory; 4];
 
 #[derive(Default, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq, Debug))]
 pub struct PlayerPart {
     pub seed: SeedType,
-    pub values: [attribute::ValueType; 4],
-    pub build: [PlayerBuild; 4],
-    pub category: [PlayerCategory; 4],
+    pub values: AttributeArray,
+    pub build: BuildArray,
+    pub category: CategoryArray,
 }
 
 impl Bufferable for PlayerPart {
     fn push_into(&self, buf: &mut VSizedBuffer) {
         self.seed.push_into(buf);
-        for value in &self.values {
-            value.push_into(buf);
-        }
-        for build in &self.build {
-            build.push_into(buf);
-        }
-        for category in &self.category {
-            category.push_into(buf);
-        }
+        self.values.push_into(buf);
+        self.build.push_into(buf);
+        self.category.push_into(buf);
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
         let seed = SeedType::pull_from(buf);
-        let values = [
-            attribute::ValueType::pull_from(buf),
-            attribute::ValueType::pull_from(buf),
-            attribute::ValueType::pull_from(buf),
-            attribute::ValueType::pull_from(buf),
-        ];
-        let build = [
-            PlayerBuild::pull_from(buf),
-            PlayerBuild::pull_from(buf),
-            PlayerBuild::pull_from(buf),
-            PlayerBuild::pull_from(buf),
-        ];
-        let category = [
-            PlayerCategory::pull_from(buf),
-            PlayerCategory::pull_from(buf),
-            PlayerCategory::pull_from(buf),
-            PlayerCategory::pull_from(buf),
-        ];
+        let values = AttributeArray::pull_from(buf);
+        let build = BuildArray::pull_from(buf);
+        let category = CategoryArray::pull_from(buf);
         Self {
             seed,
             values,
@@ -62,13 +43,13 @@ impl Bufferable for PlayerPart {
     }
 
     fn size_in_buffer(&self) -> usize {
-        size_of::<SeedType>() + (size_of::<attribute::ValueType>() * 4) + (size_of::<PackedBuildType>() * 4) + (size_of::<PackedCategoryType>() * 4)
+        self.seed.size_in_buffer() + self.values.size_in_buffer() + self.build.size_in_buffer() + self.category.size_in_buffer()
     }
 }
 
 #[cfg(test)]
 mod test {
-    use shared_data::player::build::{ANT, BRD, Build, CPU, DSC, Market};
+    use shared_data::player::build::{Build, Market, ANT, BRD, CPU, DSC};
     use shared_data::player::category::{Academic, Category, Distro, Institution, Location, Physical, Restricted, Role, Unauthorized};
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;

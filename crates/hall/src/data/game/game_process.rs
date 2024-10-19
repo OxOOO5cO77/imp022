@@ -1,6 +1,7 @@
+use crate::data::game::game_machine::GameMachineContext;
 use crate::data::game::GameCode;
-use crate::data::hall_card::HallCard;
-use shared_data::game::card::{PriorityType, DelayType};
+use crate::data::hall::hall_card::HallCard;
+use shared_data::game::card::{DelayType, PriorityType};
 use std::cmp::Ordering;
 
 type TTLType = u8;
@@ -24,20 +25,20 @@ impl GameProcess {
         }
     }
 
-    pub(crate) fn launch(&mut self) {
+    pub(crate) fn launch(&mut self, context: &mut GameMachineContext) {
         for code in &self.launch_code {
-            if !code.execute() {
+            if !code.execute(context) {
                 break;
             }
         }
     }
-    pub(crate) fn run(&mut self) {
+    pub(crate) fn run(&mut self, context: &mut GameMachineContext) {
         if self.ttl == 0 {
             return;
         }
         self.ttl -= 1;
         for code in &self.run_code {
-            if !code.execute() {
+            if !code.execute(context) {
                 break;
             }
         }

@@ -2,9 +2,9 @@ use crate::data::build::DbBuild;
 use crate::data::card::DbCard;
 use crate::data::category::DbCategory;
 use crate::save_load::save_data_single;
-use hall::data::hall_build::HallBuild;
-use hall::data::hall_card::HallCard;
-use hall::data::hall_category::HallCategory;
+use hall::data::hall::hall_build::HallBuild;
+use hall::data::hall::hall_card::HallCard;
+use hall::data::hall::hall_category::HallCategory;
 use shared_data::game::opcode::OpCode;
 use std::io::Error;
 

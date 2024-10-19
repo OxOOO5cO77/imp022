@@ -10,6 +10,7 @@ use shared_net::VSizedBuffer;
 pub type PackedCardType = u16;
 
 #[derive(Default, Clone, Copy, Serialize, Deserialize)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct PlayerCard {
     pub rarity: Rarity,
     pub number: card::NumberType,
@@ -56,6 +57,7 @@ impl PlayerCard {
             },
         }
     }
+    pub fn size_in_bytes() -> usize {size_of::<PackedCardType>()}
 }
 
 impl Bufferable for PlayerCard {

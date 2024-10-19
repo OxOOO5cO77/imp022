@@ -3,9 +3,9 @@ use std::iter::zip;
 
 use rand::prelude::*;
 
-use hall::data::hall_build::HallBuild;
-use hall::data::hall_card::HallCard;
-use hall::data::hall_category::HallCategory;
+use hall::data::hall::hall_build::HallBuild;
+use hall::data::hall::hall_card::HallCard;
+use hall::data::hall::hall_category::HallCategory;
 use hall::data::player::Player;
 use hall::data::player::player_build::PlayerBuild;
 use hall::data::player::player_card::PlayerCard;

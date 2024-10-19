@@ -1,17 +1,22 @@
 use crate::data::game::GameProcess;
 use std::collections::VecDeque;
 
-use crate::data::hall_card::HallCard;
+use crate::data::hall::hall_card::HallCard;
 use std::fmt;
 
 type MachineValueType = u16;
 
 #[derive(Default)]
+pub(crate) struct GameMachineContext {
+    pub(crate) free_space: MachineValueType,
+    pub(crate) thermal_capacity: MachineValueType,
+    pub(crate) system_health: MachineValueType,
+    pub(crate) open_ports: MachineValueType,
+}
+
+#[derive(Default)]
 pub struct GameMachine {
-    free_space: MachineValueType,
-    thermal_capacity: MachineValueType,
-    system_health: MachineValueType,
-    open_ports: MachineValueType,
+    context: GameMachineContext,
     queue: VecDeque<GameProcess>,
     heap: Vec<GameProcess>,
     state: GameMachineState,
@@ -45,7 +50,7 @@ impl fmt::Display for GameMachineTerminationReason {
 }
 
 impl GameMachine {
-    pub(crate) fn enqueue(&mut self, card: HallCard) {
+    pub fn enqueue(&mut self, card: HallCard) {
         let process = GameProcess::new_from_card(card);
         self.queue.insert(process.get_delay() as usize, process);
     }
@@ -56,7 +61,7 @@ impl GameMachine {
         }
 
         if let Some(mut process) = self.queue.pop_front() {
-            process.launch();
+            process.launch(&mut self.context);
             self.heap.push(process);
         }
 
@@ -64,13 +69,15 @@ impl GameMachine {
         self.heap.sort();
 
         for process in self.heap.iter_mut() {
-            process.run();
+            process.run(&mut self.context);
         }
 
-        self.state = self.check_state();
+        self.state = self.context.check_termination();
     }
+}
 
-    fn check_state(&self) -> GameMachineState {
+impl GameMachineContext {
+    fn check_termination(&self) -> GameMachineState {
         use GameMachineState::*;
         if self.free_space == 0 {
             Terminated(GameMachineTerminationReason::FreeSpace)
@@ -83,18 +90,5 @@ impl GameMachine {
         } else {
             Running
         }
-    }
-
-    pub(crate) fn adjust_free_space(&mut self, amount: i16) {
-        self.free_space = self.free_space.saturating_add_signed(amount);
-    }
-    pub(crate) fn adjust_thermal_capacity(&mut self, amount: i16) {
-        self.thermal_capacity = self.thermal_capacity.saturating_add_signed(amount);
-    }
-    pub(crate) fn adjust_system_health(&mut self, amount: i16) {
-        self.system_health = self.system_health.saturating_add_signed(amount);
-    }
-    pub(crate) fn adjust_open_ports(&mut self, amount: i16) {
-        self.open_ports = self.open_ports.saturating_add_signed(amount);
     }
 }

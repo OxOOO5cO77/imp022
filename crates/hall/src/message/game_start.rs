@@ -1,5 +1,3 @@
-use std::mem::size_of;
-
 use shared_data::types::GameIdType;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
@@ -24,46 +22,41 @@ impl Bufferable for GameStartRequest {
     }
 
     fn size_in_buffer(&self) -> usize {
-        size_of::<GameIdType>()
+        self.game_id.size_in_buffer()
     }
 }
 
-const PART_COUNT: usize = 8;
+type PartsArray = [PlayerPart; 8];
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameStartResponse {
     pub game_id: GameIdType,
-    pub parts: [PlayerPart; PART_COUNT],
+    pub parts: PartsArray,
 }
 
 impl Bufferable for GameStartResponse {
     fn push_into(&self, buf: &mut VSizedBuffer) {
         self.game_id.push_into(buf);
-        for part in &self.parts {
-            part.push_into(buf);
-        }
+        self.parts.push_into(buf);
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
         let game_id = GameIdType::pull_from(buf);
-        let mut result = Self {
+        let parts = PartsArray::pull_from(buf);
+        Self {
             game_id,
-            parts: [PlayerPart::default(); PART_COUNT],
-        };
-        for i in 0..result.parts.len() {
-            result.parts[i] = PlayerPart::pull_from(buf);
+            parts,
         }
-        result
     }
 
     fn size_in_buffer(&self) -> usize {
-        size_of::<GameIdType>() + (self.parts[0].size_in_buffer() * self.parts.len())
+        self.game_id.size_in_buffer() + self.parts.size_in_buffer()
     }
 }
 
 #[cfg(test)]
 mod test {
-    use shared_data::player::build::{ANT, BRD, Build, CPU, DSC, Market};
+    use shared_data::player::build::{Build, Market, ANT, BRD, CPU, DSC};
     use shared_data::player::category::{Academic, Category, Distro, Institution, Location, Physical, Restricted, Role, Unauthorized};
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
@@ -71,7 +64,7 @@ mod test {
     use crate::data::player::player_build::PlayerBuild;
     use crate::data::player::player_category::PlayerCategory;
     use crate::data::player::player_part::PlayerPart;
-    use crate::message::gamestart::{GameStartRequest, GameStartResponse};
+    use crate::message::game_start::{GameStartRequest, GameStartResponse};
 
     #[test]
     fn test_request() {

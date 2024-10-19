@@ -33,7 +33,7 @@ impl DataManager {
         self.card.iter().find(|card| card.set == in_card.set && card.rarity == in_card.rarity && card.number == in_card.number).cloned()
     }
 
-    pub(crate) fn convert_deck(&self, in_deck: VecDeque<PlayerCard>) -> VecDeque<VagabondCard> {
+    pub(crate) fn convert_deck(&self, in_deck: Vec<PlayerCard>) -> VecDeque<VagabondCard> {
         in_deck.iter().filter_map(|o| self.convert_card(o)).collect::<VecDeque<_>>()
     }
 
