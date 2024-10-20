@@ -1,6 +1,11 @@
 #!/bin/bash
 
-Save 65% on Into The Flames on Steam.docker buildx build -f archive/Dockerfile . -t "$REGISTRY/archive:latest"
+if [ -z "${REGISTRY}" ]; then
+  echo "REGISTRY is unset"
+  exit
+fi
+
+docker buildx build -f archive/Dockerfile . -t "$REGISTRY/archive:latest"
 docker buildx build -f bazaar/Dockerfile . -t "$REGISTRY/bazaar:latest"
 docker buildx build -f courtyard/Dockerfile . -t "$REGISTRY/courtyard:latest"
 docker buildx build -f drawbridge/Dockerfile . -t "$REGISTRY/drawbridge:latest"
