@@ -6,6 +6,6 @@ RUN cargo build --release --bin bazaar
 
 # We do not need the Rust toolchain to run the binary!
 FROM debian:stable-slim AS runtime
-WORKDIR /bazaar
-COPY --from=builder /bazaar/target/release/bazaar /usr/local/bin
-ENTRYPOINT ["/usr/local/bin/bazaar"]
+WORKDIR /opt/bazaar
+COPY --from=builder /bazaar/target/release/bazaar .
+ENTRYPOINT ["./bazaar"]

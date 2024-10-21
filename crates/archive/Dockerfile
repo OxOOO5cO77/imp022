@@ -8,6 +8,6 @@ RUN cargo build --release --bin archive
 
 # We do not need the Rust toolchain to run the binary!
 FROM debian:stable-slim AS runtime
-WORKDIR /archive
-COPY --from=builder /archive/target/release/archive /usr/local/bin
-ENTRYPOINT ["/usr/local/bin/archive"]
+WORKDIR /opt/archive
+COPY --from=builder /archive/target/release/archive .
+ENTRYPOINT ["./archive"]

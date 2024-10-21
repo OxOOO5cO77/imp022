@@ -7,6 +7,6 @@ RUN cargo build --release --bin forum
 
 # We do not need the Rust toolchain to run the binary!
 FROM debian:stable-slim AS runtime
-WORKDIR /forum
-COPY --from=builder /forum/target/release/forum /usr/local/bin
-ENTRYPOINT ["/usr/local/bin/forum"]
+WORKDIR /opt/forum
+COPY --from=builder /forum/target/release/forum .
+ENTRYPOINT ["./forum"]
