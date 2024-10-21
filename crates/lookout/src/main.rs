@@ -21,7 +21,7 @@ async fn main() -> Result<(), ()> {
     let _ = args.next(); // program name
     let iface_to_courtyard = args.next().unwrap_or("[::1]:12345".to_string());
 
-    let db_connect = env::var("DB_CONNECT").unwrap_or("postgresql://lookout:lookout@[::1]:5432/lookout".to_string());
+    let db_connect = env::var("DB_CONNECT").expect("DB_CONNECT must be set");
 
     let context = Arc::new(Mutex::new(Lookout {
         pool: PgPoolOptions::new().max_connections(16).connect(&db_connect).await.unwrap()
