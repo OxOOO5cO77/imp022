@@ -15,6 +15,7 @@ services:
       retries: 10
   archive:
     image: registry.impending.org:5050/archive:latest
+    command: courtyard:12345
     environment:
       - DB_CONNECT=${DB_ARCHIVE}
     depends_on:
@@ -22,6 +23,7 @@ services:
         condition: service_healthy
   bazaar:
     image: registry.impending.org:5050/bazaar:latest
+    command: courtyard:12345
     environment:
       - DB_CONNECT=${DB_BAZAAR}
     depends_on:
@@ -33,20 +35,26 @@ services:
       - "12345:12345"
   drawbridge:
     image: registry.impending.org:5050/drawbridge:latest
+    command: courtyard:12345
     ports:
       - "23450:23450"
   forum:
     image: registry.impending.org:5050/forum:latest
+    command: courtyard:12345
   gate:
     image: registry.impending.org:5050/gate:latest
+    command: courtyard:12345
     ports:
       - "23451:23451"
   hall:
     image: registry.impending.org:5050/hall:latest
+    command: courtyard:12345
   jail:
     image: registry.impending.org:5050/jail:latest
+    command: courtyard:12345
   lookout:
     image: registry.impending.org:5050/lookout:latest
+    command: courtyard:12345
     environment:
       - DB_CONNECT=${DB_LOOKOUT}
     depends_on:
@@ -54,6 +62,7 @@ services:
         condition: service_healthy
   warehouse:
     image: registry.impending.org:5050/warehouse:latest
-
+    ports:
+      - "23235:23235"
 volumes:
   pgdata:

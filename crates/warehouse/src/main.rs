@@ -30,7 +30,7 @@ async fn main() -> Result<(), std::io::Error> {
         .with_state(state)
         ;
 
-    let listener = TcpListener::bind("127.0.0.1:23235").await?;
+    let listener = TcpListener::bind("0.0.0.0:23235").await?;
 
     axum::serve(listener, routes).await?;
 
