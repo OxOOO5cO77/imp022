@@ -365,12 +365,12 @@ fn c_game_choose_attr(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessa
                 }
             }
             // TODO: set phase
-            broadcast_player_state(request.game_id, context);
+            send_each_player_state(request.game_id, context);
         }
     }
 }
 
-fn broadcast_player_state(game_id: GameIdType, mut context: MutexGuard<Hall>) {
+fn send_each_player_state(game_id: GameIdType, mut context: MutexGuard<Hall>) {
     let (games, bx) = context.split_borrow();
 
     if let Some(game) = games.get_mut(&game_id) {
