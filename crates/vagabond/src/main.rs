@@ -10,12 +10,12 @@ mod network;
 
 fn main() {
     App::new()
-        .init_state::<AppState>()
         .add_plugins(DefaultPlugins)
         .add_plugins(bevy_egui::EguiPlugin)
         .add_plugins(system::SystemPlugin)
         .add_plugins(manager::ManagerPlugin)
         .add_plugins(screen::ScreenPlugins)
+        .init_state::<AppState>()
         .add_systems(Startup, setup)
         .run()
     ;
