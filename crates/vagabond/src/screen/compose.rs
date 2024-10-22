@@ -281,7 +281,7 @@ fn spawn_part(parent: &mut ChildBuilder, part: &VagabondPart, font_info: &FontIn
             width: PART_DISPLAY_VAL,
             height: PART_DISPLAY_VAL,
             grid_template_columns: GridTrack::percent(100.0),
-            grid_template_rows: vec![GridTrack::min_content(), GridTrack::min_content(), GridTrack::min_content(), GridTrack::flex(1.0), GridTrack::min_content()],
+            grid_template_rows: vec![GridTrack::px(50.0), GridTrack::px(8.0), GridTrack::px(50.0), GridTrack::px(8.0), GridTrack::px(12.0)],
             ..default()
         },
         background_color: bevy::color::palettes::css::SILVER.into(),
@@ -294,7 +294,7 @@ fn spawn_part(parent: &mut ChildBuilder, part: &VagabondPart, font_info: &FontIn
             width: HUNDRED,
             height: HUNDRED,
             grid_template_columns: GridTrack::percent(100.0),
-            grid_template_rows: RepeatedGridTrack::max_content(4),
+            grid_template_rows: RepeatedGridTrack::auto(4),
             ..default()
         },
         background_color: bevy::color::palettes::css::SILVER.into(),
@@ -570,7 +570,7 @@ fn dragdrag(
         if let Some(part) = &holder.0 {
             commands
                 .spawn((
-                    filled_rect(Val::Px(transform.x - 64.0), Val::Px(transform.y - 64.0), Val::Px(128.0), Val::Px(128.0), bevy::color::palettes::css::ALICE_BLUE),
+                    filled_rect(Val::Px(transform.x - 66.0), Val::Px(transform.y - 66.0), Val::Px(132.0), Val::Px(132.0), bevy::color::palettes::css::CHARTREUSE),
                     Dragging(dragdrag.src)
                 ))
                 .with_children(|parent| {
