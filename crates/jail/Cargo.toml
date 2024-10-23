@@ -6,6 +6,6 @@ edition = "2021"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 
 [dependencies]
-tokio = { version = "1.40.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.41.0", features = ["macros", "rt-multi-thread"] }
 shared-data = { path = "../shared-data" }
 shared-net = { path = "../shared-net" }
