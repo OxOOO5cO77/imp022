@@ -149,8 +149,8 @@ fn c_game_start(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, m
         temp_builder.disrupt.convert_to_player_part(),
         temp_builder.build.convert_to_player_part(),
         temp_builder.build_values.convert_to_player_part(),
-        temp_builder.category.convert_to_player_part(),
-        temp_builder.category_values.convert_to_player_part(),
+        temp_builder.detail.convert_to_player_part(),
+        temp_builder.detail_values.convert_to_player_part(),
     ];
 
     let route = op::Route::One(gate);

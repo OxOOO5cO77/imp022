@@ -5,11 +5,11 @@ use rand::prelude::*;
 
 use hall::data::hall::hall_build::HallBuild;
 use hall::data::hall::hall_card::HallCard;
-use hall::data::hall::hall_category::HallCategory;
+use hall::data::hall::hall_detail::HallDetail;
 use hall::data::player::Player;
 use hall::data::player::player_build::PlayerBuild;
 use hall::data::player::player_card::PlayerCard;
-use hall::data::player::player_category::PlayerCategory;
+use hall::data::player::player_detail::PlayerDetail;
 use hall::data::player::player_part::PlayerPart;
 use shared_data::player::attribute::Attributes;
 use shared_data::types::{PartType, SeedType};
@@ -21,7 +21,7 @@ pub(crate) struct PlayerPartBuilder {
     seed: u64,
     pub(crate) values: [u8; 4],
     pub(crate) build: [HallBuild; 4],
-    pub(crate) category: [HallCategory; 4],
+    pub(crate) detail: [HallDetail; 4],
 }
 
 impl PlayerPartBuilder {
@@ -43,7 +43,7 @@ impl PlayerPartBuilder {
             seed,
             values: Self::pick_values(&mut rng),
             build: dm.pick_build(&mut rng),
-            category: dm.pick_category(&mut rng),
+            detail: dm.pick_detail(&mut rng),
         }
     }
 
@@ -57,11 +57,11 @@ impl PlayerPartBuilder {
                 self.build[2].to_player(&0),
                 self.build[3].to_player(&0),
             ],
-            category: [
-                self.category[0].to_player(&0),
-                self.category[1].to_player(&0),
-                self.category[2].to_player(&0),
-                self.category[3].to_player(&0),
+            detail: [
+                self.detail[0].to_player(&0),
+                self.detail[1].to_player(&0),
+                self.detail[2].to_player(&0),
+                self.detail[3].to_player(&0),
             ],
         }
     }
@@ -74,8 +74,8 @@ pub(crate) struct PlayerBuilder {
     pub(crate) disrupt: PlayerPartBuilder,
     pub(crate) build: PlayerPartBuilder,
     pub(crate) build_values: PlayerPartBuilder,
-    pub(crate) category: PlayerPartBuilder,
-    pub(crate) category_values: PlayerPartBuilder,
+    pub(crate) detail: PlayerPartBuilder,
+    pub(crate) detail_values: PlayerPartBuilder,
 }
 
 impl PlayerBuilder {
@@ -87,8 +87,8 @@ impl PlayerBuilder {
             disrupt: PlayerPartBuilder::new(seeds[3], dm),
             build: PlayerPartBuilder::new(seeds[4], dm),
             build_values: PlayerPartBuilder::new(seeds[5], dm),
-            category: PlayerPartBuilder::new(seeds[6], dm),
-            category_values: PlayerPartBuilder::new(seeds[7], dm),
+            detail: PlayerPartBuilder::new(seeds[6], dm),
+            detail_values: PlayerPartBuilder::new(seeds[7], dm),
         }
     }
     pub(crate) fn create_player(&self, dm: &DataManager) -> Option<Player> {
@@ -105,7 +105,7 @@ impl PlayerBuilder {
                 &self.disrupt.values,
             ),
             build: Self::build_from_parts(&self.build, &self.build_values),
-            category: Self::category_from_parts(&self.category, &self.category_values),
+            detail: Self::detail_from_parts(&self.detail, &self.detail_values),
             deck,
         };
         Some(player)
@@ -120,12 +120,12 @@ impl PlayerBuilder {
         ]
     }
 
-    pub(crate) fn category_from_parts(category: &PlayerPartBuilder, values: &PlayerPartBuilder) -> [PlayerCategory; 4] {
+    pub(crate) fn detail_from_parts(detail: &PlayerPartBuilder, values: &PlayerPartBuilder) -> [PlayerDetail; 4] {
         [
-            category.category[0].to_player(&values.values[0]),
-            category.category[1].to_player(&values.values[1]),
-            category.category[2].to_player(&values.values[2]),
-            category.category[3].to_player(&values.values[3]),
+            detail.detail[0].to_player(&values.values[0]),
+            detail.detail[1].to_player(&values.values[1]),
+            detail.detail[2].to_player(&values.values[2]),
+            detail.detail[3].to_player(&values.values[3]),
         ]
     }
 
@@ -137,8 +137,8 @@ impl PlayerBuilder {
             | 0x00000000FF000000 & &self.disrupt.seed
             | 0x000000FF00000000 & &self.build.seed
             | 0x0000FF0000000000 & &self.build_values.seed
-            | 0x00FF000000000000 & &self.category.seed
-            | 0xFF00000000000000 & &self.category_values.seed
+            | 0x00FF000000000000 & &self.detail.seed
+            | 0xFF00000000000000 & &self.detail_values.seed
     }
 
     fn map_card(card: HallCard) -> PlayerCard {
@@ -156,10 +156,10 @@ impl PlayerBuilder {
         let build_cards = build_zip.flat_map(|(item, value)| dm.pick_cards(rng, &item.cards, value)).map(Self::map_card);
         deck.extend(build_cards);
 
-        let category_zip = zip(&self.category.category, self.category_values.values);
-        let category_cards = category_zip.flat_map(|(item, value)| dm.pick_cards(rng, &item.cards, value)).map(Self::map_card);
+        let detail_zip = zip(&self.detail.detail, self.detail_values.values);
+        let detail_cards = detail_zip.flat_map(|(item, value)| dm.pick_cards(rng, &item.cards, value)).map(Self::map_card);
 
-        deck.extend(category_cards);
+        deck.extend(detail_cards);
 
         deck.make_contiguous().sort_by(|a, b| b.rarity.cmp(&a.rarity));
 
@@ -191,8 +191,8 @@ mod player_builder_test {
             disrupt: parts[3].clone(),
             build: parts[4].clone(),
             build_values: parts[5].clone(),
-            category: parts[6].clone(),
-            category_values: parts[7].clone(),
+            detail: parts[6].clone(),
+            detail_values: parts[7].clone(),
         };
         let player = full_builder.create_player(&dm);
         assert!(player.is_some());

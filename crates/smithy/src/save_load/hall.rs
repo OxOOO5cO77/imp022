@@ -1,10 +1,10 @@
 use crate::data::build::DbBuild;
 use crate::data::card::DbCard;
-use crate::data::category::DbCategory;
+use crate::data::detail::DbDetail;
 use crate::save_load::save_data_single;
 use hall::data::hall::hall_build::HallBuild;
 use hall::data::hall::hall_card::HallCard;
-use hall::data::hall::hall_category::HallCategory;
+use hall::data::hall::hall_detail::HallDetail;
 use shared_data::game::opcode::OpCode;
 use std::io::Error;
 
@@ -51,15 +51,15 @@ pub(crate) fn output_builds_for_hall(builds: &[DbBuild]) -> Result<(), Error> {
     save_data_single(hall_builds, "output/hall_builds.ron")
 }
 
-fn make_hall_category(category_instance: &DbCategory) -> HallCategory {
-    HallCategory {
-        category: category_instance.category,
-        number: category_instance.number,
-        cards: category_instance.cards.clone(),
+fn make_hall_detail(detail_instance: &DbDetail) -> HallDetail {
+    HallDetail {
+        detail: detail_instance.detail,
+        number: detail_instance.number,
+        cards: detail_instance.cards.clone(),
     }
 }
 
-pub(crate) fn output_categories_for_hall(categories: &[DbCategory]) -> Result<(), Error> {
-    let hall_categories = categories.iter().map(make_hall_category).collect::<Vec<_>>();
-    save_data_single(hall_categories, "output/hall_categories.ron")
+pub(crate) fn output_details_for_hall(details: &[DbDetail]) -> Result<(), Error> {
+    let hall_details = details.iter().map(make_hall_detail).collect::<Vec<_>>();
+    save_data_single(hall_details, "output/hall_details.ron")
 }

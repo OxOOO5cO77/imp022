@@ -1,6 +1,6 @@
 use crate::data::build::process_build;
 use crate::data::card::process_card;
-use crate::data::category::process_category;
+use crate::data::detail::process_detail;
 use clap::Parser;
 use sqlx::postgres::PgPoolOptions;
 
@@ -13,8 +13,8 @@ struct Args {
     #[arg(short = 'p', long)] password: String,
     #[arg(short = 'd', long)] database: String,
     #[arg(long)] build: bool,
-    #[arg(long)] category: bool,
     #[arg(long)] card: bool,
+    #[arg(long)] detail: bool,
     #[arg(short = 'H', long)] hall: bool,
     #[arg(short = 'V', long)] vagabond: bool,
 }
@@ -28,7 +28,12 @@ async fn main() -> Result<(), sqlx::Error> {
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(connection.as_str())
-        .await?;
+        .await
+        .map_err(|e| {
+            println!("[ERROR] sqlx error: {}", e);
+            e
+        })?
+        ;
 
 
     if std::fs::metadata("output").is_err() {
@@ -39,8 +44,8 @@ async fn main() -> Result<(), sqlx::Error> {
         process_build(&args, &pool).await?;
     }
 
-    if args.category {
-        process_category(&args, &pool).await?;
+    if args.detail {
+        process_detail(&args, &pool).await?;
     }
 
     if args.card {

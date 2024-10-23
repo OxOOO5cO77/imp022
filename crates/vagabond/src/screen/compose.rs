@@ -4,7 +4,7 @@ use vagabond::data::vagabond_part::VagabondPart;
 
 use crate::manager::{BackendManager, DataManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
-use crate::screen::compose::StatRowKind::{Build, Category};
+use crate::screen::compose::StatRowKind::{Build, Detail};
 use crate::system::app_state::AppState;
 use crate::system::dragdrop::{DragDrag, DragDrop, Dragging, DragTarget, DropTarget};
 use crate::system::ui::{filled_rect, HUNDRED, screen_exit, ScreenBundle};
@@ -68,14 +68,14 @@ enum StatRowKind {
     Compute,
     Disrupt,
     Build,
-    Category,
+    Detail,
 }
 
 #[derive(Component)]
 enum PlayerPartHolderKind {
     StatRow(StatRowKind),
     Build,
-    Category,
+    Detail,
     Unallocated,
 }
 
@@ -332,8 +332,8 @@ fn spawn_part(parent: &mut ChildBuilder, part: &VagabondPart, font_info: &FontIn
             parent
                 .spawn(label_container.clone())
                 .with_children(|parent| {
-                    for category in &part.category {
-                        text_children.push(parent.spawn(text(category.title.clone(), font_info)).id());
+                    for detail in &part.detail {
+                        text_children.push(parent.spawn(text(detail.title.clone(), font_info)).id());
                     }
                 })
             ;
@@ -529,7 +529,7 @@ fn build_ui_compose(
                                 .spawn(compose_attribs.clone())
                                 .with_children(|parent| {
                                     let headers = ["Institution", "Role", "Location", "Distro"];
-                                    spawn_val_label(parent, PlayerPartHolderKind::StatRow(Category), &font_info_val, PlayerPartHolderKind::Category, &font_info_label, headers);
+                                    spawn_val_label(parent, PlayerPartHolderKind::StatRow(Detail), &font_info_val, PlayerPartHolderKind::Detail, &font_info_label, headers);
                                 })
                             ;
                             parent.spawn(node(ATTRIB_VAL, Srgba::NONE));
@@ -599,7 +599,7 @@ fn update_part_holder(kind: &PlayerPartHolderKind, kids: Option<&TextChildren>, 
         let func = match kind {
             PlayerPartHolderKind::StatRow(_) => |o: &VagabondPart, i: usize| o.values[i].to_string(),
             PlayerPartHolderKind::Build => |o: &VagabondPart, i: usize| o.build[i].title.clone(),
-            PlayerPartHolderKind::Category => |o: &VagabondPart, i: usize| o.category[i].title.clone(),
+            PlayerPartHolderKind::Detail => |o: &VagabondPart, i: usize| o.detail[i].title.clone(),
             PlayerPartHolderKind::Unallocated => |_: &VagabondPart, _: usize| "".to_owned(),
         };
         populate_children(kids, holder, text_q, func);
@@ -656,11 +656,11 @@ fn finish_player(
                         StatRowKind::Compute => parts[2] = seed_from_holder(holder),
                         StatRowKind::Disrupt => parts[3] = seed_from_holder(holder),
                         Build => parts[5] = seed_from_holder(holder),
-                        Category => parts[7] = seed_from_holder(holder),
+                        Detail => parts[7] = seed_from_holder(holder),
                     }
                 }
                 PlayerPartHolderKind::Build => parts[4] = seed_from_holder(holder),
-                PlayerPartHolderKind::Category => parts[6] = seed_from_holder(holder),
+                PlayerPartHolderKind::Detail => parts[6] = seed_from_holder(holder),
                 PlayerPartHolderKind::Unallocated => {}
             }
         }

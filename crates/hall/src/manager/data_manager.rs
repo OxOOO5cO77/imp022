@@ -5,15 +5,15 @@ use rand::prelude::*;
 
 use hall::data::hall::hall_build::HallBuild;
 use hall::data::hall::hall_card::HallCard;
-use hall::data::hall::hall_category::HallCategory;
+use hall::data::hall::hall_detail::HallDetail;
 use hall::data::player::player_card::PlayerCard;
 use shared_data::game::card::CardSlot;
 use shared_data::player::build::{Build, ANT, BRD, CPU, DSC};
-use shared_data::player::category::{Category, Distro, Institution, Location, Role};
+use shared_data::player::detail::{Detail, Distro, Institution, Location, Role};
 
 pub(crate) struct DataManager {
     build: Vec<HallBuild>,
-    category: Vec<HallCategory>,
+    detail: Vec<HallDetail>,
     card: Vec<HallCard>,
 }
 
@@ -21,7 +21,7 @@ impl DataManager {
     pub(crate) fn new() -> Result<Self, Error> {
         Ok(DataManager {
             build: load_data_single("assets/data/hall_builds.ron")?,
-            category: load_data_single("assets/data/hall_categories.ron")?,
+            detail: load_data_single("assets/data/hall_details.ron")?,
             card: load_data_single("assets/data/hall_cards.ron")?,
         })
     }
@@ -52,30 +52,30 @@ impl DataManager {
         build
     }
 
-    pub(crate) fn pick_category(&self, rng: &mut impl Rng) -> [HallCategory; 4] {
-        let category = [
-            self.category.iter()
-                .filter(|o| o.is(&Category::Institution(Institution::Any)))
+    pub(crate) fn pick_detail(&self, rng: &mut impl Rng) -> [HallDetail; 4] {
+        let detail = [
+            self.detail.iter()
+                .filter(|o| o.is(&Detail::Institution(Institution::Any)))
                 .choose(rng)
                 .unwrap()
                 .clone(),
-            self.category.iter()
-                .filter(|o| o.is(&Category::Role(Role::Any)))
+            self.detail.iter()
+                .filter(|o| o.is(&Detail::Role(Role::Any)))
                 .choose(rng)
                 .unwrap()
                 .clone(),
-            self.category.iter()
-                .filter(|o| o.is(&Category::Location(Location::Any)))
+            self.detail.iter()
+                .filter(|o| o.is(&Detail::Location(Location::Any)))
                 .choose(rng)
                 .unwrap()
                 .clone(),
-            self.category.iter()
-                .filter(|o| o.is(&Category::Distro(Distro::Any)))
+            self.detail.iter()
+                .filter(|o| o.is(&Detail::Distro(Distro::Any)))
                 .choose(rng)
                 .unwrap()
                 .clone(),
         ];
-        category
+        detail
     }
 
     fn pick_card(&self, rng: &mut impl Rng, slot: &CardSlot) -> Option<HallCard> {
@@ -119,7 +119,7 @@ mod data_manager_test {
         let dm = DataManager::new()?;
         assert!(!dm.card.is_empty());
         assert!(!dm.build.is_empty());
-        assert!(!dm.category.is_empty());
+        assert!(!dm.detail.is_empty());
         Ok(())
     }
 }

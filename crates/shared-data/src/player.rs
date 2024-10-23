@@ -1,3 +1,3 @@
 pub mod attribute;
 pub mod build;
-pub mod category;
+pub mod detail;

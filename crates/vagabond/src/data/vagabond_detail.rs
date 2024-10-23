@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use shared_data::player::category::Category;
+use shared_data::player::detail::Detail;
 
 type NumberType = u8;
 
 #[derive(Default, Clone, Serialize, Deserialize)]
-pub struct VagabondCategory {
-    pub category: Category,
+pub struct VagabondDetail {
+    pub detail: Detail,
     pub number: NumberType,
     pub title: String,
 }

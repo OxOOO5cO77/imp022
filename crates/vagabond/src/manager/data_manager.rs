@@ -6,17 +6,17 @@ use bevy::prelude::Resource;
 
 use hall::data::player::player_build::PlayerBuild;
 use hall::data::player::player_card::PlayerCard;
-use hall::data::player::player_category::PlayerCategory;
+use hall::data::player::player_detail::PlayerDetail;
 use hall::data::player::player_part::PlayerPart;
 use vagabond::data::vagabond_build::VagabondBuild;
 use vagabond::data::vagabond_card::VagabondCard;
-use vagabond::data::vagabond_category::VagabondCategory;
+use vagabond::data::vagabond_detail::VagabondDetail;
 use vagabond::data::vagabond_part::VagabondPart;
 
 #[derive(Resource)]
 pub(crate) struct DataManager {
     build: Vec<VagabondBuild>,
-    category: Vec<VagabondCategory>,
+    detail: Vec<VagabondDetail>,
     card: Vec<VagabondCard>,
 }
 
@@ -24,7 +24,7 @@ impl DataManager {
     pub(crate) fn new() -> Result<Self, Error> {
         Ok(DataManager {
             build: load_data_single("assets/data/vagabond_builds.ron")?,
-            category: load_data_single("assets/data/vagabond_categories.ron")?,
+            detail: load_data_single("assets/data/vagabond_details.ron")?,
             card: load_data_single("assets/data/vagabond_cards.ron")?,
         })
     }
@@ -41,8 +41,8 @@ impl DataManager {
         self.build.iter().find(|build| build.build == in_build.build && build.number == in_build.number).cloned()
     }
 
-    fn convert_category(&self, in_build: &PlayerCategory) -> Option<VagabondCategory> {
-        self.category.iter().find(|category| category.category == in_build.category && category.number == in_build.number).cloned()
+    fn convert_detail(&self, in_build: &PlayerDetail) -> Option<VagabondDetail> {
+        self.detail.iter().find(|detail| detail.detail == in_build.detail && detail.number == in_build.number).cloned()
     }
 
     pub(crate) fn convert_part(&self, in_part: &PlayerPart) -> Option<VagabondPart> {
@@ -55,11 +55,11 @@ impl DataManager {
                 self.convert_build(&in_part.build[2])?,
                 self.convert_build(&in_part.build[3])?,
             ],
-            category: [
-                self.convert_category(&in_part.category[0])?,
-                self.convert_category(&in_part.category[1])?,
-                self.convert_category(&in_part.category[2])?,
-                self.convert_category(&in_part.category[3])?,
+            detail: [
+                self.convert_detail(&in_part.detail[0])?,
+                self.convert_detail(&in_part.detail[1])?,
+                self.convert_detail(&in_part.detail[2])?,
+                self.convert_detail(&in_part.detail[3])?,
             ],
         };
         Some(part)
@@ -85,7 +85,7 @@ mod data_manager_test {
         let dm = DataManager::new()?;
         assert!(!dm.card.is_empty());
         assert!(!dm.build.is_empty());
-        assert!(!dm.category.is_empty());
+        assert!(!dm.detail.is_empty());
         Ok(())
     }
 }

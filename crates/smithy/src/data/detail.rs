@@ -1,17 +1,17 @@
 use crate::data::common::extract_cards;
-use crate::save_load::hall::output_categories_for_hall;
-use crate::save_load::vagabond::output_categories_for_vagabond;
+use crate::save_load::hall::output_details_for_hall;
+use crate::save_load::vagabond::output_details_for_vagabond;
 use crate::Args;
 use shared_data::game::card::CardSlot;
 use shared_data::player::build::NumberType;
-use shared_data::player::category::*;
+use shared_data::player::detail::*;
 use sqlx::postgres::PgRow;
 use sqlx::{FromRow, Pool, Postgres, Row};
 
 #[derive(FromRow)]
-pub(crate) struct DbCategory {
+pub(crate) struct DbDetail {
     pub number: NumberType,
-    pub category: Category,
+    pub detail: Detail,
     pub title: String,
     pub cards: Vec<CardSlot>,
 }
@@ -213,45 +213,45 @@ fn compose_rol(build_2: &str, build_3: &str) -> Role {
     }
 }
 
-fn compose_category(build_1: &str, build_2: &str, build_3: &str) -> Category {
+fn compose_detail(build_1: &str, build_2: &str, build_3: &str) -> Detail {
     match build_1 {
-        "Distro" => Category::Distro(compose_dis(build_2, build_3)),
-        "Institution" => Category::Institution(compose_ins(build_2, build_3)),
-        "Location" => Category::Location(compose_loc(build_2, build_3)),
-        "Role" => Category::Role(compose_rol(build_2, build_3)),
-        _ => Category::Any
+        "Distro" => Detail::Distro(compose_dis(build_2, build_3)),
+        "Institution" => Detail::Institution(compose_ins(build_2, build_3)),
+        "Location" => Detail::Location(compose_loc(build_2, build_3)),
+        "Role" => Detail::Role(compose_rol(build_2, build_3)),
+        _ => Detail::Any
     }
 }
 
 
-fn row_to_category(row: &PgRow) -> DbCategory {
-    DbCategory {
+fn row_to_detail(row: &PgRow) -> DbDetail {
+    DbDetail {
         number: row.get::<i32, _>("number") as NumberType,
-        category: compose_category(row.get("category_1"), row.get("category_2"), row.get("category_3")),
+        detail: compose_detail(row.get("detail_1"), row.get("detail_2"), row.get("detail_3")),
         title: row.get("title"),
         cards: extract_cards(row),
 
     }
 }
 
-pub(crate) async fn process_category(args: &Args, pool: &Pool<Postgres>) -> Result<(), sqlx::Error> {
-    println!("[Smithy] BEGIN category");
+pub(crate) async fn process_detail(args: &Args, pool: &Pool<Postgres>) -> Result<(), sqlx::Error> {
+    println!("[Smithy] BEGIN detail");
 
-    let rows = sqlx::query("SELECT * FROM category").fetch_all(pool).await?;
+    let rows = sqlx::query("SELECT * FROM detail").fetch_all(pool).await?;
 
-    let categories = rows
+    let details = rows
         .iter()
-        .map(row_to_category)
-        .collect::<Vec<DbCategory>>()
+        .map(row_to_detail)
+        .collect::<Vec<DbDetail>>()
         ;
 
     if args.hall {
-        output_categories_for_hall(&categories)?;
+        output_details_for_hall(&details)?;
     }
     if args.vagabond {
-        output_categories_for_vagabond(&categories)?;
+        output_details_for_vagabond(&details)?;
     }
 
-    println!("[Smithy] END category");
+    println!("[Smithy] END detail");
     Ok(())
 }

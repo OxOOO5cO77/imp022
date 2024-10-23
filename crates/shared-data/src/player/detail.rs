@@ -200,7 +200,7 @@ pub enum Distro {
 }
 
 #[derive(Default, Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
-pub enum Category {
+pub enum Detail {
     #[default] Any,
     Institution(Institution),
     Role(Role),

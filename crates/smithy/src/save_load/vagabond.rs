@@ -1,11 +1,11 @@
 use std::io::Error;
 use vagabond::data::vagabond_build::VagabondBuild;
 use vagabond::data::vagabond_card::VagabondCard;
-use vagabond::data::vagabond_category::VagabondCategory;
+use vagabond::data::vagabond_detail::VagabondDetail;
 
 use crate::data::build::DbBuild;
 use crate::data::card::DbCard;
-use crate::data::category::DbCategory;
+use crate::data::detail::DbDetail;
 use crate::save_load::save_data_single;
 
 fn make_vagabond_card(card: &DbCard) -> VagabondCard {
@@ -41,15 +41,15 @@ pub(crate) fn output_builds_for_vagabond(builds: &[DbBuild]) -> Result<(), Error
     save_data_single(vagabond_builds, "output/vagabond_builds.ron")
 }
 
-fn make_vagabond_category(category_instance: &DbCategory) -> VagabondCategory {
-    VagabondCategory {
-        category: category_instance.category,
-        number: category_instance.number,
-        title: category_instance.title.clone(),
+fn make_vagabond_detail(detail_instance: &DbDetail) -> VagabondDetail {
+    VagabondDetail {
+        detail: detail_instance.detail,
+        number: detail_instance.number,
+        title: detail_instance.title.clone(),
     }
 }
 
-pub(crate) fn output_categories_for_vagabond(categories: &[DbCategory]) -> Result<(), Error> {
-    let vagabond_categories = categories.iter().map(make_vagabond_category).collect::<Vec<_>>();
-    save_data_single(vagabond_categories, "output/vagabond_categories.ron")
+pub(crate) fn output_details_for_vagabond(details: &[DbDetail]) -> Result<(), Error> {
+    let vagabond_details = details.iter().map(make_vagabond_detail).collect::<Vec<_>>();
+    save_data_single(vagabond_details, "output/vagabond_details.ron")
 }
