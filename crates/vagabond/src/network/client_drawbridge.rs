@@ -1,15 +1,15 @@
-use std::net::IpAddr;
 use bevy::prelude::Resource;
+use std::net::IpAddr;
 
 use fasthash::farm::fingerprint128;
+use shared_data::types::AuthType;
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
-use shared_data::types::AuthType;
 
-use shared_net::{op, VClientMode, RoutedMessage, VSizedBuffer};
 use shared_net::op::Route;
+use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 
 pub(crate) struct AuthInfo {
     pub(crate) ip: IpAddr,
@@ -40,26 +40,23 @@ impl DrawbridgeClient {
 fn process_drawbridge(context: DrawbridgeClient, _tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
     match buf.pull::<op::Command>() {
         //op::Command::Hello => {},
-        op::Command::Authorize => d_authorize(context, buf),
+        op::Command::Authorize => recv_authorize(context, buf),
         _ => VClientMode::Continue
     }
 }
 
-fn d_authorize(context: DrawbridgeClient, mut buf: VSizedBuffer) -> VClientMode {
+fn recv_authorize(context: DrawbridgeClient, mut buf: VSizedBuffer) -> VClientMode {
     let mut ip_buf = [0; 16];
     ip_buf.copy_from_slice(&buf.pull_bytes_n(16));
-    let ip = IpAddr::from(ip_buf);
 
+    let ip = IpAddr::from(ip_buf);
     let port = buf.pull::<u16>();
     let auth = buf.pull::<AuthType>();
 
     println!("IP: {} Port: {}", ip, port);
 
-    let _ = context.auth_tx.send(AuthInfo {
-        ip,
-        port,
-        auth,
-    });
+    let auth_info = AuthInfo { ip, port, auth };
+    let _ = context.auth_tx.send(auth_info);
 
     VClientMode::Shutdown
 }

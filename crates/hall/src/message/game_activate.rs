@@ -1,15 +1,20 @@
 use shared_data::types::GameIdType;
 use shared_net::sizedbuffers::Bufferable;
-use shared_net::VSizedBuffer;
+use shared_net::{op, VSizedBuffer};
 
 use crate::data::player::player_part::PlayerPart;
+use crate::message::Request;
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
-pub struct GameStartRequest {
+pub struct GameActivateRequest {
     pub game_id: GameIdType,
 }
 
-impl Bufferable for GameStartRequest {
+impl Request for GameActivateRequest {
+    const COMMAND: op::Command = op::Command::GameActivate;
+}
+
+impl Bufferable for GameActivateRequest {
     fn push_into(&self, buf: &mut VSizedBuffer) {
         self.game_id.push_into(buf);
     }
@@ -29,12 +34,12 @@ impl Bufferable for GameStartRequest {
 type PartsArray = [PlayerPart; 8];
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
-pub struct GameStartResponse {
+pub struct GameActivateResponse {
     pub game_id: GameIdType,
     pub parts: PartsArray,
 }
 
-impl Bufferable for GameStartResponse {
+impl Bufferable for GameActivateResponse {
     fn push_into(&self, buf: &mut VSizedBuffer) {
         self.game_id.push_into(buf);
         self.parts.push_into(buf);
@@ -64,17 +69,17 @@ mod test {
     use crate::data::player::player_build::PlayerBuild;
     use crate::data::player::player_detail::PlayerDetail;
     use crate::data::player::player_part::PlayerPart;
-    use crate::message::game_start::{GameStartRequest, GameStartResponse};
+    use crate::message::game_activate::{GameActivateRequest, GameActivateResponse};
 
     #[test]
     fn test_request() {
-        let orig = GameStartRequest {
+        let orig = GameActivateRequest {
             game_id: 1234567890,
         };
 
         let mut buf = VSizedBuffer::new(orig.size_in_buffer());
         buf.push(&orig);
-        let result = buf.pull::<GameStartRequest>();
+        let result = buf.pull::<GameActivateRequest>();
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig, result);
@@ -99,14 +104,14 @@ mod test {
             ],
         };
 
-        let orig = GameStartResponse {
+        let orig = GameActivateResponse {
             game_id: 1234567890,
             parts: [part; 8],
         };
 
         let mut buf = VSizedBuffer::new(orig.size_in_buffer());
         buf.push(&orig);
-        let result = buf.pull::<GameStartResponse>();
+        let result = buf.pull::<GameActivateResponse>();
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig, result);

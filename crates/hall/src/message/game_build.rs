@@ -1,8 +1,9 @@
 use shared_data::types::{GameIdType, PartType, SeedType};
 use shared_net::sizedbuffers::Bufferable;
-use shared_net::VSizedBuffer;
+use shared_net::{op, VSizedBuffer};
 
 use crate::data::player::player_card::PlayerCard;
+use crate::message::Request;
 
 type PartsArray = [PartType; 8];
 
@@ -10,6 +11,11 @@ type PartsArray = [PartType; 8];
 pub struct GameBuildRequest {
     pub game_id: GameIdType,
     pub parts: PartsArray,
+    pub commit: bool,
+}
+
+impl Request for GameBuildRequest {
+    const COMMAND: op::Command = op::Command::GameBuild;
 }
 
 impl Bufferable for GameBuildRequest {
@@ -21,9 +27,11 @@ impl Bufferable for GameBuildRequest {
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
         let game_id = GameIdType::pull_from(buf);
         let parts = PartsArray::pull_from(buf);
+        let commit = bool::pull_from(buf);
         Self {
             game_id,
             parts,
+            commit,
         }
     }
 
@@ -31,8 +39,6 @@ impl Bufferable for GameBuildRequest {
         self.game_id.size_in_buffer() + self.parts.size_in_buffer()
     }
 }
-
-pub const CARD_COUNT: usize = 40;
 
 pub struct GameBuildResponse {
     pub seed: SeedType,
@@ -67,13 +73,16 @@ mod test {
     use shared_net::VSizedBuffer;
 
     use crate::data::player::player_card::PlayerCard;
-    use crate::message::game_build::{GameBuildRequest, GameBuildResponse, CARD_COUNT};
+    use crate::message::game_build::{GameBuildRequest, GameBuildResponse};
+
+    pub const CARD_COUNT: usize = 40;
 
     #[test]
     fn test_request() {
         let orig = GameBuildRequest {
             game_id: 1234567890,
             parts: [1234567890, 1234567891, 1234567892, 1234567893, 1234567894, 1234567895, 1234567896, 1234567897],
+            commit: true,
         };
 
         let mut buf = VSizedBuffer::new(orig.size_in_buffer());

@@ -4,7 +4,8 @@ use rand::{distr::Uniform, rngs::ThreadRng, Rng};
 use shared_data::game::card::CostType;
 use shared_data::player::attribute::ValueType;
 use shared_data::types::{AuthType, UserIdType};
-use shared_net::op::Command;
+
+use shared_net::op;
 use std::cmp::{Ordering, Reverse};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
@@ -61,7 +62,7 @@ impl GameState {
         self.users.iter().all(|(_, user)| user.player.is_some())
     }
 
-    pub fn all_users_last_command(&self, command: Command) -> bool {
+    pub fn all_users_last_command(&self, command: op::Command) -> bool {
         self.users.iter().all(|(_, user)| user.state.last_command == Some(command))
     }
 

@@ -1,46 +1,40 @@
+use crate::message::Request;
 use shared_data::types::GameIdType;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
-use crate::message::Request;
-
-pub type CardIdxType = u8;
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
-pub struct GamePlayCardRequest {
+pub struct GameEndGameRequest {
     pub game_id: GameIdType,
-    pub card_idx: CardIdxType,
 }
 
-impl Request for GamePlayCardRequest {
-    const COMMAND: op::Command = op::Command::GamePlayCard;
+impl Request for GameEndGameRequest {
+    const COMMAND: op::Command = op::Command::GameEndGame;
 }
 
-impl Bufferable for GamePlayCardRequest {
+impl Bufferable for GameEndGameRequest {
     fn push_into(&self, buf: &mut VSizedBuffer) {
         self.game_id.push_into(buf);
-        self.card_idx.push_into(buf);
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
         let game_id = GameIdType::pull_from(buf);
-        let card_idx = CardIdxType::pull_from(buf);
         Self {
             game_id,
-            card_idx,
         }
     }
 
     fn size_in_buffer(&self) -> usize {
-        self.game_id.size_in_buffer() + self.card_idx.size_in_buffer()
+        self.game_id.size_in_buffer()
     }
 }
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
-pub struct GamePlayCardResponse {
+pub struct GameEndGameResponse {
     pub success: bool,
 }
 
-impl Bufferable for GamePlayCardResponse {
+impl Bufferable for GameEndGameResponse {
     fn push_into(&self, buf: &mut VSizedBuffer) {
         self.success.push_into(buf);
     }
@@ -59,21 +53,19 @@ impl Bufferable for GamePlayCardResponse {
 
 #[cfg(test)]
 mod test {
+    use crate::message::game_end_game::{GameEndGameRequest, GameEndGameResponse};
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
 
-    use crate::message::game_play_card::{GamePlayCardRequest, GamePlayCardResponse};
-
     #[test]
     fn test_request() {
-        let orig = GamePlayCardRequest {
+        let orig = GameEndGameRequest {
             game_id: 1234567890,
-            card_idx: 0,
         };
 
         let mut buf = VSizedBuffer::new(orig.size_in_buffer());
         buf.push(&orig);
-        let result = buf.pull::<GamePlayCardRequest>();
+        let result = buf.pull::<GameEndGameRequest>();
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig, result);
@@ -81,13 +73,13 @@ mod test {
 
     #[test]
     fn test_response() {
-        let orig = GamePlayCardResponse {
+        let orig = GameEndGameResponse {
             success: true,
         };
 
         let mut buf = VSizedBuffer::new(orig.size_in_buffer());
         buf.push(&orig);
-        let result = buf.pull::<GamePlayCardResponse>();
+        let result = buf.pull::<GameEndGameResponse>();
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig, result);

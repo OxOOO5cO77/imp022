@@ -66,7 +66,6 @@ fn process_vagabond(context: Arc<Mutex<Gate>>, tx: UnboundedSender<RoutedMessage
         op::Command::InvList => v_marshall(context, op::Flavor::Archive, command, &tx, id, &mut buf),
         op::Command::GameActivate |
         op::Command::GameBuild |
-        op::Command::GameCommitDeck |
         op::Command::GameStartTurn |
         op::Command::GameChooseAttr |
         op::Command::GamePlayCard |
@@ -77,8 +76,8 @@ fn process_vagabond(context: Arc<Mutex<Gate>>, tx: UnboundedSender<RoutedMessage
         op::Command::GameStartGame |
         op::Command::GameRoll |
         op::Command::GameResources |
-        op::Command::GameResolveCard |
-        op::Command::GameEnd |
+        op::Command::GameResolveCards |
+        op::Command::GameEndGame |
         op::Command::GameTick |
         op::Command::GameUpdateState |
         op::Command::UserAttr => false,
@@ -134,18 +133,17 @@ fn process_courtyard(context: Arc<Mutex<Gate>>, tx: UnboundedSender<RoutedMessag
         op::Command::InvList |
         op::Command::GameActivate |
         op::Command::GameBuild |
-        op::Command::GameCommitDeck |
         op::Command::GameStartGame |
         op::Command::GameStartTurn |
         op::Command::GameRoll |
         op::Command::GameChooseAttr |
         op::Command::GameResources |
         op::Command::GamePlayCard |
-        op::Command::GameResolveCard |
+        op::Command::GameResolveCards |
         op::Command::GameEndTurn |
         op::Command::GameTick |
         op::Command::GameUpdateState |
-        op::Command::GameEnd => c_marshall_one(command, &tx, &mut buf),
+        op::Command::GameEndGame => c_marshall_one(command, &tx, &mut buf),
         op::Command::NoOp |
         op::Command::Register |
         op::Command::Hello |

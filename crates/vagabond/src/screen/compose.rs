@@ -1,8 +1,7 @@
 use bevy::prelude::*;
-
 use vagabond::data::vagabond_part::VagabondPart;
 
-use crate::manager::{BackendManager, DataManager};
+use crate::manager::{WarehouseManager, DataManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::compose::StatRowKind::{Build, Detail};
 use crate::system::app_state::AppState;
@@ -18,7 +17,7 @@ impl Plugin for ComposePlugin {
             .add_systems(OnEnter(AppState::ComposeInit), composeinit_enter)
             .add_systems(Update, composeinit_update.run_if(in_state(AppState::ComposeInit)))
             .add_systems(OnEnter(AppState::Compose), compose_enter)
-            .add_systems(Update, (dragdrag, dragdrop, finish_player, compose_update).run_if(in_state(AppState::Compose)))
+            .add_systems(Update, (dragdrag, drag_drop, finish_player, compose_update).run_if(in_state(AppState::Compose)))
             .add_systems(OnExit(AppState::Compose), screen_exit)
         ;
     }
@@ -30,7 +29,7 @@ struct ComposeInitHandoff {
 }
 
 fn composeinit_enter(gate: ResMut<GateIFace>) {
-    gate.send_gamestart();
+    gate.send_game_activate();
 }
 
 fn composeinit_update(
@@ -39,7 +38,7 @@ fn composeinit_update(
     mut app_state: ResMut<NextState<AppState>>,
     dm: Res<DataManager>,
 ) {
-    if let Ok(GateCommand::GameStart(response)) = gate.grx.try_recv() {
+    if let Ok(GateCommand::GameActivate(response)) = gate.grx.try_recv() {
         let init_handoff = ComposeInitHandoff {
             parts: [
                 dm.convert_part(&response.parts[0]).unwrap_or_default(),
@@ -447,7 +446,7 @@ fn build_ui_compose(
         background_color: bevy::color::palettes::css::NAVY.into(),
         ..default()
     };
-    let compose_attribs = NodeBundle {
+    let compose_attributes = NodeBundle {
         style: Style {
             display: Display::Grid,
             width: HUNDRED,
@@ -491,7 +490,7 @@ fn build_ui_compose(
                         .spawn(compose_area)
                         .with_children(|parent| {
                             parent
-                                .spawn(compose_attribs.clone())
+                                .spawn(compose_attributes.clone())
                                 .with_children(|parent| {
                                     parent
                                         .spawn(v_vals(ATTRIB_VAL))
@@ -518,7 +517,7 @@ fn build_ui_compose(
                             ;
                             parent.spawn(node(ATTRIB_VAL, Srgba::NONE));
                             parent
-                                .spawn(compose_attribs.clone())
+                                .spawn(compose_attributes.clone())
                                 .with_children(|parent| {
                                     let headers = ["ANT", "BRD", "CPU", "DSC"];
                                     spawn_val_label(parent, PlayerPartHolderKind::StatRow(Build), &font_info_val, PlayerPartHolderKind::Build, &font_info_label, headers);
@@ -526,7 +525,7 @@ fn build_ui_compose(
                             ;
                             parent.spawn(node(ATTRIB_VAL, Srgba::NONE));
                             parent
-                                .spawn(compose_attribs.clone())
+                                .spawn(compose_attributes.clone())
                                 .with_children(|parent| {
                                     let headers = ["Institution", "Role", "Location", "Distro"];
                                     spawn_val_label(parent, PlayerPartHolderKind::StatRow(Detail), &font_info_val, PlayerPartHolderKind::Detail, &font_info_label, headers);
@@ -534,7 +533,7 @@ fn build_ui_compose(
                             ;
                             parent.spawn(node(ATTRIB_VAL, Srgba::NONE));
                             parent
-                                .spawn(compose_attribs)
+                                .spawn(compose_attributes)
                                 .with_children(|parent| {
                                     parent
                                         .spawn(v_vals(HUNDRED))
@@ -606,16 +605,16 @@ fn update_part_holder(kind: &PlayerPartHolderKind, kids: Option<&TextChildren>, 
     }
 }
 
-fn dragdrop(
+fn drag_drop(
     mut commands: Commands,
     mut receive: EventReader<DragDrop>,
     holder_q: Query<(Option<&TextChildren>, &PlayerPartHolder, &PlayerPartHolderKind)>,
     mut text_q: Query<&mut Text>,
     mut send: EventWriter<FinishPlayer>,
 ) {
-    for dragdrop in receive.read() {
-        let src_entity = dragdrop.src;
-        if let Some(dst_entity) = dragdrop.dst {
+    for drag_drop in receive.read() {
+        let src_entity = drag_drop.src;
+        if let Some(dst_entity) = drag_drop.dst {
             let (src_kids, src_part, src_kind) = holder_q.get(src_entity).unwrap();
             let (dst_kids, dst_part, dst_kind) = holder_q.get(dst_entity).unwrap();
             if dst_part.0.is_none() {
@@ -631,7 +630,7 @@ fn dragdrop(
             send.send(FinishPlayer);
         }
 
-        commands.entity(dragdrop.drag).despawn_recursive();
+        commands.entity(drag_drop.drag).despawn_recursive();
     }
 }
 
@@ -666,7 +665,7 @@ fn finish_player(
         }
 
         if parts.iter().all(|&o| o != 0) {
-            gate.send_gamebuild(gate.game_id, parts);
+            gate.send_game_build(parts, false);
         }
     }
 }
@@ -675,32 +674,36 @@ fn compose_update(
     mut gate: ResMut<GateIFace>,
     mut deck_q: Query<(&mut Text, &CardHolder), Without<InfoKind>>,
     mut info_q: Query<(&mut Text, &InfoKind), Without<CardHolder>>,
-    bm: Res<BackendManager>,
+    wm: Res<WarehouseManager>,
     dm: Res<DataManager>,
 ) {
-    if let Ok(GateCommand::PlayerBuild(gate_response)) = gate.grx.try_recv() {
-        match bm.fetch_player(gate_response.seed) {
-            Ok(backend_response) => {
-                if let Some(player_bio) = backend_response.player_bio {
-                    for (mut info, info_kind) in info_q.iter_mut() {
-                        match info_kind {
-                            InfoKind::Name => info.sections[0].value.clone_from(&player_bio.name),
-                            InfoKind::ID => info.sections[0].value.clone_from(&player_bio.id),
-                            InfoKind::Birthplace => info.sections[0].value = player_bio.birthplace(),
-                            InfoKind::DoB => info.sections[0].value = player_bio.age().to_string(),
+    match gate.grx.try_recv() {
+        Ok(GateCommand::GameBuild(gate_response)) => {
+            match wm.fetch_player(gate_response.seed) {
+                Ok(warehouse_response) => {
+                    if let Some(player_bio) = warehouse_response.player_bio {
+                        for (mut info, info_kind) in info_q.iter_mut() {
+                            match info_kind {
+                                InfoKind::Name => info.sections[0].value.clone_from(&player_bio.name),
+                                InfoKind::ID => info.sections[0].value.clone_from(&player_bio.id),
+                                InfoKind::Birthplace => info.sections[0].value = player_bio.birthplace(),
+                                InfoKind::DoB => info.sections[0].value = player_bio.age().to_string(),
+                            }
                         }
-                    }
 
-                    let deck = dm.convert_deck(gate_response.deck);
+                        let deck = dm.convert_deck(gate_response.deck);
 
-                    for (idx, card) in deck.iter().enumerate() {
-                        if let Some((mut card_text, _)) = deck_q.iter_mut().find(|o| o.1.0 == idx) {
-                            card_text.sections[0].value.clone_from(&card.title);
+                        for (idx, card) in deck.iter().enumerate() {
+                            if let Some((mut card_text, _)) = deck_q.iter_mut().find(|o| o.1.0 == idx) {
+                                card_text.sections[0].value.clone_from(&card.title);
+                            }
                         }
                     }
                 }
+                Err(err) => println!("Error: {err}"),
             }
-            Err(err) => println!("Error: {err}"),
         }
+        Ok(_) => {}
+        Err(_) => {}
     }
 }

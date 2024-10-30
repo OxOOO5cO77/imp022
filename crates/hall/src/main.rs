@@ -3,12 +3,7 @@ use crate::manager::player_builder::PlayerBuilder;
 use gate::message::gate_header::GateHeader;
 use hall::data::game::GameState;
 use hall::data::game::GameUser;
-use hall::message::game_build::{GameBuildRequest, GameBuildResponse};
-use hall::message::game_choose_attr::{GameChooseAttrRequest, GameChooseAttrResponse};
-use hall::message::game_end_turn::{GameEndTurnRequest, GameEndTurnResponse};
-use hall::message::game_play_card::{GamePlayCardRequest, GamePlayCardResponse};
-use hall::message::game_start::{GameStartRequest, GameStartResponse};
-use hall::message::game_start_turn::{GameStartTurnRequest, GameStartTurnResponse};
+use hall::message::*;
 use rand::prelude::*;
 use shared_data::game::card::CostType;
 use shared_data::types::{AuthType, GameIdType, NodeType, UserIdType};
@@ -16,7 +11,7 @@ use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 use std::collections::HashMap;
 use std::env;
-use std::ops::{DerefMut};
+use std::ops::DerefMut;
 use std::sync::{Arc, Mutex, MutexGuard};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
@@ -101,25 +96,24 @@ async fn main() -> Result<(), ()> {
 
 fn process_courtyard(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
     match buf.pull::<op::Command>() {
-        op::Command::GameActivate => c_game_start(context, tx, buf),
-        op::Command::GameBuild => c_game_build(context, tx, buf),
-        op::Command::GameCommitDeck => c_game_commit_deck(context, tx, buf),
-        op::Command::GameStartTurn => c_game_start_turn(context, tx, buf),
-        op::Command::GameChooseAttr => c_game_choose_attr(context, tx, buf),
-        op::Command::GamePlayCard => c_game_play_card(context, tx, buf),
-        op::Command::GameEndTurn => c_game_end_turn(context, tx, buf),
-        op::Command::GameEnd => c_game_end(context, tx, buf),
+        op::Command::GameActivate => recv_game_start(context, tx, buf),
+        op::Command::GameBuild => recv_game_build(context, tx, buf),
+        op::Command::GameStartTurn => recv_game_start_turn(context, tx, buf),
+        op::Command::GameChooseAttr => recv_game_choose_attr(context, tx, buf),
+        op::Command::GamePlayCard => recv_game_play_card(context, tx, buf),
+        op::Command::GameEndTurn => recv_game_end_turn(context, tx, buf),
+        op::Command::GameEndGame => recv_game_end(context, tx, buf),
         _ => {}
     };
     VClientMode::Continue
 }
 
-fn c_game_start(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
+fn recv_game_start(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
     let mut context = context.lock().unwrap();
 
     let gate = buf.pull::<NodeType>();
     let header = buf.pull::<GateHeader>();
-    let request = buf.pull::<GameStartRequest>();
+    let request = buf.pull::<GameActivateRequest>();
 
     let mut user = GameUser::new(header.auth);
 
@@ -155,7 +149,7 @@ fn c_game_start(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, m
 
     let route = op::Route::One(gate);
     let command = op::Command::GameActivate;
-    let response = GameStartResponse {
+    let response = GameActivateResponse {
         game_id,
         parts,
     };
@@ -170,18 +164,19 @@ fn c_game_start(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, m
     let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });
 }
 
-fn c_game_build(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
-    let context = context.lock().unwrap();
+fn recv_game_build(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
+    let mut context = context.lock().unwrap();
 
     let gate = buf.pull::<NodeType>();
     let header = buf.pull::<GateHeader>();
     let request = buf.pull::<GameBuildRequest>();
 
     let builder = PlayerBuilder::new(&request.parts, &context.data_manager);
-    let response = if let Some(player) = builder.create_player(&context.data_manager) {
+    let player = builder.create_player(&context.data_manager);
+    let response = if let Some(player) = player.as_ref() {
         GameBuildResponse {
             seed: player.seed,
-            deck: Vec::<_>::from(player.deck),
+            deck: player.deck.iter().cloned().collect(),
         }
     } else {
         GameBuildResponse {
@@ -203,17 +198,6 @@ fn c_game_build(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, m
     out.push(&response);
 
     let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });
-}
-
-fn c_game_commit_deck(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
-    let mut context = context.lock().unwrap();
-
-    let gate = buf.pull::<NodeType>();
-    let header = buf.pull::<GateHeader>();
-    let request = buf.pull::<GameBuildRequest>();
-
-    let builder = PlayerBuilder::new(&request.parts, &context.data_manager);
-    let player = builder.create_player(&context.data_manager);
 
     {
         let context = context.deref_mut();
@@ -227,7 +211,7 @@ fn c_game_commit_deck(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessa
                     user.state.setup(valid_player.deck.iter().filter_map(|card| dm.lookup_player_card(card)).collect(), &mut rng);
 
                     let route = op::Route::One(gate);
-                    let command = op::Command::GameCommitDeck;
+                    let command = op::Command::GameUpdateState;
                     let player_view = user.state.to_player_view();
 
                     let mut out = VSizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + header.vagabond.size_in_buffer() + player_view.size_in_buffer());
@@ -255,7 +239,7 @@ fn c_game_commit_deck(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessa
     }
 }
 
-fn c_game_end(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
+fn recv_game_end(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
     let mut context = context.lock().unwrap();
 
     let gate = buf.pull::<NodeType>();
@@ -269,7 +253,7 @@ fn c_game_end(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut
     }
 
     let route = op::Route::One(gate);
-    let command = op::Command::GameEnd;
+    let command = op::Command::GameEndGame;
 
     let mut out = VSizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + header.vagabond.size_in_buffer());
 
@@ -290,7 +274,7 @@ fn update_user(context: &mut Hall, game_id: GameIdType, user: UserIdType, auth: 
     false
 }
 
-fn c_game_start_turn(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
+fn recv_game_start_turn(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
     let mut context = context.lock().unwrap();
 
     let gate = buf.pull::<NodeType>();
@@ -328,7 +312,7 @@ fn c_game_start_turn(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessag
     }
 }
 
-fn c_game_choose_attr(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
+fn recv_game_choose_attr(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
     let mut context = context.lock().unwrap();
 
     let gate = buf.pull::<NodeType>();
@@ -401,7 +385,7 @@ fn send_each_player_state(game_id: GameIdType, mut context: MutexGuard<Hall>) {
     }
 }
 
-fn c_game_play_card(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
+fn recv_game_play_card(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
     let mut context = context.lock().unwrap();
 
     let gate = buf.pull::<NodeType>();
@@ -427,7 +411,7 @@ fn c_game_play_card(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage
     let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });
 }
 
-fn c_game_end_turn(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
+fn recv_game_end_turn(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
     let mut context = context.lock().unwrap();
 
     let gate = buf.pull::<NodeType>();

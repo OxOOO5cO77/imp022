@@ -1,32 +1,38 @@
+use crate::message::Request;
 use shared_data::types::GameIdType;
-use shared_net::sizedbuffers::Bufferable;
-use shared_net::VSizedBuffer;
 
-type CardIdxType = u8;
+use shared_net::sizedbuffers::Bufferable;
+use shared_net::{op, VSizedBuffer};
+
+pub type AttrIdxType = u8;
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameChooseAttrRequest {
     pub game_id: GameIdType,
-    pub card_idx: CardIdxType,
+    pub attr_idx: AttrIdxType,
+}
+
+impl Request for GameChooseAttrRequest {
+    const COMMAND: op::Command = op::Command::GameChooseAttr;
 }
 
 impl Bufferable for GameChooseAttrRequest {
     fn push_into(&self, buf: &mut VSizedBuffer) {
         self.game_id.push_into(buf);
-        self.card_idx.push_into(buf);
+        self.attr_idx.push_into(buf);
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
         let game_id = GameIdType::pull_from(buf);
-        let card_idx = CardIdxType::pull_from(buf);
+        let attr_idx = AttrIdxType::pull_from(buf);
         Self {
             game_id,
-            card_idx,
+            attr_idx,
         }
     }
 
     fn size_in_buffer(&self) -> usize {
-        self.game_id.size_in_buffer() + self.card_idx.size_in_buffer()
+        self.game_id.size_in_buffer() + self.attr_idx.size_in_buffer()
     }
 }
 
@@ -54,15 +60,15 @@ impl Bufferable for GameChooseAttrResponse {
 
 #[cfg(test)]
 mod test {
+    use crate::message::game_choose_attr::{GameChooseAttrRequest, GameChooseAttrResponse};
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
-    use crate::message::game_choose_attr::{GameChooseAttrRequest, GameChooseAttrResponse};
 
     #[test]
     fn test_request() {
         let orig = GameChooseAttrRequest {
             game_id: 1234567890,
-            card_idx: 0,
+            attr_idx: 0,
         };
 
         let mut buf = VSizedBuffer::new(orig.size_in_buffer());
