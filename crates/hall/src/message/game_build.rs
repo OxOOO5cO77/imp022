@@ -22,6 +22,7 @@ impl Bufferable for GameBuildRequest {
     fn push_into(&self, buf: &mut VSizedBuffer) {
         self.game_id.push_into(buf);
         self.parts.push_into(buf);
+        self.commit.push_into(buf);
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
@@ -36,7 +37,7 @@ impl Bufferable for GameBuildRequest {
     }
 
     fn size_in_buffer(&self) -> usize {
-        self.game_id.size_in_buffer() + self.parts.size_in_buffer()
+        self.game_id.size_in_buffer() + self.parts.size_in_buffer() + self.commit.size_in_buffer()
     }
 }
 

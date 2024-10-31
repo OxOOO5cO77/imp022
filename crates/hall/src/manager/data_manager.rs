@@ -8,8 +8,8 @@ use hall::data::hall::hall_card::HallCard;
 use hall::data::hall::hall_detail::HallDetail;
 use hall::data::player::player_card::PlayerCard;
 use shared_data::game::card::CardSlot;
-use shared_data::player::build::{Build, ANT, BRD, CPU, DSC};
-use shared_data::player::detail::{Detail, Distro, Institution, Location, Role};
+use shared_data::player::build::Build;
+use shared_data::player::detail::Detail;
 
 pub(crate) struct DataManager {
     build: Vec<HallBuild>,
@@ -29,22 +29,22 @@ impl DataManager {
     pub(crate) fn pick_build(&self, rng: &mut impl Rng) -> [HallBuild; 4] {
         let build = [
             self.build.iter()
-                .filter(|o| o.is(&Build::ANT(ANT::Any)))
+                .filter(|o| o.is(Build::ANT))
                 .choose(rng)
                 .unwrap()
                 .clone(),
             self.build.iter()
-                .filter(|o| o.is(&Build::BRD(BRD::Any)))
+                .filter(|o| o.is(Build::BRD))
                 .choose(rng)
                 .unwrap()
                 .clone(),
             self.build.iter()
-                .filter(|o| o.is(&Build::CPU(CPU::Any)))
+                .filter(|o| o.is(Build::CPU))
                 .choose(rng)
                 .unwrap()
                 .clone(),
             self.build.iter()
-                .filter(|o| o.is(&Build::DSC(DSC::Any)))
+                .filter(|o| o.is(Build::DSK))
                 .choose(rng)
                 .unwrap()
                 .clone(),
@@ -55,22 +55,22 @@ impl DataManager {
     pub(crate) fn pick_detail(&self, rng: &mut impl Rng) -> [HallDetail; 4] {
         let detail = [
             self.detail.iter()
-                .filter(|o| o.is(&Detail::Institution(Institution::Any)))
+                .filter(|o| o.is(Detail::Institution))
                 .choose(rng)
                 .unwrap()
                 .clone(),
             self.detail.iter()
-                .filter(|o| o.is(&Detail::Role(Role::Any)))
+                .filter(|o| o.is(Detail::Role))
                 .choose(rng)
                 .unwrap()
                 .clone(),
             self.detail.iter()
-                .filter(|o| o.is(&Detail::Location(Location::Any)))
+                .filter(|o| o.is(Detail::Location))
                 .choose(rng)
                 .unwrap()
                 .clone(),
             self.detail.iter()
-                .filter(|o| o.is(&Detail::Distro(Distro::Any)))
+                .filter(|o| o.is(Detail::Distro))
                 .choose(rng)
                 .unwrap()
                 .clone(),

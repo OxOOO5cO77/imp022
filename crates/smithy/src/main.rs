@@ -1,6 +1,8 @@
 use crate::data::build::process_build;
 use crate::data::card::process_card;
 use crate::data::detail::process_detail;
+use crate::save_load::hall::*;
+use crate::save_load::vagabond::*;
 use clap::Parser;
 use sqlx::postgres::PgPoolOptions;
 
@@ -35,21 +37,45 @@ async fn main() -> Result<(), sqlx::Error> {
         })?
         ;
 
-
     if std::fs::metadata("output").is_err() {
         std::fs::create_dir("output")?;
     }
 
     if args.build {
-        process_build(&args, &pool).await?;
+        println!("[Smithy] BEGIN build");
+        let builds = process_build(&pool).await?;
+        if args.hall {
+            output_builds_for_hall(&builds)?;
+        }
+        if args.vagabond {
+            output_builds_for_vagabond(&builds)?;
+        }
+        println!("[Smithy] END build");
     }
 
     if args.detail {
-        process_detail(&args, &pool).await?;
+        println!("[Smithy] BEGIN detail");
+        let details = process_detail(&pool).await?;
+        if args.hall {
+            output_details_for_hall(&details)?;
+        }
+        if args.vagabond {
+            output_details_for_vagabond(&details)?;
+        }
+        println!("[Smithy] END detail");
     }
 
     if args.card {
-        process_card(&args, &pool).await?;
+        println!("[Smithy] BEGIN card");
+        let cards = process_card(&pool).await?;
+
+        if args.hall {
+            output_cards_for_hall(&cards)?;
+        }
+        if args.vagabond {
+            output_cards_for_vagabond(&cards)?;
+        }
+        println!("[Smithy] END card");
     }
 
     Ok(())

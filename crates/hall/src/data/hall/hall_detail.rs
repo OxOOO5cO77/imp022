@@ -3,7 +3,7 @@ use std::mem::discriminant;
 use serde::{Deserialize, Serialize};
 
 use shared_data::game::card::CardSlot;
-use shared_data::player::detail::{Detail, NumberType};
+use shared_data::player::detail::{Detail, GeneralType, NumberType, SpecificType};
 
 use crate::data::player::player_detail::PlayerDetail;
 
@@ -15,8 +15,8 @@ pub struct HallDetail {
 }
 
 impl HallDetail {
-    pub fn is(&self, other: &Detail) -> bool {
-        discriminant(&self.detail) == discriminant(other)
+    pub fn is(&self, other: impl FnOnce(GeneralType, SpecificType) -> Detail) -> bool {
+        discriminant(&self.detail) == discriminant(&other(0,0))
     }
 
     pub fn to_player(&self, value: &u8) -> PlayerDetail {

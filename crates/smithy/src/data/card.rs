@@ -1,10 +1,7 @@
-use crate::save_load::hall::output_cards_for_hall;
-use crate::save_load::vagabond::output_cards_for_vagabond;
-use crate::Args;
+use crate::data::common::DbRarity;
 use shared_data::game::card::*;
 use sqlx::postgres::PgRow;
 use sqlx::{Pool, Postgres, Row};
-use crate::data::common::DbRarity;
 
 pub(crate) struct DbCard {
     pub title: String,
@@ -54,9 +51,7 @@ fn row_to_card(row: &PgRow) -> DbCard {
     }
 }
 
-pub(crate) async fn process_card(args: &Args, pool: &Pool<Postgres>) -> Result<(), sqlx::Error> {
-    println!("[Smithy] BEGIN card");
-
+pub(crate) async fn process_card(pool: &Pool<Postgres>) -> Result<Vec<DbCard>, sqlx::Error> {
     let rows = sqlx::query("SELECT * FROM card").fetch_all(pool).await?;
     let cards = rows
         .iter()
@@ -64,12 +59,5 @@ pub(crate) async fn process_card(args: &Args, pool: &Pool<Postgres>) -> Result<(
         .collect::<Vec<DbCard>>()
         ;
 
-    if args.hall {
-        output_cards_for_hall(&cards)?;
-    }
-    if args.vagabond {
-        output_cards_for_vagabond(&cards)?;
-    }
-    println!("[Smithy] END card");
-    Ok(())
+    Ok(cards)
 }

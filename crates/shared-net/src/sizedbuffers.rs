@@ -194,7 +194,7 @@ impl<T: Bufferable + Default> Bufferable for Vec<T> {
     }
 }
 
-impl<T: Bufferable + Default + Copy, const N:usize> Bufferable for [T; N] {
+impl<T: Bufferable + Default + Copy, const N: usize> Bufferable for [T; N] {
     fn push_into(&self, buf: &mut VSizedBuffer) {
         for item in self {
             item.push_into(buf);
@@ -356,6 +356,21 @@ mod test {
 
             buf.push(&orig);
             let result = TestArray::pull_from(&mut buf);
+
+            assert_eq!(orig.len(), result.len());
+            assert_eq!(orig, result);
+        }
+
+        #[test]
+        fn test_array_array() {
+            type TestArray = [u32; 10];
+            type TestArrayArray = [TestArray; 3];
+            let mut buf = VSizedBuffer::new(256);
+            let orig_item: TestArray = [0u32, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+            let orig: TestArrayArray = [orig_item, orig_item, orig_item];
+
+            buf.push(&orig);
+            let result = TestArrayArray::pull_from(&mut buf);
 
             assert_eq!(orig.len(), result.len());
             assert_eq!(orig, result);
