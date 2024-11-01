@@ -43,24 +43,24 @@ async fn main() -> Result<(), sqlx::Error> {
 
     if args.build {
         println!("[Smithy] BEGIN build");
-        let builds = process_build(&pool).await?;
+        let (builds, company, market) = process_build(&pool).await?;
         if args.hall {
             output_builds_for_hall(&builds)?;
         }
         if args.vagabond {
-            output_builds_for_vagabond(&builds)?;
+            output_builds_for_vagabond(&builds, company, market)?;
         }
         println!("[Smithy] END build");
     }
 
     if args.detail {
         println!("[Smithy] BEGIN detail");
-        let details = process_detail(&pool).await?;
+        let (details, general, specific) = process_detail(&pool).await?;
         if args.hall {
             output_details_for_hall(&details)?;
         }
         if args.vagabond {
-            output_details_for_vagabond(&details)?;
+            output_details_for_vagabond(&details, general, specific)?;
         }
         println!("[Smithy] END detail");
     }

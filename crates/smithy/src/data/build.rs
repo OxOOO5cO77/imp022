@@ -4,9 +4,10 @@ use crate::data::common::extract_cards;
 use serde::Deserialize;
 use shared_data::game::card::CardSlot;
 use shared_data::player::build::{Build, CompanyType, MarketType, NumberType};
-use shared_data::player::detail::SpecificType;
+use shared_data::player::detail::{GeneralType, SpecificType};
 use sqlx::postgres::PgRow;
 use sqlx::{Pool, Postgres, Row};
+use std::collections::HashMap;
 
 #[derive(Deserialize)]
 pub(crate) struct DbBuild {
@@ -43,7 +44,7 @@ fn row_to_build(row: &PgRow) -> DbBuild {
     }
 }
 
-pub(crate) async fn process_build(pool: &Pool<Postgres>) -> Result<Vec<DbBuild>, sqlx::Error> {
+pub(crate) async fn process_build(pool: &Pool<Postgres>) -> Result<(Vec<DbBuild>, HashMap<CompanyType, String>, HashMap<MarketType, String>), sqlx::Error> {
     let rows = sqlx::query("SELECT * FROM build").fetch_all(pool).await?;
 
     let builds = rows
@@ -51,6 +52,18 @@ pub(crate) async fn process_build(pool: &Pool<Postgres>) -> Result<Vec<DbBuild>,
         .map(row_to_build)
         .collect::<Vec<DbBuild>>()
         ;
+    let company_rows = sqlx::query("SELECT id,name FROM \"build/company\"").fetch_all(pool).await?;
+    let company = company_rows
+        .iter()
+        .map(|row| (row.get::<i32, _>("id") as GeneralType, row.get("name")))
+        .collect::<HashMap<CompanyType, String>>()
+        ;
+    let market_rows = sqlx::query("SELECT id,name FROM \"build/market\"").fetch_all(pool).await?;
+    let market = market_rows
+        .iter()
+        .map(|row| (row.get::<i32, _>("id") as SpecificType, row.get("name")))
+        .collect::<HashMap<MarketType, String>>()
+        ;
 
-    Ok(builds)
+    Ok((builds, company, market))
 }

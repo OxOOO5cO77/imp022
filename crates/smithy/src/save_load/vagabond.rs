@@ -1,3 +1,6 @@
+use shared_data::player::build::{CompanyType, MarketType};
+use shared_data::player::detail::{GeneralType, SpecificType};
+use std::collections::HashMap;
 use std::io::Error;
 use vagabond::data::vagabond_build::VagabondBuild;
 use vagabond::data::vagabond_card::VagabondCard;
@@ -36,9 +39,12 @@ fn make_vagabond_build(build_instance: &DbBuild) -> VagabondBuild {
     }
 }
 
-pub(crate) fn output_builds_for_vagabond(builds: &[DbBuild]) -> Result<(), Error> {
+pub(crate) fn output_builds_for_vagabond(builds: &[DbBuild], company: HashMap<CompanyType, String>, market: HashMap<MarketType, String>) -> Result<(), Error> {
     let vagabond_builds = builds.iter().map(make_vagabond_build).collect::<Vec<_>>();
-    save_data_single(vagabond_builds, "output/vagabond_builds.ron")
+    save_data_single(vagabond_builds, "output/vagabond_builds.ron")?;
+    save_data_single((company, market), "output/vagabond_details_meta.ron")?;
+
+    Ok(())
 }
 
 fn make_vagabond_detail(detail_instance: &DbDetail) -> VagabondDetail {
@@ -49,7 +55,10 @@ fn make_vagabond_detail(detail_instance: &DbDetail) -> VagabondDetail {
     }
 }
 
-pub(crate) fn output_details_for_vagabond(details: &[DbDetail]) -> Result<(), Error> {
+pub(crate) fn output_details_for_vagabond(details: &[DbDetail], general: HashMap<GeneralType, String>, specific: HashMap<SpecificType, String>) -> Result<(), Error> {
     let vagabond_details = details.iter().map(make_vagabond_detail).collect::<Vec<_>>();
-    save_data_single(vagabond_details, "output/vagabond_details.ron")
+    save_data_single(vagabond_details, "output/vagabond_details.ron")?;
+    save_data_single((general, specific), "output/vagabond_details_meta.ron")?;
+
+    Ok(())
 }

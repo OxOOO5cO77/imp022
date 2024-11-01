@@ -4,6 +4,7 @@ use shared_data::player::build::NumberType;
 use shared_data::player::detail::*;
 use sqlx::postgres::PgRow;
 use sqlx::{FromRow, Pool, Postgres, Row};
+use std::collections::HashMap;
 
 #[derive(FromRow)]
 pub(crate) struct DbDetail {
@@ -40,7 +41,7 @@ fn row_to_detail(row: &PgRow) -> DbDetail {
     }
 }
 
-pub(crate) async fn process_detail(pool: &Pool<Postgres>) -> Result<Vec<DbDetail>, sqlx::Error> {
+pub(crate) async fn process_detail(pool: &Pool<Postgres>) -> Result<(Vec<DbDetail>, HashMap<GeneralType, String>, HashMap<SpecificType, String>), sqlx::Error> {
     let rows = sqlx::query("SELECT * FROM detail").fetch_all(pool).await?;
 
     let details = rows
@@ -49,5 +50,18 @@ pub(crate) async fn process_detail(pool: &Pool<Postgres>) -> Result<Vec<DbDetail
         .collect::<Vec<DbDetail>>()
         ;
 
-    Ok(details)
+    let general_rows = sqlx::query("SELECT id,name FROM \"detail/general\"").fetch_all(pool).await?;
+    let general = general_rows
+        .iter()
+        .map(|row| (row.get::<i32, _>("id") as GeneralType, row.get("name")))
+        .collect::<HashMap<GeneralType, String>>()
+        ;
+    let specific_rows = sqlx::query("SELECT id,name FROM \"detail/specific\"").fetch_all(pool).await?;
+    let specific = specific_rows
+        .iter()
+        .map(|row| (row.get::<i32, _>("id") as SpecificType, row.get("name")))
+        .collect::<HashMap<SpecificType, String>>()
+        ;
+
+    Ok((details, general, specific))
 }
