@@ -1,12 +1,12 @@
 use bevy::prelude::*;
 use vagabond::data::vagabond_part::VagabondPart;
 
-use crate::manager::{WarehouseManager, DataManager};
+use crate::manager::{DataManager, WarehouseManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::compose::StatRowKind::{Build, Detail};
 use crate::system::app_state::AppState;
-use crate::system::dragdrop::{DragDrag, DragDrop, Dragging, DragTarget, DropTarget};
-use crate::system::ui::{filled_rect, HUNDRED, screen_exit, ScreenBundle};
+use crate::system::dragdrop::{DragDrag, DragDrop, DragTarget, Dragging, DropTarget};
+use crate::system::ui::{filled_rect, screen_exit, ScreenBundle, HUNDRED};
 
 pub struct ComposePlugin;
 
@@ -17,7 +17,8 @@ impl Plugin for ComposePlugin {
             .add_systems(OnEnter(AppState::ComposeInit), composeinit_enter)
             .add_systems(Update, composeinit_update.run_if(in_state(AppState::ComposeInit)))
             .add_systems(OnEnter(AppState::Compose), compose_enter)
-            .add_systems(Update, (dragdrag, drag_drop, finish_player, compose_update).run_if(in_state(AppState::Compose)))
+            .add_systems(Update, (drag_drag, drag_drop, finish_player, compose_update, button_update).run_if(in_state(AppState::Compose)))
+            .add_systems(Update, button_commit_update.after(button_update).run_if(in_state(AppState::Compose)))
             .add_systems(OnExit(AppState::Compose), screen_exit)
         ;
     }
@@ -57,9 +58,18 @@ fn composeinit_update(
     }
 }
 
+#[derive(Resource, Default, PartialEq)]
+enum ComposeState {
+    #[default] Build,
+    Ready,
+    Committed,
+}
 
 #[derive(Event)]
 struct FinishPlayer;
+
+#[derive(Component)]
+struct SubmitButton;
 
 enum StatRowKind {
     Access,
@@ -375,6 +385,7 @@ fn compose_enter(
 ) {
     let parts = init_handoff.parts.clone();
     commands.remove_resource::<ComposeInitHandoff>();
+    commands.insert_resource(ComposeState::default());
     build_ui_compose(commands, parts, asset_server);
 }
 
@@ -440,7 +451,7 @@ fn build_ui_compose(
             width: HUNDRED,
             height: HUNDRED,
             grid_template_columns: vec![GridTrack::max_content(), GridTrack::percent(5.0), GridTrack::max_content(), GridTrack::percent(5.0), GridTrack::max_content(), GridTrack::percent(5.0), GridTrack::max_content()],
-            grid_template_rows: GridTrack::auto(),
+            grid_template_rows: vec![GridTrack::auto(), GridTrack::px(32.0)],
             ..default()
         },
         background_color: bevy::color::palettes::css::NAVY.into(),
@@ -519,7 +530,7 @@ fn build_ui_compose(
                             parent
                                 .spawn(compose_attributes.clone())
                                 .with_children(|parent| {
-                                    let headers = ["ANT", "BRD", "CPU", "DSC"];
+                                    let headers = ["ANT", "BRD", "CPU", "DSK"];
                                     spawn_val_label(parent, PlayerPartHolderKind::StatRow(Build), &font_info_val, PlayerPartHolderKind::Build, &font_info_label, headers);
                                 })
                             ;
@@ -547,6 +558,18 @@ fn build_ui_compose(
                                     ;
                                 })
                             ;
+                            parent
+                                .spawn((
+                                    SubmitButton,
+                                    ButtonBundle {
+                                        background_color: bevy::color::palettes::css::DARK_GRAY.into(),
+                                        ..default()
+                                    },
+                                ))
+                                .with_children(|parent| {
+                                    parent
+                                        .spawn(text("Submit", &font_info_label));
+                                });
                         })
                     ;
                 })
@@ -555,7 +578,51 @@ fn build_ui_compose(
     ;
 }
 
-fn dragdrag(
+type ButtonQuery<'a> = (
+    &'a Interaction,
+    &'a mut BackgroundColor,
+    &'a mut BorderColor,
+);
+
+fn button_update(
+    mut interaction_query: Query<ButtonQuery, (Changed<Interaction>, With<Button>)>,
+    state: Res<ComposeState>,
+) {
+    for (interaction, mut background_color, mut border_color) in &mut interaction_query {
+        match *interaction {
+            Interaction::Pressed => {
+                *background_color = if *state == ComposeState::Ready { bevy::color::palettes::basic::GREEN } else { bevy::color::palettes::basic::RED }.into();
+                *border_color = bevy::color::palettes::basic::RED.into();
+            }
+            Interaction::Hovered => {
+                *background_color = Color::srgb(0.25, 0.25, 0.25).into();
+                *border_color = Color::WHITE.into();
+            }
+            Interaction::None => {
+                *background_color = Color::srgb(0.15, 0.15, 0.15).into();
+                *border_color = Color::BLACK.into();
+            }
+        }
+    }
+}
+
+fn button_commit_update(
+    interaction_query: Query<&Interaction, (Changed<Interaction>, With<SubmitButton>)>,
+    mut state: ResMut<ComposeState>,
+    mut send: EventWriter<FinishPlayer>,
+) {
+    if *state != ComposeState::Ready {
+        return;
+    }
+    for &interaction in &interaction_query {
+        if interaction == Interaction::Pressed {
+            *state = ComposeState::Committed;
+            send.send(FinishPlayer);
+        }
+    }
+}
+
+fn drag_drag(
     mut commands: Commands,
     mut receive: EventReader<DragDrag>,
     holder_q: Query<(&GlobalTransform, &PlayerPartHolder)>,
@@ -611,7 +678,13 @@ fn drag_drop(
     holder_q: Query<(Option<&TextChildren>, &PlayerPartHolder, &PlayerPartHolderKind)>,
     mut text_q: Query<&mut Text>,
     mut send: EventWriter<FinishPlayer>,
+    state: Res<ComposeState>,
 ) {
+    if *state == ComposeState::Committed {
+        receive.clear();
+        return;
+    }
+
     for drag_drop in receive.read() {
         let src_entity = drag_drop.src;
         if let Some(dst_entity) = drag_drop.dst {
@@ -642,6 +715,7 @@ fn finish_player(
     receive: EventReader<FinishPlayer>,
     holder_q: Query<(&PlayerPartHolder, &PlayerPartHolderKind)>,
     gate: Res<GateIFace>,
+    mut state: ResMut<ComposeState>,
 ) {
     if !receive.is_empty() {
         let mut parts = [0, 0, 0, 0, 0, 0, 0, 0, ];
@@ -665,7 +739,10 @@ fn finish_player(
         }
 
         if parts.iter().all(|&o| o != 0) {
-            gate.send_game_build(parts, false);
+            if *state == ComposeState::Build {
+                *state = ComposeState::Ready;
+            }
+            gate.send_game_build(parts, *state == ComposeState::Committed);
         }
     }
 }
@@ -676,9 +753,16 @@ fn compose_update(
     mut info_q: Query<(&mut Text, &InfoKind), Without<CardHolder>>,
     wm: Res<WarehouseManager>,
     dm: Res<DataManager>,
+    state: Res<ComposeState>,
+    mut app_state: ResMut<NextState<AppState>>,
 ) {
     match gate.grx.try_recv() {
         Ok(GateCommand::GameBuild(gate_response)) => {
+            if *state == ComposeState::Committed {
+                app_state.set(AppState::Gameplay);
+                return;
+            }
+
             match wm.fetch_player(gate_response.seed) {
                 Ok(warehouse_response) => {
                     if let Some(player_bio) = warehouse_response.player_bio {
