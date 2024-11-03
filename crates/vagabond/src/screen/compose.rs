@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use pyri_tooltip::TooltipContent;
 use vagabond::data::vagabond_part::VagabondPart;
 
 use crate::manager::{DataManager, WarehouseManager};
@@ -72,7 +73,7 @@ struct FinishPlayer;
 struct SubmitButton;
 
 enum StatRowKind {
-    Access,
+    Analyze,
     Breach,
     Compute,
     Disrupt,
@@ -180,9 +181,15 @@ fn text(text: impl Into<String>, font_info: &FontInfo) -> TextBundle {
     })
 }
 
-fn spawn_with_text(parent: &mut ChildBuilder, node: NodeBundle, string: impl Into<String>, font_info: &FontInfo) -> Entity {
+fn spawn_with_text(parent: &mut ChildBuilder, node: NodeBundle, string: impl Into<String>, tooltip: Option<impl Into<String>>, font_info: &FontInfo) -> Entity {
     let mut id = Entity::PLACEHOLDER;
-    parent.spawn(node).with_children(|parent| { id = parent.spawn(text(string, font_info)).id(); });
+    let mut base_node = if let Some(tip) = tooltip {
+        let tooltip_node = pyri_tooltip::Tooltip::cursor(TooltipContent::from(tip.into()));
+        parent.spawn((node, tooltip_node, Interaction::default()))
+    } else {
+        parent.spawn(node)
+    };
+    base_node.with_children(|parent| { id = parent.spawn(text(string, font_info)).id(); });
     id
 }
 
@@ -225,10 +232,10 @@ fn attrib_header(parent: &mut ChildBuilder, font_info: &FontInfo) {
     parent
         .spawn(h_vals.clone())
         .with_children(|parent| {
-            spawn_with_text(parent, val.clone(), "a", font_info);
-            spawn_with_text(parent, val.clone(), "b", font_info);
-            spawn_with_text(parent, val.clone(), "c", font_info);
-            spawn_with_text(parent, val.clone(), "d", font_info);
+            spawn_with_text(parent, val.clone(), "a", Some("Accuracy"), font_info);
+            spawn_with_text(parent, val.clone(), "b", Some("Boost"), font_info);
+            spawn_with_text(parent, val.clone(), "c", Some("Celerity"), font_info);
+            spawn_with_text(parent, val.clone(), "d", Some("Duration"), font_info);
         })
     ;
 }
@@ -240,10 +247,10 @@ fn spawn_val_label(parent: &mut ChildBuilder, val_kind: PlayerPartHolderKind, fo
         .with_children(|parent| {
             let val = node(ATTRIB_VAL, bevy::color::palettes::css::SILVER);
             parent.spawn(node(ATTRIB_VAL, Srgba::NONE));
-            val_children.push(spawn_with_text(parent, val.clone(), "-", font_info_val));
-            val_children.push(spawn_with_text(parent, val.clone(), "-", font_info_val));
-            val_children.push(spawn_with_text(parent, val.clone(), "-", font_info_val));
-            val_children.push(spawn_with_text(parent, val.clone(), "-", font_info_val));
+            val_children.push(spawn_with_text(parent, val.clone(), "-", None::<&str>, font_info_val));
+            val_children.push(spawn_with_text(parent, val.clone(), "-", None::<&str>, font_info_val));
+            val_children.push(spawn_with_text(parent, val.clone(), "-", None::<&str>, font_info_val));
+            val_children.push(spawn_with_text(parent, val.clone(), "-", None::<&str>, font_info_val));
         })
         .insert(TextChildren(val_children))
     ;
@@ -274,10 +281,10 @@ fn attrib_row(parent: &mut ChildBuilder, kind: StatRowKind, font_info: &FontInfo
     parent
         .spawn((h_vals.clone(), DropTarget, PlayerPartHolderKind::StatRow(kind), PlayerPartHolder(None)))
         .with_children(|parent| {
-            text_children.push(spawn_with_text(parent, val.clone(), "-", font_info));
-            text_children.push(spawn_with_text(parent, val.clone(), "-", font_info));
-            text_children.push(spawn_with_text(parent, val.clone(), "-", font_info));
-            text_children.push(spawn_with_text(parent, val.clone(), "-", font_info));
+            text_children.push(spawn_with_text(parent, val.clone(), "-", None::<&str>, font_info));
+            text_children.push(spawn_with_text(parent, val.clone(), "-", None::<&str>, font_info));
+            text_children.push(spawn_with_text(parent, val.clone(), "-", None::<&str>, font_info));
+            text_children.push(spawn_with_text(parent, val.clone(), "-", None::<&str>, font_info));
         })
         .insert(TextChildren(text_children))
     ;
@@ -508,17 +515,17 @@ fn build_ui_compose(
                                         .with_children(|parent| {
                                             let val = node(ATTRIB_VAL, bevy::color::palettes::css::DARK_GRAY);
                                             parent.spawn(node(ATTRIB_VAL, Srgba::NONE));
-                                            spawn_with_text(parent, val.clone(), "A", &font_info_val);
-                                            spawn_with_text(parent, val.clone(), "B", &font_info_val);
-                                            spawn_with_text(parent, val.clone(), "C", &font_info_val);
-                                            spawn_with_text(parent, val.clone(), "D", &font_info_val);
+                                            spawn_with_text(parent, val.clone(), "A", Some("Analyze"), &font_info_val);
+                                            spawn_with_text(parent, val.clone(), "B", Some("Breach"), &font_info_val);
+                                            spawn_with_text(parent, val.clone(), "C", Some("Compute"), &font_info_val);
+                                            spawn_with_text(parent, val.clone(), "D", Some("Disrupt"), &font_info_val);
                                         })
                                     ;
                                     parent
                                         .spawn(v_vals(HUNDRED))
                                         .with_children(|parent| {
                                             attrib_header(parent, &font_info_val);
-                                            attrib_row(parent, StatRowKind::Access, &font_info_val);
+                                            attrib_row(parent, StatRowKind::Analyze, &font_info_val);
                                             attrib_row(parent, StatRowKind::Breach, &font_info_val);
                                             attrib_row(parent, StatRowKind::Compute, &font_info_val);
                                             attrib_row(parent, StatRowKind::Disrupt, &font_info_val);
@@ -724,7 +731,7 @@ fn finish_player(
             match holder_kind {
                 PlayerPartHolderKind::StatRow(row) => {
                     match row {
-                        StatRowKind::Access => parts[0] = seed_from_holder(holder),
+                        StatRowKind::Analyze => parts[0] = seed_from_holder(holder),
                         StatRowKind::Breach => parts[1] = seed_from_holder(holder),
                         StatRowKind::Compute => parts[2] = seed_from_holder(holder),
                         StatRowKind::Disrupt => parts[3] = seed_from_holder(holder),

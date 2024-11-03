@@ -12,6 +12,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(bevy_egui::EguiPlugin)
+        .add_plugins(pyri_tooltip::TooltipPlugin::default())
         .add_plugins(system::SystemPlugin)
         .add_plugins(manager::ManagerPlugin)
         .add_plugins(screen::ScreenPlugins)
