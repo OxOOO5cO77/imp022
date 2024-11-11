@@ -13,17 +13,17 @@ pub(crate) enum GateCommand {
     Hello,
     GameActivate(Box<GameActivateResponse>),
     GameBuild(Box<GameBuildResponse>),
-    GameStartGame(Box<GameStartGameResponse>),
+    GameStartGame(Box<GameStartGameMessage>),
     GameStartTurn(Box<GameStartTurnResponse>),
-    GameRoll(Box<GameRollResponse>),
+    GameRoll(Box<GameRollMessage>),
     GameChooseAttr(Box<GameChooseAttrResponse>),
-    GameResources(Box<GameResourcesResponse>),
+    GameResources(Box<GameResourcesMessage>),
     GamePlayCard(Box<GamePlayCardResponse>),
-    GameResolveCards(Box<GameResolveCardsResponse>),
+    GameResolveCards(Box<GameResolveCardsMessage>),
     GameEndTurn(Box<GameEndTurnResponse>),
-    GameTick(Box<GameTickResponse>),
+    GameTick(Box<GameTickMessage>),
     GameEndGame(Box<GameEndGameResponse>),
-    GameUpdateState(Box<GameUpdateStateResponse>),
+    GameUpdateState(Box<GameUpdateStateMessage>),
 }
 
 #[derive(Resource)]
@@ -109,7 +109,7 @@ fn recv_response<T: Bufferable>(context: GateClient, buf: &mut VSizedBuffer, as_
 }
 
 impl GateIFace {
-    fn send_request<T: Request>(&self, request: T) {
+    fn send_request<T: CommandMessage>(&self, request: T) {
         let mut out = VSizedBuffer::new(T::COMMAND.size_in_buffer() + self.auth.size_in_buffer() + request.size_in_buffer());
         out.push(&T::COMMAND);
         out.push(&self.auth);
@@ -125,7 +125,7 @@ impl GateIFace {
 
         self.send_request(request);
     }
-    
+
     pub fn send_game_build(&self, parts: [PartType; 8], commit: bool) {
         let request = GameBuildRequest {
             game_id: self.game_id,
@@ -144,10 +144,10 @@ impl GateIFace {
         self.send_request(request);
     }
 
-    pub fn send_game_choose_attr(&self, attr_idx: AttrIdxType) {
+    pub fn send_game_choose_attr(&self, attr: AttrKind) {
         let request = GameChooseAttrRequest {
             game_id: self.game_id,
-            attr_idx,
+            attr,
         };
 
         self.send_request(request);
@@ -164,14 +164,6 @@ impl GateIFace {
 
     pub fn send_game_end_turn(&self) {
         let request = GameEndTurnRequest {
-            game_id: self.game_id,
-        };
-
-        self.send_request(request);
-    }
-
-    pub fn send_game_end(&self) {
-        let request = GameEndGameRequest {
             game_id: self.game_id,
         };
 

@@ -4,6 +4,7 @@ use shared_net::VSizedBuffer;
 #[cfg(test)]
 use strum_macros::EnumIter;
 
+#[repr(u8)]
 #[derive(Default, Clone, Copy, PartialEq)]
 #[cfg_attr(test, derive(Debug, EnumIter))]
 pub enum GameStage {
@@ -13,16 +14,14 @@ pub enum GameStage {
     End,
 }
 
+#[repr(u8)]
 #[derive(Default, Clone, Copy, PartialEq)]
 #[cfg_attr(test, derive(Debug, EnumIter))]
 pub enum GamePhase {
-    #[default] Waiting,
-    Roll,
+    #[default] TurnStart,
     ChooseAttr,
-    ResourceAlloc,
     CardPlay,
-    CardResolve,
-    Tick,
+    TurnEnd,
 }
 
 
@@ -63,26 +62,20 @@ impl Bufferable for GameStage {
 impl Bufferable for GamePhase {
     fn push_into(&self, buf: &mut VSizedBuffer) {
         match self {
-            GamePhase::Waiting => 0u8,
-            GamePhase::Roll => 1,
-            GamePhase::ChooseAttr => 2,
-            GamePhase::ResourceAlloc => 3,
-            GamePhase::CardPlay => 4,
-            GamePhase::CardResolve => 5,
-            GamePhase::Tick => 6,
+            GamePhase::TurnStart => 0u8,
+            GamePhase::ChooseAttr => 1,
+            GamePhase::CardPlay => 2,
+            GamePhase::TurnEnd => 3
         }.push_into(buf);
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
         match u8::pull_from(buf) {
-            0 => GamePhase::Waiting,
-            1 => GamePhase::Roll,
-            2 => GamePhase::ChooseAttr,
-            3 => GamePhase::ResourceAlloc,
-            4 => GamePhase::CardPlay,
-            5 => GamePhase::CardResolve,
-            6 => GamePhase::Tick,
-            _ => GamePhase::Waiting,
+            0 => GamePhase::TurnStart,
+            1 => GamePhase::ChooseAttr,
+            2 => GamePhase::CardPlay,
+            3 => GamePhase::TurnEnd,
+            _ => GamePhase::TurnStart,
         }
     }
 

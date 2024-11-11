@@ -1,19 +1,19 @@
 use crate::manager::data_manager::DataManager;
 use crate::manager::player_builder::PlayerBuilder;
 use gate::message::gate_header::GateHeader;
-use hall::data::game::GameState;
-use hall::data::game::GameUser;
+use hall::data::game::{GamePhase, GameStage, GameState, GameUser};
+use hall::data::player::player_state::PlayerStatePlayerView;
 use hall::message::*;
 use rand::prelude::*;
-use shared_data::game::card::CostType;
 use shared_data::types::{AuthType, GameIdType, NodeType, UserIdType};
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 use std::collections::HashMap;
 use std::env;
 use std::ops::DerefMut;
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
+use tokio::sync::mpsc::error::SendError;
 use tokio::sync::mpsc::UnboundedSender;
 
 pub(crate) mod manager;
@@ -24,20 +24,23 @@ struct Broadcaster {
 }
 
 impl Broadcaster {
-    pub(crate) fn broadcast(&mut self, command: op::Command, buf: VSizedBuffer) {
+    pub(crate) fn broadcast<T: CommandMessage>(&mut self, message: T) {
         let mut errors = vec![];
         for (id, (gate, vagabond)) in &self.gate_map {
             let route = op::Route::One(*gate);
-            let mut msg = buf.clone();
+            let command = T::COMMAND;
 
-            let mut out = VSizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + vagabond.size_in_buffer() + msg.size());
+            let mut out = VSizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + vagabond.size_in_buffer() + message.size_in_buffer());
 
             out.push(&route);
             out.push(&command);
             out.push(vagabond);
-            out.xfer_bytes(&mut msg);
+            out.push(&message);
 
-            let result = self.local_tx.send(RoutedMessage { route: op::Route::None, buf: out });
+            let result = self.local_tx.send(RoutedMessage {
+                route: op::Route::None,
+                buf: out,
+            });
             if result.is_err() {
                 errors.push(*id);
             }
@@ -108,6 +111,23 @@ fn process_courtyard(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessag
     VClientMode::Continue
 }
 
+fn send_routed_message<T: CommandMessage>(message: T, gate: NodeType, vagabond: NodeType, tx: &UnboundedSender<RoutedMessage>) -> Result<(), SendError<RoutedMessage>> {
+    let route = op::Route::One(gate);
+    let command = T::COMMAND;
+
+    let mut out = VSizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + vagabond.size_in_buffer() + message.size_in_buffer());
+
+    out.push(&route);
+    out.push(&command);
+    out.push(&vagabond);
+    out.push(&message);
+
+    tx.send(RoutedMessage {
+        route: op::Route::None,
+        buf: out,
+    })
+}
+
 fn recv_game_start(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
     let mut context = context.lock().unwrap();
 
@@ -130,38 +150,19 @@ fn recv_game_start(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>
 
     let game = context.games.entry(game_id).or_default();
     game.user_add(header.user, user);
-    game.set_stage_build();
+    game.set_stage(GameStage::Building);
 
     context.bx.track(header.user, (gate, header.vagabond));
 
     println!("[Hall] [{:X}] Sending parts to G({})=>V({})", game_id, gate, header.vagabond);
 
-    let parts = [
-        temp_builder.access.convert_to_player_part(),
-        temp_builder.breach.convert_to_player_part(),
-        temp_builder.compute.convert_to_player_part(),
-        temp_builder.disrupt.convert_to_player_part(),
-        temp_builder.build.convert_to_player_part(),
-        temp_builder.build_values.convert_to_player_part(),
-        temp_builder.detail.convert_to_player_part(),
-        temp_builder.detail_values.convert_to_player_part(),
-    ];
+    let parts = [temp_builder.access.convert_to_player_part(), temp_builder.breach.convert_to_player_part(), temp_builder.compute.convert_to_player_part(), temp_builder.disrupt.convert_to_player_part(), temp_builder.build.convert_to_player_part(), temp_builder.build_values.convert_to_player_part(), temp_builder.detail.convert_to_player_part(), temp_builder.detail_values.convert_to_player_part()];
 
-    let route = op::Route::One(gate);
-    let command = op::Command::GameActivate;
     let response = GameActivateResponse {
         game_id,
         parts,
     };
-
-    let mut out = VSizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + header.vagabond.size_in_buffer() + response.size_in_buffer());
-
-    out.push(&route);
-    out.push(&command);
-    out.push(&header.vagabond);
-    out.push(&response);
-
-    let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });
+    let _ = send_routed_message(response, gate, header.vagabond, &tx);
 }
 
 fn recv_game_build(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
@@ -187,19 +188,9 @@ fn recv_game_build(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>
 
     println!("[Hall] Sending build to G({})=>V({})", gate, header.vagabond);
 
-    let route = op::Route::One(gate);
-    let command = op::Command::GameBuild;
+    let _ = send_routed_message(response, gate, header.vagabond, &tx);
 
-    let mut out = VSizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + header.vagabond.size_in_buffer() + response.size_in_buffer());
-
-    out.push(&route);
-    out.push(&command);
-    out.push(&header.vagabond);
-    out.push(&response);
-
-    let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });
-
-    {
+    if request.commit {
         let context = context.deref_mut();
         let (games, dm) = (&mut context.games, &context.data_manager);
 
@@ -209,32 +200,22 @@ fn recv_game_build(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>
                 user.player = player;
                 if let Some(valid_player) = user.player.as_ref() {
                     user.state.setup(valid_player.deck.iter().filter_map(|card| dm.lookup_player_card(card)).collect(), &mut rng);
-
-                    let route = op::Route::One(gate);
-                    let command = op::Command::GameUpdateState;
-                    let player_view = user.state.to_player_view();
-
-                    let mut out = VSizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + header.vagabond.size_in_buffer() + player_view.size_in_buffer());
-
-                    out.push(&route);
-                    out.push(&command);
-                    out.push(&header.vagabond);
-                    out.push(&player_view);
-
-                    let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });
+                    let message = GameUpdateStateMessage {
+                        player_state: PlayerStatePlayerView::from(&user.state),
+                    };
+                    let _ = send_routed_message(message, gate, header.vagabond, &tx);
                 }
             }
         }
     }
 
-
     if let Some(game) = context.games.get_mut(&request.game_id) {
         if game.all_users_have_players() {
-            game.set_stage_gameplay();
-            let stage = game.get_stage();
-            let mut broadcast_buf = VSizedBuffer::new(stage.size_in_buffer());
-            broadcast_buf.push(&stage);
-            context.bx.broadcast(op::Command::GameStartGame, broadcast_buf);
+            game.set_phase(GamePhase::TurnStart);
+            let message = GameStartGameMessage {
+                success: true,
+            };
+            context.bx.broadcast(message);
         }
     }
 }
@@ -252,16 +233,11 @@ fn recv_game_end(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, 
         }
     }
 
-    let route = op::Route::One(gate);
-    let command = op::Command::GameEndGame;
+    let response = GameEndGameResponse {
+        success: true,
+    };
 
-    let mut out = VSizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + header.vagabond.size_in_buffer());
-
-    out.push(&route);
-    out.push(&command);
-    out.push(&header.vagabond);
-
-    let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });
+    let _ = send_routed_message(response, gate, header.vagabond, &tx);
 }
 
 fn update_user(context: &mut Hall, game_id: GameIdType, user: UserIdType, auth: AuthType, command: op::Command, update: impl Fn(&mut GameUser) -> bool) -> bool {
@@ -281,33 +257,25 @@ fn recv_game_start_turn(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMes
     let header = buf.pull::<GateHeader>();
     let request = buf.pull::<GameStartTurnRequest>();
 
-    let success = update_user(&mut context, request.game_id, header.user, header.auth, op::Command::GameStartTurn, |_user| { /*TODO:*/true });
+    let success = update_user(&mut context, request.game_id, header.user, header.auth, op::Command::GameStartTurn, |_user| {
+        /*TODO:*/
+        true
+    });
 
     let response = GameStartTurnResponse {
-        success
+        success,
     };
 
-    let route = op::Route::One(gate);
-    let command = op::Command::GameStartTurn;
-
-    let mut out = VSizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + header.vagabond.size_in_buffer() + response.size_in_buffer());
-
-    out.push(&route);
-    out.push(&command);
-    out.push(&header.vagabond);
-    out.push(&response);
-
-    let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });
+    let _ = send_routed_message(response, gate, header.vagabond, &tx);
 
     if let Some(game) = context.games.get_mut(&request.game_id) {
         if game.all_users_last_command(op::Command::GameStartTurn) {
             game.roll();
-            let mut broadcast_buf = VSizedBuffer::new(size_of::<CostType>() * 4);
-            broadcast_buf.push(&game.erg_roll[0]);
-            broadcast_buf.push(&game.erg_roll[1]);
-            broadcast_buf.push(&game.erg_roll[2]);
-            broadcast_buf.push(&game.erg_roll[3]);
-            context.bx.broadcast(op::Command::GameStartGame, broadcast_buf);
+            let message = GameRollMessage {
+                roll: game.erg_roll,
+            };
+            game.set_phase(GamePhase::ChooseAttr);
+            context.bx.broadcast(message);
         }
     }
 }
@@ -319,25 +287,20 @@ fn recv_game_choose_attr(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMe
     let header = buf.pull::<GateHeader>();
     let request = buf.pull::<GameChooseAttrRequest>();
 
-    let success = update_user(&mut context, request.game_id, header.user, header.auth, op::Command::GameChooseAttr, |_user| { /*TODO:*/true });
+    let success = update_user(&mut context, request.game_id, header.user, header.auth, op::Command::GameChooseAttr, |user| {
+        user.state.resolve_kind = Some(request.attr.into());
+        true
+    });
 
     let response = GameChooseAttrResponse {
-        success
+        success,
     };
 
-    let route = op::Route::One(gate);
-    let command = op::Command::GameChooseAttr;
+    let _ = send_routed_message(response, gate, header.vagabond, &tx);
 
-    let mut out = VSizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + header.vagabond.size_in_buffer() + response.size_in_buffer());
+    let (games, bx) = context.split_borrow();
 
-    out.push(&route);
-    out.push(&command);
-    out.push(&header.vagabond);
-    out.push(&response);
-
-    let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });
-
-    if let Some(game) = context.games.get_mut(&request.game_id) {
+    if let Some(game) = games.get_mut(&request.game_id) {
         if game.all_users_last_command(op::Command::GameChooseAttr) {
             let (erg_roll, users) = game.split_borrow_for_resolve();
             for user in users.values_mut() {
@@ -348,40 +311,27 @@ fn recv_game_choose_attr(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMe
                     }
                 }
             }
-            // TODO: set phase
-            send_each_player_state(request.game_id, context);
+            game.set_phase(GamePhase::CardPlay);
+            send_each_player_resources(game, bx);
         }
     }
 }
 
-fn send_each_player_state(game_id: GameIdType, mut context: MutexGuard<Hall>) {
-    let (games, bx) = context.split_borrow();
-
-    if let Some(game) = games.get_mut(&game_id) {
-        if game.all_users_last_command(op::Command::GameChooseAttr) {
-            let mut errors = vec![];
-            for (id, (gate, vagabond)) in &bx.gate_map {
-                let route = op::Route::One(*gate);
-                let command = op::Command::GameUpdateState;
-                let state = game.get_user(*id).unwrap().state.to_player_view();
-
-                let mut out = VSizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + vagabond.size_in_buffer() + state.size_in_buffer());
-
-                out.push(&route);
-                out.push(&command);
-                out.push(vagabond);
-                out.push(&state);
-
-                let result = bx.local_tx.send(RoutedMessage { route: op::Route::None, buf: out });
-                if result.is_err() {
-                    errors.push(*id);
-                }
-            }
-
-            for id in &errors {
-                context.bx.gate_map.remove(id);
-            }
+fn send_each_player_resources(game: &mut GameState, bx: &mut Broadcaster) {
+    let mut errors = vec![];
+    for (id, (gate, vagabond)) in &bx.gate_map {
+        let player_state_view = PlayerStatePlayerView::from(&game.get_user(*id).unwrap().state);
+        let message = GameResourcesMessage {
+            player_state_view,
+        };
+        let result = send_routed_message(message, *gate, *vagabond, &bx.local_tx);
+        if result.is_err() {
+            errors.push(*id);
         }
+    }
+
+    for id in &errors {
+        bx.gate_map.remove(id);
     }
 }
 
@@ -395,20 +345,20 @@ fn recv_game_play_card(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMess
     let success = update_user(&mut context, request.game_id, header.user, header.auth, op::Command::GamePlayCard, |user| user.state.play_card(request.card_idx as usize));
 
     let response = GamePlayCardResponse {
-        success
+        success,
     };
 
-    let route = op::Route::One(gate);
-    let command = op::Command::GamePlayCard;
+    let _ = send_routed_message(response, gate, header.vagabond, &tx);
 
-    let mut out = VSizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + header.vagabond.size_in_buffer() + response.size_in_buffer());
-
-    out.push(&route);
-    out.push(&command);
-    out.push(&header.vagabond);
-    out.push(&response);
-
-    let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });
+    if let Some(game) = context.games.get_mut(&request.game_id) {
+        if game.all_users_last_command(op::Command::GamePlayCard) {
+            let message = GameResolveCardsMessage {
+                success: true,
+            };
+            game.set_phase(GamePhase::TurnEnd);
+            context.bx.broadcast(message);
+        }
+    }
 }
 
 fn recv_game_end_turn(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
@@ -418,21 +368,25 @@ fn recv_game_end_turn(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessa
     let header = buf.pull::<GateHeader>();
     let request = buf.pull::<GameEndTurnRequest>();
 
-    let success = update_user(&mut context, request.game_id, header.user, header.auth, op::Command::GameEndTurn, |_user| { /*TODO:*/true });
+    let success = update_user(&mut context, request.game_id, header.user, header.auth, op::Command::GameEndTurn, |_user| {
+        /*TODO:*/
+        true
+    });
 
     let response = GameEndTurnResponse {
-        success
+        success,
     };
 
-    let route = op::Route::One(gate);
-    let command = op::Command::GameEndTurn;
+    let _ = send_routed_message(response, gate, header.vagabond, &tx);
 
-    let mut out = VSizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + header.vagabond.size_in_buffer() + response.size_in_buffer());
-
-    out.push(&route);
-    out.push(&command);
-    out.push(&header.vagabond);
-    out.push(&response);
-
-    let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });
+    // game.set_phase(GamePhase::TurnStart);
+    if let Some(game) = context.games.get_mut(&request.game_id) {
+        if game.all_users_last_command(op::Command::GameEndTurn) {
+            let message = GameTickMessage {
+                success: true,
+            };
+            game.set_phase(GamePhase::TurnStart);
+            context.bx.broadcast(message);
+        }
+    }
 }

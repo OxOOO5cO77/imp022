@@ -3,7 +3,7 @@ use std::collections::{HashMap, VecDeque};
 use crate::data::hall::hall_card::HallCard;
 use crate::data::player::player_card::PlayerCard;
 use rand::{seq::SliceRandom, Rng};
-use shared_data::game::card::{CostType, Kind};
+use shared_data::game::card::{ErgType, Kind};
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
 
@@ -12,7 +12,7 @@ pub struct PlayerState {
     deck: VecDeque<HallCard>,
     discard: Vec<HallCard>,
     hand: Vec<HallCard>,
-    erg: HashMap<Kind, CostType>,
+    erg: HashMap<Kind, ErgType>,
     play: Vec<HallCard>,
     pub last_command: Option<op::Command>,
     pub resolve_kind: Option<Kind>,
@@ -60,58 +60,64 @@ impl PlayerState {
         false
     }
 
-    pub fn add_erg(&mut self, kind: Kind, erg: CostType) {
+    pub fn add_erg(&mut self, kind: Kind, erg: ErgType) {
         let entry = self.erg.entry(kind).or_insert(0);
         *entry += erg;
     }
+}
 
-    pub fn to_player_view(&self) -> PlayerStatePlayerView {
-        PlayerStatePlayerView {
-            deck_size: self.deck.len() as u8,
-            discard: self.discard.iter().map(HallCard::to_player_card).collect(),
-            hand: self.hand.iter().map(HallCard::to_player_card).collect(),
+type DeckCountType = u8;
+type ErgArray = [ErgType; 4];
+
+#[derive(Default)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
+pub struct PlayerStatePlayerView {
+    pub deck: DeckCountType,
+    pub heap: Vec<PlayerCard>,
+    pub hand: Vec<PlayerCard>,
+    pub erg: ErgArray,
+}
+
+impl From<&PlayerState> for PlayerStatePlayerView {
+    fn from(player_state: &PlayerState) -> Self {
+        Self {
+            deck: player_state.deck.len() as DeckCountType,
+            heap: player_state.discard.iter().map(HallCard::to_player_card).collect(),
+            hand: player_state.hand.iter().map(HallCard::to_player_card).collect(),
             erg: [
-                *self.erg.get(&Kind::Analyze).unwrap_or(&0),
-                *self.erg.get(&Kind::Breach).unwrap_or(&0),
-                *self.erg.get(&Kind::Compute).unwrap_or(&0),
-                *self.erg.get(&Kind::Disrupt).unwrap_or(&0),
+                *player_state.erg.get(&Kind::Analyze).unwrap_or(&0),
+                *player_state.erg.get(&Kind::Breach).unwrap_or(&0),
+                *player_state.erg.get(&Kind::Compute).unwrap_or(&0),
+                *player_state.erg.get(&Kind::Disrupt).unwrap_or(&0),
             ],
+
         }
     }
 }
 
-type ErgArray = [CostType; 4];
-
-pub struct PlayerStatePlayerView {
-    deck_size: u8,
-    discard: Vec<PlayerCard>,
-    hand: Vec<PlayerCard>,
-    erg: ErgArray,
-}
-
 impl Bufferable for PlayerStatePlayerView {
     fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.deck_size.push_into(buf);
-        self.discard.push_into(buf);
+        self.deck.push_into(buf);
+        self.heap.push_into(buf);
         self.hand.push_into(buf);
         self.erg.push_into(buf);
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let deck_size = u8::pull_from(buf);
-        let discard = Vec::<PlayerCard>::pull_from(buf);
+        let deck = DeckCountType::pull_from(buf);
+        let heap = Vec::<PlayerCard>::pull_from(buf);
         let hand = Vec::<PlayerCard>::pull_from(buf);
         let erg = ErgArray::pull_from(buf);
         Self {
-            deck_size,
-            discard,
+            deck,
+            heap,
             hand,
             erg,
         }
     }
 
     fn size_in_buffer(&self) -> usize {
-        self.deck_size.size_in_buffer() + self.discard.size_in_buffer() + self.hand.size_in_buffer() + self.erg.size_in_buffer()
+        self.deck.size_in_buffer() + self.heap.size_in_buffer() + self.hand.size_in_buffer() + self.erg.size_in_buffer()
     }
 }
 
@@ -133,8 +139,8 @@ mod tests {
         };
 
         let orig_view = PlayerStatePlayerView {
-            deck_size: 32,
-            discard: vec![dummy_card; 12],
+            deck: 32,
+            heap: vec![dummy_card; 12],
             hand: vec![dummy_card; 5],
             erg: [5, 6, 7, 8],
         };
@@ -142,10 +148,10 @@ mod tests {
         buf.push(&orig_view);
         let new_view = buf.pull::<PlayerStatePlayerView>();
 
-        assert_eq!(orig_view.deck_size, new_view.deck_size);
-        assert_eq!(orig_view.discard.len(), new_view.discard.len());
-        assert_eq!(orig_view.discard[0], new_view.discard[0]);
-        assert_eq!(orig_view.discard[1], new_view.discard[1]);
+        assert_eq!(orig_view.deck, new_view.deck);
+        assert_eq!(orig_view.heap.len(), new_view.heap.len());
+        assert_eq!(orig_view.heap[0], new_view.heap[0]);
+        assert_eq!(orig_view.heap[1], new_view.heap[1]);
         assert_eq!(orig_view.hand.len(), new_view.hand.len());
         assert_eq!(orig_view.hand[0], new_view.hand[0]);
         assert_eq!(orig_view.hand[1], new_view.hand[1]);

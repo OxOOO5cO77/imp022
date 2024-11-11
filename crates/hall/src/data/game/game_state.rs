@@ -1,7 +1,7 @@
 use crate::data::game::game_stage::{GamePhase, GameStage};
 use crate::data::game::{GameMachine, GameUser};
 use rand::{distr::Uniform, rngs::ThreadRng, Rng};
-use shared_data::game::card::CostType;
+use shared_data::game::card::ErgType;
 use shared_data::player::attribute::ValueType;
 use shared_data::types::{AuthType, UserIdType};
 
@@ -20,7 +20,7 @@ pub struct GameState {
     cpus: HashMap<CpuType, GameMachine>,
     current_tick: TickType,
     stage: GameStage,
-    pub erg_roll: [CostType; 4],
+    pub erg_roll: [ErgType; 4],
     pub rng: ThreadRng,
 }
 
@@ -29,16 +29,31 @@ impl GameState {
         self.stage
     }
 
-    pub fn set_stage_build(&mut self) {
-        if self.stage == GameStage::Idle || self.stage == GameStage::Building {
-            self.stage = GameStage::Building;
+    fn is_valid_transition(&self, game_stage: &GameStage) -> bool {
+        if self.stage == *game_stage {
+            return true;
+        }
+        match game_stage {
+            GameStage::Idle => false,
+            GameStage::Building => self.stage == GameStage::Idle,
+            GameStage::Running(phase) => match phase {
+                GamePhase::TurnStart => self.stage == GameStage::Idle || self.stage == GameStage::Running(GamePhase::TurnEnd),
+                GamePhase::ChooseAttr => self.stage == GameStage::Running(GamePhase::TurnStart),
+                GamePhase::CardPlay => self.stage == GameStage::Running(GamePhase::ChooseAttr),
+                GamePhase::TurnEnd => self.stage == GameStage::Running(GamePhase::CardPlay),
+            }
+            GameStage::End => matches!(self.stage, GameStage::Running(_))
+        }
+    }
+
+    pub fn set_stage(&mut self, stage: GameStage) {
+        if self.is_valid_transition(&stage) {
+            self.stage = stage;
         } // else log error
     }
 
-    pub fn set_stage_gameplay(&mut self) {
-        if self.stage == GameStage::Building {
-            self.stage = GameStage::Running(GamePhase::Waiting);
-        } // else log error
+    pub fn set_phase(&mut self, phase: GamePhase) {
+        self.set_stage(GameStage::Running(phase));
     }
 
     pub fn get_user(&mut self, user_id_type: UserIdType) -> Option<&GameUser> {
@@ -95,16 +110,16 @@ impl GameState {
         }
     }
 
-    fn increment(alloc: &mut (CostType, CostType), erg: CostType) {
+    fn increment(alloc: &mut (ErgType, ErgType), erg: ErgType) {
         alloc.0 += 1;
         alloc.1 += erg;
     }
 
-    pub fn split_borrow_for_resolve(&mut self) -> (&[CostType; 4], &mut HashMap<UserIdType, GameUser>) {
+    pub fn split_borrow_for_resolve(&mut self) -> (&[ErgType; 4], &mut HashMap<UserIdType, GameUser>) {
         (&self.erg_roll, &mut self.users)
     }
 
-    pub fn resolve_matchups(erg_roll: &[CostType], p1: &[ValueType; 4], p2: &[ValueType; 4]) -> [CostType; 2] {
+    pub fn resolve_matchups(erg_roll: &[ErgType], p1: &[ValueType; 4], p2: &[ValueType; 4]) -> [ErgType; 2] {
         let mut matchups = zip(erg_roll, zip(p1, p2)).collect::<Vec<_>>();
         matchups.sort_unstable_by_key(|(erg, (_, _))| Reverse(*erg));
 

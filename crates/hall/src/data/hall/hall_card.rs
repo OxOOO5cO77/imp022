@@ -10,7 +10,7 @@ pub struct HallCard {
     pub number: NumberType,
     pub set: SetType,
     pub kind: Kind,
-    pub cost: CostType,
+    pub cost: ErgType,
     pub delay: DelayType,
     pub launch_code: Vec<OpCode>,
     pub priority: PriorityType,

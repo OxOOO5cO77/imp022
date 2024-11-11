@@ -3,7 +3,7 @@ use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
 
 use crate::data::player::player_card::PlayerCard;
-use crate::message::Request;
+use crate::message::CommandMessage;
 
 type PartsArray = [PartType; 8];
 
@@ -14,7 +14,7 @@ pub struct GameBuildRequest {
     pub commit: bool,
 }
 
-impl Request for GameBuildRequest {
+impl CommandMessage for GameBuildRequest {
     const COMMAND: op::Command = op::Command::GameBuild;
 }
 
@@ -44,6 +44,10 @@ impl Bufferable for GameBuildRequest {
 pub struct GameBuildResponse {
     pub seed: SeedType,
     pub deck: Vec<PlayerCard>,
+}
+
+impl CommandMessage for GameBuildResponse {
+    const COMMAND: op::Command = op::Command::GameBuild;
 }
 
 impl Bufferable for GameBuildResponse {

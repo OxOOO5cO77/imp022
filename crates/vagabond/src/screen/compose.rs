@@ -7,7 +7,7 @@ use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::compose::StatRowKind::{Build, Detail};
 use crate::system::app_state::AppState;
 use crate::system::dragdrop::{DragDrag, DragDrop, DragTarget, Dragging, DropTarget};
-use crate::system::ui::{filled_rect, screen_exit, ScreenBundle, HUNDRED};
+use crate::system::ui::{filled_rect, font_size, screen_exit, text, FontInfo, Screen, ScreenBundle, HUNDRED};
 
 pub struct ComposePlugin;
 
@@ -20,7 +20,7 @@ impl Plugin for ComposePlugin {
             .add_systems(OnEnter(AppState::Compose), compose_enter)
             .add_systems(Update, (drag_drag, drag_drop, finish_player, compose_update, button_update).run_if(in_state(AppState::Compose)))
             .add_systems(Update, button_commit_update.after(button_update).run_if(in_state(AppState::Compose)))
-            .add_systems(OnExit(AppState::Compose), screen_exit)
+            .add_systems(OnExit(AppState::Compose), compose_exit)
         ;
     }
 }
@@ -145,7 +145,7 @@ fn v_vals(width: Val) -> NodeBundle {
     }
 }
 
-fn node(w: Val, color: Srgba) -> NodeBundle {
+fn attrib_node(w: Val, color: Srgba) -> NodeBundle {
     NodeBundle {
         style: Style {
             display: Display::Grid,
@@ -157,28 +157,6 @@ fn node(w: Val, color: Srgba) -> NodeBundle {
         background_color: color.into(),
         ..default()
     }
-}
-
-#[derive(Clone)]
-struct FontInfo {
-    handle: Handle<Font>,
-    size: f32,
-    color: Color,
-}
-
-fn text(text: impl Into<String>, font_info: &FontInfo) -> TextBundle {
-    TextBundle::from_section(
-        text,
-        TextStyle {
-            font: font_info.handle.clone(),
-            font_size: font_info.size,
-            color: font_info.color,
-        },
-    ).with_style(Style {
-        align_self: AlignSelf::Center,
-        justify_self: JustifySelf::Center,
-        ..default()
-    })
 }
 
 fn spawn_with_text(parent: &mut ChildBuilder, node: NodeBundle, string: impl Into<String>, tooltip: Option<impl Into<String>>, font_info: &FontInfo) -> Entity {
@@ -194,7 +172,7 @@ fn spawn_with_text(parent: &mut ChildBuilder, node: NodeBundle, string: impl Int
 }
 
 fn spawn_labelled(parent: &mut ChildBuilder, header: impl Into<String>, font_info: &FontInfo) -> Entity {
-    let v_label = node(LABEL_VAL, bevy::color::palettes::css::SILVER);
+    let v_label = attrib_node(LABEL_VAL, bevy::color::palettes::css::SILVER);
 
     let mut header_font_info = font_info.clone();
     header_font_info.size *= 0.6;
@@ -211,7 +189,7 @@ fn spawn_labelled(parent: &mut ChildBuilder, header: impl Into<String>, font_inf
 }
 
 fn spawn_info(parent: &mut ChildBuilder, header: impl Into<String>, info: InfoKind, font_info: &FontInfo) {
-    let v_label = node(LABEL_VAL, bevy::color::palettes::css::DARK_GRAY);
+    let v_label = attrib_node(LABEL_VAL, bevy::color::palettes::css::DARK_GRAY);
 
     let mut header_font_info = font_info.clone();
     header_font_info.size *= 0.6;
@@ -227,7 +205,7 @@ fn spawn_info(parent: &mut ChildBuilder, header: impl Into<String>, info: InfoKi
 
 fn attrib_header(parent: &mut ChildBuilder, font_info: &FontInfo) {
     let h_vals = h_vals(Srgba::NONE);
-    let val = node(ATTRIB_VAL, bevy::color::palettes::css::DARK_GRAY);
+    let val = attrib_node(ATTRIB_VAL, bevy::color::palettes::css::DARK_GRAY);
 
     parent
         .spawn(h_vals.clone())
@@ -245,8 +223,8 @@ fn spawn_val_label(parent: &mut ChildBuilder, val_kind: PlayerPartHolderKind, fo
     parent
         .spawn((v_vals(ATTRIB_VAL), DropTarget, val_kind, PlayerPartHolder(None)))
         .with_children(|parent| {
-            let val = node(ATTRIB_VAL, bevy::color::palettes::css::SILVER);
-            parent.spawn(node(ATTRIB_VAL, Srgba::NONE));
+            let val = attrib_node(ATTRIB_VAL, bevy::color::palettes::css::SILVER);
+            parent.spawn(attrib_node(ATTRIB_VAL, Srgba::NONE));
             val_children.push(spawn_with_text(parent, val.clone(), "-", None::<&str>, font_info_val));
             val_children.push(spawn_with_text(parent, val.clone(), "-", None::<&str>, font_info_val));
             val_children.push(spawn_with_text(parent, val.clone(), "-", None::<&str>, font_info_val));
@@ -259,7 +237,7 @@ fn spawn_val_label(parent: &mut ChildBuilder, val_kind: PlayerPartHolderKind, fo
     parent
         .spawn((v_vals(HUNDRED), DropTarget, label_kind, PlayerPartHolder(None)))
         .with_children(|parent| {
-            parent.spawn(node(ATTRIB_VAL, Srgba::NONE));
+            parent.spawn(attrib_node(ATTRIB_VAL, Srgba::NONE));
             label_children.push(spawn_labelled(parent, headers[0], font_info_label));
             label_children.push(spawn_labelled(parent, headers[1], font_info_label));
             label_children.push(spawn_labelled(parent, headers[2], font_info_label));
@@ -274,7 +252,7 @@ struct TextChildren(Vec<Entity>);
 
 fn attrib_row(parent: &mut ChildBuilder, kind: StatRowKind, font_info: &FontInfo) {
     let h_vals = h_vals(Srgba::rgb(0.0, 0.5, 0.0));
-    let val = node(ATTRIB_VAL, bevy::color::palettes::css::SILVER);
+    let val = attrib_node(ATTRIB_VAL, bevy::color::palettes::css::SILVER);
 
     let mut text_children = Vec::with_capacity(4);
 
@@ -376,14 +354,6 @@ fn spawn_card_holder(parent: &mut ChildBuilder, idx: usize, font_info: &FontInfo
         .id()
 }
 
-fn font_size(asset_server: &Res<AssetServer>, size: f32) -> FontInfo {
-    let font = asset_server.load("font/RobotoMono.ttf");
-    FontInfo {
-        handle: font.clone(),
-        size,
-        color: Color::BLACK,
-    }
-}
 
 fn compose_enter(
     mut commands: Commands,
@@ -513,8 +483,8 @@ fn build_ui_compose(
                                     parent
                                         .spawn(v_vals(ATTRIB_VAL))
                                         .with_children(|parent| {
-                                            let val = node(ATTRIB_VAL, bevy::color::palettes::css::DARK_GRAY);
-                                            parent.spawn(node(ATTRIB_VAL, Srgba::NONE));
+                                            let val = attrib_node(ATTRIB_VAL, bevy::color::palettes::css::DARK_GRAY);
+                                            parent.spawn(attrib_node(ATTRIB_VAL, Srgba::NONE));
                                             spawn_with_text(parent, val.clone(), "A", Some("Analyze"), &font_info_val);
                                             spawn_with_text(parent, val.clone(), "B", Some("Breach"), &font_info_val);
                                             spawn_with_text(parent, val.clone(), "C", Some("Compute"), &font_info_val);
@@ -533,7 +503,7 @@ fn build_ui_compose(
                                     ;
                                 })
                             ;
-                            parent.spawn(node(ATTRIB_VAL, Srgba::NONE));
+                            parent.spawn(attrib_node(ATTRIB_VAL, Srgba::NONE));
                             parent
                                 .spawn(compose_attributes.clone())
                                 .with_children(|parent| {
@@ -541,7 +511,7 @@ fn build_ui_compose(
                                     spawn_val_label(parent, PlayerPartHolderKind::StatRow(Build), &font_info_val, PlayerPartHolderKind::Build, &font_info_label, headers);
                                 })
                             ;
-                            parent.spawn(node(ATTRIB_VAL, Srgba::NONE));
+                            parent.spawn(attrib_node(ATTRIB_VAL, Srgba::NONE));
                             parent
                                 .spawn(compose_attributes.clone())
                                 .with_children(|parent| {
@@ -549,14 +519,14 @@ fn build_ui_compose(
                                     spawn_val_label(parent, PlayerPartHolderKind::StatRow(Detail), &font_info_val, PlayerPartHolderKind::Detail, &font_info_label, headers);
                                 })
                             ;
-                            parent.spawn(node(ATTRIB_VAL, Srgba::NONE));
+                            parent.spawn(attrib_node(ATTRIB_VAL, Srgba::NONE));
                             parent
                                 .spawn(compose_attributes)
                                 .with_children(|parent| {
                                     parent
                                         .spawn(v_vals(HUNDRED))
                                         .with_children(|parent| {
-                                            parent.spawn(node(ATTRIB_VAL, Srgba::NONE));
+                                            parent.spawn(attrib_node(ATTRIB_VAL, Srgba::NONE));
                                             spawn_info(parent, "ID", InfoKind::ID, &font_info_label);
                                             spawn_info(parent, "Name", InfoKind::Name, &font_info_label);
                                             spawn_info(parent, "Birthplace", InfoKind::Birthplace, &font_info_label);
@@ -576,7 +546,8 @@ fn build_ui_compose(
                                 .with_children(|parent| {
                                     parent
                                         .spawn(text("Submit", &font_info_label));
-                                });
+                                })
+                            ;
                         })
                     ;
                 })
@@ -766,7 +737,6 @@ fn compose_update(
     match gate.grx.try_recv() {
         Ok(GateCommand::GameBuild(gate_response)) => {
             if *state == ComposeState::Committed {
-                app_state.set(AppState::Gameplay);
                 return;
             }
 
@@ -794,7 +764,20 @@ fn compose_update(
                 Err(err) => println!("Error: {err}"),
             }
         }
+        Ok(GateCommand::GameStartGame(gate_response)) => {
+            if gate_response.success {
+                app_state.set(AppState::Gameplay);
+            }
+        }
         Ok(_) => {}
         Err(_) => {}
     }
+}
+
+pub fn compose_exit(
+    mut commands: Commands,
+    screen_q: Query<Entity, With<Screen>>,
+) {
+    commands.remove_resource::<ComposeState>();
+    screen_exit(commands, screen_q);
 }

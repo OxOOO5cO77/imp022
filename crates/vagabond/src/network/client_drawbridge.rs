@@ -53,8 +53,6 @@ fn recv_authorize(context: DrawbridgeClient, mut buf: VSizedBuffer) -> VClientMo
     let port = buf.pull::<u16>();
     let auth = buf.pull::<AuthType>();
 
-    println!("IP: {} Port: {}", ip, port);
-
     let auth_info = AuthInfo { ip, port, auth };
     let _ = context.auth_tx.send(auth_info);
 

@@ -1,6 +1,6 @@
 use bevy::app::App;
 use bevy::prelude::*;
-
+use bevy::window::WindowResolution;
 use system::app_state::AppState;
 
 mod manager;
@@ -10,7 +10,14 @@ mod network;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set( WindowPlugin {
+            primary_window: Some(Window {
+                resolution: WindowResolution::new(1920.0, 1080.0).with_scale_factor_override(1.0),
+                title: "Vagabond".to_string(),
+                ..default()
+            }),
+            ..default()
+        }))
         .add_plugins(bevy_egui::EguiPlugin)
         .add_plugins(pyri_tooltip::TooltipPlugin::default())
         .add_plugins(system::SystemPlugin)

@@ -10,3 +10,4 @@ pub(crate) use game_machine::GameMachine;
 pub(crate) use game_process::GameProcess;
 pub use game_state::GameState;
 pub use game_user::GameUser;
+pub use game_stage::{GameStage, GamePhase};

@@ -1,14 +1,14 @@
+use crate::message::CommandMessage;
 use shared_data::types::GameIdType;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
-use crate::message::Request;
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameStartTurnRequest {
     pub game_id: GameIdType,
 }
 
-impl Request for GameStartTurnRequest {
+impl CommandMessage for GameStartTurnRequest {
     const COMMAND: op::Command = op::Command::GameStartTurn;
 }
 
@@ -32,6 +32,10 @@ impl Bufferable for GameStartTurnRequest {
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameStartTurnResponse {
     pub success: bool,
+}
+
+impl CommandMessage for GameStartTurnResponse {
+    const COMMAND: op::Command = op::Command::GameStartTurn;
 }
 
 impl Bufferable for GameStartTurnResponse {

@@ -1,4 +1,4 @@
-use crate::message::Request;
+use crate::message::CommandMessage;
 use shared_data::types::GameIdType;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
@@ -8,7 +8,7 @@ pub struct GameEndTurnRequest {
     pub game_id: GameIdType,
 }
 
-impl Request for GameEndTurnRequest {
+impl CommandMessage for GameEndTurnRequest {
     const COMMAND: op::Command = op::Command::GameEndTurn;
 }
 
@@ -32,6 +32,10 @@ impl Bufferable for GameEndTurnRequest {
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameEndTurnResponse {
     pub success: bool,
+}
+
+impl CommandMessage for GameEndTurnResponse {
+    const COMMAND: op::Command = op::Command::GameEndTurn;
 }
 
 impl Bufferable for GameEndTurnResponse {

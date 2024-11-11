@@ -1,12 +1,17 @@
+use crate::message::CommandMessage;
 use shared_net::sizedbuffers::Bufferable;
-use shared_net::VSizedBuffer;
+use shared_net::{op, VSizedBuffer};
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
-pub struct GameStartGameResponse {
+pub struct GameStartGameMessage {
     pub success: bool,
 }
 
-impl Bufferable for GameStartGameResponse {
+impl CommandMessage for GameStartGameMessage {
+    const COMMAND: op::Command = op::Command::GameStartGame;
+}
+
+impl Bufferable for GameStartGameMessage {
     fn push_into(&self, buf: &mut VSizedBuffer) {
         self.success.push_into(buf);
     }
@@ -25,19 +30,19 @@ impl Bufferable for GameStartGameResponse {
 
 #[cfg(test)]
 mod test {
-    use crate::message::game_start_game::GameStartGameResponse;
+    use crate::message::game_start_game::GameStartGameMessage;
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
 
     #[test]
     fn test_response() {
-        let orig = GameStartGameResponse {
+        let orig = GameStartGameMessage {
             success: true,
         };
 
         let mut buf = VSizedBuffer::new(orig.size_in_buffer());
         buf.push(&orig);
-        let result = buf.pull::<GameStartGameResponse>();
+        let result = buf.pull::<GameStartGameMessage>();
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig, result);

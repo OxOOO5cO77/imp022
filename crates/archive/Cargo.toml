@@ -7,7 +7,7 @@ authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 
 [dependencies]
 sqlx = { version = "0.8.2", features = ["postgres", "macros", "uuid", "runtime-tokio-rustls"] }
-tokio = { version = "1.41.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.41.1", features = ["macros", "rt-multi-thread"] }
 uuid = { version = "1.11.0", features = ["v4"] }
 gate = { path = "../gate" }
 shared-data = { path = "../shared-data" }

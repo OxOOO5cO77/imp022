@@ -1,7 +1,7 @@
+use crate::message::CommandMessage;
 use shared_data::types::GameIdType;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
-use crate::message::Request;
 
 pub type CardIdxType = u8;
 
@@ -11,7 +11,7 @@ pub struct GamePlayCardRequest {
     pub card_idx: CardIdxType,
 }
 
-impl Request for GamePlayCardRequest {
+impl CommandMessage for GamePlayCardRequest {
     const COMMAND: op::Command = op::Command::GamePlayCard;
 }
 
@@ -38,6 +38,10 @@ impl Bufferable for GamePlayCardRequest {
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GamePlayCardResponse {
     pub success: bool,
+}
+
+impl CommandMessage for GamePlayCardResponse {
+    const COMMAND: op::Command = op::Command::GamePlayCard;
 }
 
 impl Bufferable for GamePlayCardResponse {

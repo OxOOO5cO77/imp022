@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 pub type SetType = u8;
 pub type NumberType = u8;
-pub type CostType = u16;
+pub type ErgType = u16;
 pub type PriorityType = u8;
 pub type DelayType = u8;
 
@@ -23,7 +23,7 @@ pub enum Slot {
     Number(NumberType),
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize, Hash, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
 pub enum Kind {
     Analyze,
     Breach,
