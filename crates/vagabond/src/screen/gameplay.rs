@@ -1,6 +1,6 @@
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::system::app_state::AppState;
-use crate::system::ui::{font_size, font_size_color, screen_exit, text, Screen, ScreenBundle, HUNDRED};
+use crate::system::ui::{font_size, font_size_color, screen_exit, text, Screen, ScreenBundle, HUNDRED, ZERO};
 use bevy::prelude::*;
 use hall::data::player::player_state::PlayerStatePlayerView;
 use hall::message::AttrKind;
@@ -10,7 +10,12 @@ pub struct GameplayPlugin;
 
 impl Plugin for GameplayPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<UiEvent>().add_systems(OnEnter(AppState::Gameplay), gameplay_enter).add_systems(Update, (gameplay_update, button_ui_update, player_ui_update, roll_ui_update).run_if(in_state(AppState::Gameplay))).add_systems(Update, button_next_update.after(button_ui_update).run_if(in_state(AppState::Gameplay))).add_systems(OnExit(AppState::Gameplay), gameplay_exit);
+        app //
+            .add_event::<UiEvent>()
+            .add_systems(OnEnter(AppState::Gameplay), gameplay_enter)
+            .add_systems(Update, (gameplay_update, button_ui_update, player_ui_update, roll_ui_update).run_if(in_state(AppState::Gameplay)))
+            .add_systems(Update, button_next_update.after(button_ui_update).run_if(in_state(AppState::Gameplay)))
+            .add_systems(OnExit(AppState::Gameplay), gameplay_exit);
     }
 }
 
@@ -68,7 +73,7 @@ fn spacer(color: Color) -> NodeBundle {
 
 fn gameplay_enter(mut commands: Commands, asset_server: Res<AssetServer>) {
     let font_info_black = font_size(&asset_server, 16.0);
-    let font_info_white = font_size_color(&asset_server, 16.0, bevy::color::palettes::basic::WHITE);
+    let font_info_erg = font_size_color(&asset_server, 48.0, bevy::color::palettes::basic::YELLOW);
     let font_info_green = font_size_color(&asset_server, 16.0, bevy::color::palettes::basic::GREEN);
 
     let main_layout = NodeBundle {
@@ -76,43 +81,155 @@ fn gameplay_enter(mut commands: Commands, asset_server: Res<AssetServer>) {
             display: Display::Grid,
             width: HUNDRED,
             height: HUNDRED,
-            grid_template_columns: vec![GridTrack::px(272.0), GridTrack::flex(1.0), GridTrack::px(272.0)],
-            grid_template_rows: vec![GridTrack::flex(1.0), GridTrack::px(272.0)],
+            grid_template_columns: vec![GridTrack::px(342.0), GridTrack::flex(1.0), GridTrack::px(342.0)],
+            grid_template_rows: GridTrack::auto(),
             ..default()
         },
         ..default()
     };
-    let continue_layout = NodeBundle {
+    let attr_layout = NodeBundle {
         style: Style {
             display: Display::Grid,
             width: HUNDRED,
             height: HUNDRED,
-            grid_template_columns: vec![GridTrack::auto()],
-            grid_template_rows: vec![GridTrack::auto(), GridTrack::px(72.0)],
+            grid_template_columns: GridTrack::flex(1.0),
+            grid_template_rows: vec![GridTrack::px(116.0), GridTrack::px(320.0), GridTrack::px(336.0), GridTrack::auto()],
+            ..default()
+        },
+        ..default()
+    };
+    let attr_values_layout = NodeBundle {
+        style: Style {
+            display: Display::Grid,
+            width: HUNDRED,
+            height: HUNDRED,
+            grid_template_columns: RepeatedGridTrack::flex(4, 1.0),
+            grid_template_rows: GridTrack::flex(1.0),
+            ..default()
+        },
+        ..default()
+    };
+    let attr_player_layout = NodeBundle {
+        style: Style {
+            display: Display::Grid,
+            width: HUNDRED,
+            height: HUNDRED,
+            grid_template_columns: RepeatedGridTrack::flex(4, 1.0),
+            grid_template_rows: RepeatedGridTrack::flex(4, 1.0),
+            ..default()
+        },
+        ..default()
+    };
+    let center_layout = NodeBundle {
+        style: Style {
+            display: Display::Grid,
+            width: HUNDRED,
+            height: HUNDRED,
+            grid_template_columns: GridTrack::flex(1.0),
+            grid_template_rows: vec![GridTrack::px(696.0), GridTrack::px(88.0), GridTrack::flex(1.0)],
+            ..default()
+        },
+        ..default()
+    };
+    let game_map_layout = NodeBundle {
+        style: Style {
+            display: Display::Grid,
+            width: HUNDRED,
+            height: HUNDRED,
+            grid_template_columns: GridTrack::flex(1.0),
+            grid_template_rows: GridTrack::flex(1.0),
+            ..default()
+        },
+        ..default()
+    };
+    let player_erg_layout = NodeBundle {
+        style: Style {
+            display: Display::Grid,
+            width: HUNDRED,
+            height: HUNDRED,
+            grid_template_columns: vec![GridTrack::px(80.0), GridTrack::flex(1.0), GridTrack::flex(1.0), GridTrack::flex(1.0), GridTrack::flex(1.0), GridTrack::flex(1.0), GridTrack::px(80.0)],
+            grid_template_rows: GridTrack::flex(1.0),
+            ..default()
+        },
+        ..default()
+    };
+    let player_card_layout = NodeBundle {
+        style: Style {
+            display: Display::Grid,
+            width: HUNDRED,
+            height: HUNDRED,
+            grid_template_columns: RepeatedGridTrack::flex(5, 1.0),
+            grid_template_rows: GridTrack::flex(1.0),
+            ..default()
+        },
+        ..default()
+    };
+    let machine_layout = NodeBundle {
+        style: Style {
+            display: Display::Grid,
+            width: HUNDRED,
+            height: HUNDRED,
+            grid_template_columns: GridTrack::flex(1.0),
+            grid_template_rows: vec![GridTrack::px(298.0), GridTrack::px(308.0), GridTrack::px(390.0), GridTrack::flex(1.0)],
             ..default()
         },
         ..default()
     };
 
-    commands.spawn(ScreenBundle::default()).with_children(|parent| {
-        parent.spawn(main_layout).with_children(|parent| {
-            parent.spawn(spacer(Color::BLACK)).with_children(|parent| {
-                parent.spawn((RollText(0), text("0", &font_info_white)));
-                parent.spawn((RollText(1), text("0", &font_info_white)));
-                parent.spawn((RollText(2), text("0", &font_info_white)));
-                parent.spawn((RollText(3), text("0", &font_info_white)));
-            });
-            parent.spawn(spacer(Color::BLACK));
-            parent.spawn(spacer(Color::BLACK));
+    let screen = ScreenBundle {
+        screen: Screen,
+        base: ImageBundle {
+            style: Style {
+                position_type: PositionType::Absolute,
+                left: ZERO,
+                top: ZERO,
+                width: HUNDRED,
+                height: HUNDRED,
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                align_content: AlignContent::Center,
+                align_self: AlignSelf::Center,
+                ..default()
+            },
+            image: asset_server.load("image/gameplay.png").into(),
+            ..Default::default()
+        },
+    };
 
-            parent.spawn(spacer(Color::BLACK));
-            parent.spawn(spacer(Color::BLACK)).with_children(|parent| {
-                parent.spawn((ErgText(0), text("0", &font_info_white)));
-                parent.spawn((ErgText(1), text("0", &font_info_white)));
-                parent.spawn((ErgText(2), text("0", &font_info_white)));
-                parent.spawn((ErgText(3), text("0", &font_info_white)));
+    commands.spawn(screen).with_children(|parent| {
+        parent.spawn(main_layout).with_children(|parent| {
+            parent.spawn(attr_layout).with_children(|parent| {
+                parent.spawn(attr_values_layout.clone()).with_children(|parent| {
+                    parent.spawn(spacer(Color::NONE));
+                });
+                parent.spawn(attr_values_layout).with_children(|parent| {
+                    for i in 0..=3 {
+                        parent.spawn((RollText(i), text("-", &font_info_erg)));
+                    }
+                });
+                parent.spawn(attr_player_layout).with_children(|parent| {
+                    parent.spawn(spacer(Color::NONE));
+                });
             });
-            parent.spawn(continue_layout).with_children(|parent| {
+            parent.spawn(center_layout).with_children(|parent| {
+                parent.spawn(game_map_layout).with_children(|parent| {
+                    parent.spawn(spacer(Color::NONE));
+                });
+                parent.spawn(player_erg_layout).with_children(|parent| {
+                    parent.spawn(spacer(Color::NONE));
+                    for i in 0..=3 {
+                        parent.spawn((ErgText(i), text("00", &font_info_erg)));
+                    }
+                    parent.spawn(spacer(Color::NONE));
+                    parent.spawn(spacer(Color::NONE));
+                });
+                parent.spawn(player_card_layout).with_children(|parent| {
+                    parent.spawn(spacer(Color::NONE));
+                });
+            });
+            parent.spawn(machine_layout).with_children(|parent| {
+                parent.spawn(spacer(Color::NONE));
+                parent.spawn(spacer(Color::NONE));
                 parent.spawn((PhaseText, text("Phase", &font_info_green)));
                 parent
                     .spawn((
@@ -185,7 +302,7 @@ fn player_ui_update(mut receive: EventReader<UiEvent>, mut erg_q: Query<(&mut Te
     for ui_event in receive.read() {
         if let UiEvent::PlayerState(player_state) = ui_event {
             for (mut erg_text, ErgText(index)) in erg_q.iter_mut() {
-                erg_text.sections[0].value = format!("{}", player_state.erg[*index])
+                erg_text.sections[0].value = format!("{:02}", player_state.erg[*index])
             }
         }
     }

@@ -13,15 +13,14 @@ pub struct ComposePlugin;
 
 impl Plugin for ComposePlugin {
     fn build(&self, app: &mut App) {
-        app
+        app //
             .add_event::<FinishPlayer>()
             .add_systems(OnEnter(AppState::ComposeInit), composeinit_enter)
             .add_systems(Update, composeinit_update.run_if(in_state(AppState::ComposeInit)))
             .add_systems(OnEnter(AppState::Compose), compose_enter)
             .add_systems(Update, (drag_drag, drag_drop, finish_player, compose_update, button_update).run_if(in_state(AppState::Compose)))
             .add_systems(Update, button_commit_update.after(button_update).run_if(in_state(AppState::Compose)))
-            .add_systems(OnExit(AppState::Compose), compose_exit)
-        ;
+            .add_systems(OnExit(AppState::Compose), compose_exit);
     }
 }
 
@@ -34,24 +33,10 @@ fn composeinit_enter(gate: ResMut<GateIFace>) {
     gate.send_game_activate();
 }
 
-fn composeinit_update(
-    mut commands: Commands,
-    mut gate: ResMut<GateIFace>,
-    mut app_state: ResMut<NextState<AppState>>,
-    dm: Res<DataManager>,
-) {
+fn composeinit_update(mut commands: Commands, mut gate: ResMut<GateIFace>, mut app_state: ResMut<NextState<AppState>>, dm: Res<DataManager>) {
     if let Ok(GateCommand::GameActivate(response)) = gate.grx.try_recv() {
         let init_handoff = ComposeInitHandoff {
-            parts: [
-                dm.convert_part(&response.parts[0]).unwrap_or_default(),
-                dm.convert_part(&response.parts[1]).unwrap_or_default(),
-                dm.convert_part(&response.parts[2]).unwrap_or_default(),
-                dm.convert_part(&response.parts[3]).unwrap_or_default(),
-                dm.convert_part(&response.parts[4]).unwrap_or_default(),
-                dm.convert_part(&response.parts[5]).unwrap_or_default(),
-                dm.convert_part(&response.parts[6]).unwrap_or_default(),
-                dm.convert_part(&response.parts[7]).unwrap_or_default(),
-            ]
+            parts: [dm.convert_part(&response.parts[0]).unwrap_or_default(), dm.convert_part(&response.parts[1]).unwrap_or_default(), dm.convert_part(&response.parts[2]).unwrap_or_default(), dm.convert_part(&response.parts[3]).unwrap_or_default(), dm.convert_part(&response.parts[4]).unwrap_or_default(), dm.convert_part(&response.parts[5]).unwrap_or_default(), dm.convert_part(&response.parts[6]).unwrap_or_default(), dm.convert_part(&response.parts[7]).unwrap_or_default()],
         };
         gate.game_id = response.game_id;
         commands.insert_resource(init_handoff);
@@ -61,7 +46,8 @@ fn composeinit_update(
 
 #[derive(Resource, Default, PartialEq)]
 enum ComposeState {
-    #[default] Build,
+    #[default]
+    Build,
     Ready,
     Committed,
 }
@@ -94,7 +80,6 @@ struct PlayerPartHolder(Option<VagabondPart>);
 
 #[derive(Component, Clone)]
 struct CardHolder(usize);
-
 
 #[derive(Component)]
 enum InfoKind {
@@ -167,7 +152,9 @@ fn spawn_with_text(parent: &mut ChildBuilder, node: NodeBundle, string: impl Int
     } else {
         parent.spawn(node)
     };
-    base_node.with_children(|parent| { id = parent.spawn(text(string, font_info)).id(); });
+    base_node.with_children(|parent| {
+        id = parent.spawn(text(string, font_info)).id();
+    });
     id
 }
 
@@ -178,13 +165,10 @@ fn spawn_labelled(parent: &mut ChildBuilder, header: impl Into<String>, font_inf
     header_font_info.size *= 0.6;
 
     let mut id = Entity::PLACEHOLDER;
-    parent
-        .spawn(v_label)
-        .with_children(|parent| {
-            parent.spawn(text(header, &header_font_info));
-            id = parent.spawn(text("-", font_info)).id();
-        })
-    ;
+    parent.spawn(v_label).with_children(|parent| {
+        parent.spawn(text(header, &header_font_info));
+        id = parent.spawn(text("-", font_info)).id();
+    });
     id
 }
 
@@ -194,28 +178,22 @@ fn spawn_info(parent: &mut ChildBuilder, header: impl Into<String>, info: InfoKi
     let mut header_font_info = font_info.clone();
     header_font_info.size *= 0.6;
 
-    parent
-        .spawn(v_label)
-        .with_children(|parent| {
-            parent.spawn(text(header, &header_font_info));
-            parent.spawn((text("-", font_info), info));
-        })
-    ;
+    parent.spawn(v_label).with_children(|parent| {
+        parent.spawn(text(header, &header_font_info));
+        parent.spawn((text("-", font_info), info));
+    });
 }
 
 fn attrib_header(parent: &mut ChildBuilder, font_info: &FontInfo) {
     let h_vals = h_vals(Srgba::NONE);
     let val = attrib_node(ATTRIB_VAL, bevy::color::palettes::css::DARK_GRAY);
 
-    parent
-        .spawn(h_vals.clone())
-        .with_children(|parent| {
-            spawn_with_text(parent, val.clone(), "a", Some("Accuracy"), font_info);
-            spawn_with_text(parent, val.clone(), "b", Some("Boost"), font_info);
-            spawn_with_text(parent, val.clone(), "c", Some("Celerity"), font_info);
-            spawn_with_text(parent, val.clone(), "d", Some("Duration"), font_info);
-        })
-    ;
+    parent.spawn(h_vals.clone()).with_children(|parent| {
+        spawn_with_text(parent, val.clone(), "a", Some("Accuracy"), font_info);
+        spawn_with_text(parent, val.clone(), "b", Some("Boost"), font_info);
+        spawn_with_text(parent, val.clone(), "c", Some("Celerity"), font_info);
+        spawn_with_text(parent, val.clone(), "d", Some("Duration"), font_info);
+    });
 }
 
 fn spawn_val_label(parent: &mut ChildBuilder, val_kind: PlayerPartHolderKind, font_info_val: &FontInfo, label_kind: PlayerPartHolderKind, font_info_label: &FontInfo, headers: [&str; 4]) {
@@ -230,8 +208,7 @@ fn spawn_val_label(parent: &mut ChildBuilder, val_kind: PlayerPartHolderKind, fo
             val_children.push(spawn_with_text(parent, val.clone(), "-", None::<&str>, font_info_val));
             val_children.push(spawn_with_text(parent, val.clone(), "-", None::<&str>, font_info_val));
         })
-        .insert(TextChildren(val_children))
-    ;
+        .insert(TextChildren(val_children));
 
     let mut label_children = Vec::with_capacity(4);
     parent
@@ -243,8 +220,7 @@ fn spawn_val_label(parent: &mut ChildBuilder, val_kind: PlayerPartHolderKind, fo
             label_children.push(spawn_labelled(parent, headers[2], font_info_label));
             label_children.push(spawn_labelled(parent, headers[3], font_info_label));
         })
-        .insert(TextChildren(label_children))
-    ;
+        .insert(TextChildren(label_children));
 }
 
 #[derive(Component)]
@@ -264,8 +240,7 @@ fn attrib_row(parent: &mut ChildBuilder, kind: StatRowKind, font_info: &FontInfo
             text_children.push(spawn_with_text(parent, val.clone(), "-", None::<&str>, font_info));
             text_children.push(spawn_with_text(parent, val.clone(), "-", None::<&str>, font_info));
         })
-        .insert(TextChildren(text_children))
-    ;
+        .insert(TextChildren(text_children));
 }
 
 fn spawn_part(parent: &mut ChildBuilder, part: &VagabondPart, font_info: &FontInfo) {
@@ -312,65 +287,43 @@ fn spawn_part(parent: &mut ChildBuilder, part: &VagabondPart, font_info: &FontIn
     parent
         .spawn((part_display, PlayerPartHolderKind::Unallocated, DragTarget))
         .with_children(|parent| {
-            parent
-                .spawn(label_container.clone())
-                .with_children(|parent| {
-                    for build in &part.build {
-                        text_children.push(parent.spawn(text(build.title.clone(), font_info)).id());
-                    }
-                })
-            ;
+            parent.spawn(label_container.clone()).with_children(|parent| {
+                for build in &part.build {
+                    text_children.push(parent.spawn(text(build.title.clone(), font_info)).id());
+                }
+            });
 
             parent.spawn(text("-", font_info));
 
-            parent
-                .spawn(label_container.clone())
-                .with_children(|parent| {
-                    for detail in &part.detail {
-                        text_children.push(parent.spawn(text(detail.title.clone(), font_info)).id());
-                    }
-                })
-            ;
+            parent.spawn(label_container.clone()).with_children(|parent| {
+                for detail in &part.detail {
+                    text_children.push(parent.spawn(text(detail.title.clone(), font_info)).id());
+                }
+            });
 
             parent.spawn(text("-", font_info));
-            parent
-                .spawn(val_container.clone())
-                .with_children(|parent| {
-                    for value in &part.values {
-                        text_children.push(parent.spawn(text(value.to_string(), font_info)).id());
-                    }
-                })
-            ;
+            parent.spawn(val_container.clone()).with_children(|parent| {
+                for value in &part.values {
+                    text_children.push(parent.spawn(text(value.to_string(), font_info)).id());
+                }
+            });
         })
         .insert(PlayerPartHolder(Some(part.clone())))
-        .insert(TextChildren(text_children))
-    ;
+        .insert(TextChildren(text_children));
 }
 
 fn spawn_card_holder(parent: &mut ChildBuilder, idx: usize, font_info: &FontInfo) -> Entity {
-    parent
-        .spawn(text("-", font_info))
-        .insert(CardHolder(idx))
-        .id()
+    parent.spawn(text("-", font_info)).insert(CardHolder(idx)).id()
 }
 
-
-fn compose_enter(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    init_handoff: Res<ComposeInitHandoff>,
-) {
+fn compose_enter(mut commands: Commands, asset_server: Res<AssetServer>, init_handoff: Res<ComposeInitHandoff>) {
     let parts = init_handoff.parts.clone();
     commands.remove_resource::<ComposeInitHandoff>();
     commands.insert_resource(ComposeState::default());
     build_ui_compose(commands, parts, asset_server);
 }
 
-fn build_ui_compose(
-    mut commands: Commands,
-    parts: [VagabondPart; 8],
-    asset_server: Res<AssetServer>,
-) {
+fn build_ui_compose(mut commands: Commands, parts: [VagabondPart; 8], asset_server: Res<AssetServer>) {
     let font_info_val = font_size(&asset_server, 48.0);
     let font_info_label = font_size(&asset_server, 16.0);
     let font_info_part = font_size(&asset_server, 12.0);
@@ -449,127 +402,85 @@ fn build_ui_compose(
         ..default()
     };
 
-    commands
-        .spawn(ScreenBundle::default())
-        .with_children(|parent| {
-            parent
-                .spawn(main_layout)
-                .with_children(|parent| {
-                    parent
-                        .spawn(part_gutter)
-                        .with_children(|parent| {
-                            for part in &parts {
-                                spawn_part(parent, part, &font_info_part);
-                            }
-                        })
-                    ;
-                    parent
-                        .spawn(deck_gutter)
-                        .with_children(|parent| {
-                            for idx in 0..40 {
-                                spawn_card_holder(parent, idx, &font_info_card);
-                            }
-                        })
-                    ;
-                    parent
-                        .spawn(spacer)
-                    ;
-                    parent
-                        .spawn(compose_area)
-                        .with_children(|parent| {
-                            parent
-                                .spawn(compose_attributes.clone())
-                                .with_children(|parent| {
-                                    parent
-                                        .spawn(v_vals(ATTRIB_VAL))
-                                        .with_children(|parent| {
-                                            let val = attrib_node(ATTRIB_VAL, bevy::color::palettes::css::DARK_GRAY);
-                                            parent.spawn(attrib_node(ATTRIB_VAL, Srgba::NONE));
-                                            spawn_with_text(parent, val.clone(), "A", Some("Analyze"), &font_info_val);
-                                            spawn_with_text(parent, val.clone(), "B", Some("Breach"), &font_info_val);
-                                            spawn_with_text(parent, val.clone(), "C", Some("Compute"), &font_info_val);
-                                            spawn_with_text(parent, val.clone(), "D", Some("Disrupt"), &font_info_val);
-                                        })
-                                    ;
-                                    parent
-                                        .spawn(v_vals(HUNDRED))
-                                        .with_children(|parent| {
-                                            attrib_header(parent, &font_info_val);
-                                            attrib_row(parent, StatRowKind::Analyze, &font_info_val);
-                                            attrib_row(parent, StatRowKind::Breach, &font_info_val);
-                                            attrib_row(parent, StatRowKind::Compute, &font_info_val);
-                                            attrib_row(parent, StatRowKind::Disrupt, &font_info_val);
-                                        })
-                                    ;
-                                })
-                            ;
-                            parent.spawn(attrib_node(ATTRIB_VAL, Srgba::NONE));
-                            parent
-                                .spawn(compose_attributes.clone())
-                                .with_children(|parent| {
-                                    let headers = ["ANT", "BRD", "CPU", "DSK"];
-                                    spawn_val_label(parent, PlayerPartHolderKind::StatRow(Build), &font_info_val, PlayerPartHolderKind::Build, &font_info_label, headers);
-                                })
-                            ;
-                            parent.spawn(attrib_node(ATTRIB_VAL, Srgba::NONE));
-                            parent
-                                .spawn(compose_attributes.clone())
-                                .with_children(|parent| {
-                                    let headers = ["Institution", "Role", "Location", "Distro"];
-                                    spawn_val_label(parent, PlayerPartHolderKind::StatRow(Detail), &font_info_val, PlayerPartHolderKind::Detail, &font_info_label, headers);
-                                })
-                            ;
-                            parent.spawn(attrib_node(ATTRIB_VAL, Srgba::NONE));
-                            parent
-                                .spawn(compose_attributes)
-                                .with_children(|parent| {
-                                    parent
-                                        .spawn(v_vals(HUNDRED))
-                                        .with_children(|parent| {
-                                            parent.spawn(attrib_node(ATTRIB_VAL, Srgba::NONE));
-                                            spawn_info(parent, "ID", InfoKind::ID, &font_info_label);
-                                            spawn_info(parent, "Name", InfoKind::Name, &font_info_label);
-                                            spawn_info(parent, "Birthplace", InfoKind::Birthplace, &font_info_label);
-                                            spawn_info(parent, "Age", InfoKind::DoB, &font_info_label);
-                                        })
-                                    ;
-                                })
-                            ;
-                            parent
-                                .spawn((
-                                    SubmitButton,
-                                    ButtonBundle {
-                                        background_color: bevy::color::palettes::css::DARK_GRAY.into(),
-                                        ..default()
-                                    },
-                                ))
-                                .with_children(|parent| {
-                                    parent
-                                        .spawn(text("Submit", &font_info_label));
-                                })
-                            ;
-                        })
-                    ;
-                })
-            ;
-        })
-    ;
+    commands.spawn(ScreenBundle::default()).with_children(|parent| {
+        parent.spawn(main_layout).with_children(|parent| {
+            parent.spawn(part_gutter).with_children(|parent| {
+                for part in &parts {
+                    spawn_part(parent, part, &font_info_part);
+                }
+            });
+            parent.spawn(deck_gutter).with_children(|parent| {
+                for idx in 0..40 {
+                    spawn_card_holder(parent, idx, &font_info_card);
+                }
+            });
+            parent.spawn(spacer);
+            parent.spawn(compose_area).with_children(|parent| {
+                parent.spawn(compose_attributes.clone()).with_children(|parent| {
+                    parent.spawn(v_vals(ATTRIB_VAL)).with_children(|parent| {
+                        let val = attrib_node(ATTRIB_VAL, bevy::color::palettes::css::DARK_GRAY);
+                        parent.spawn(attrib_node(ATTRIB_VAL, Srgba::NONE));
+                        spawn_with_text(parent, val.clone(), "A", Some("Analyze"), &font_info_val);
+                        spawn_with_text(parent, val.clone(), "B", Some("Breach"), &font_info_val);
+                        spawn_with_text(parent, val.clone(), "C", Some("Compute"), &font_info_val);
+                        spawn_with_text(parent, val.clone(), "D", Some("Disrupt"), &font_info_val);
+                    });
+                    parent.spawn(v_vals(HUNDRED)).with_children(|parent| {
+                        attrib_header(parent, &font_info_val);
+                        attrib_row(parent, StatRowKind::Analyze, &font_info_val);
+                        attrib_row(parent, StatRowKind::Breach, &font_info_val);
+                        attrib_row(parent, StatRowKind::Compute, &font_info_val);
+                        attrib_row(parent, StatRowKind::Disrupt, &font_info_val);
+                    });
+                });
+                parent.spawn(attrib_node(ATTRIB_VAL, Srgba::NONE));
+                parent.spawn(compose_attributes.clone()).with_children(|parent| {
+                    let headers = ["ANT", "BRD", "CPU", "DSK"];
+                    spawn_val_label(parent, PlayerPartHolderKind::StatRow(Build), &font_info_val, PlayerPartHolderKind::Build, &font_info_label, headers);
+                });
+                parent.spawn(attrib_node(ATTRIB_VAL, Srgba::NONE));
+                parent.spawn(compose_attributes.clone()).with_children(|parent| {
+                    let headers = ["Institution", "Role", "Location", "Distro"];
+                    spawn_val_label(parent, PlayerPartHolderKind::StatRow(Detail), &font_info_val, PlayerPartHolderKind::Detail, &font_info_label, headers);
+                });
+                parent.spawn(attrib_node(ATTRIB_VAL, Srgba::NONE));
+                parent.spawn(compose_attributes).with_children(|parent| {
+                    parent.spawn(v_vals(HUNDRED)).with_children(|parent| {
+                        parent.spawn(attrib_node(ATTRIB_VAL, Srgba::NONE));
+                        spawn_info(parent, "ID", InfoKind::ID, &font_info_label);
+                        spawn_info(parent, "Name", InfoKind::Name, &font_info_label);
+                        spawn_info(parent, "Birthplace", InfoKind::Birthplace, &font_info_label);
+                        spawn_info(parent, "Age", InfoKind::DoB, &font_info_label);
+                    });
+                });
+                parent
+                    .spawn((
+                        SubmitButton,
+                        ButtonBundle {
+                            background_color: bevy::color::palettes::css::DARK_GRAY.into(),
+                            ..default()
+                        },
+                    ))
+                    .with_children(|parent| {
+                        parent.spawn(text("Submit", &font_info_label));
+                    });
+            });
+        });
+    });
 }
 
-type ButtonQuery<'a> = (
-    &'a Interaction,
-    &'a mut BackgroundColor,
-    &'a mut BorderColor,
-);
+type ButtonQuery<'a> = (&'a Interaction, &'a mut BackgroundColor, &'a mut BorderColor);
 
-fn button_update(
-    mut interaction_query: Query<ButtonQuery, (Changed<Interaction>, With<Button>)>,
-    state: Res<ComposeState>,
-) {
+fn button_update(mut interaction_query: Query<ButtonQuery, (Changed<Interaction>, With<Button>)>, state: Res<ComposeState>) {
     for (interaction, mut background_color, mut border_color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
-                *background_color = if *state == ComposeState::Ready { bevy::color::palettes::basic::GREEN } else { bevy::color::palettes::basic::RED }.into();
+                *background_color = if *state == ComposeState::Ready {
+                    bevy::color::palettes::basic::GREEN
+                } else {
+                    bevy::color::palettes::basic::RED
+                }
+                .into();
                 *border_color = bevy::color::palettes::basic::RED.into();
             }
             Interaction::Hovered => {
@@ -584,11 +495,7 @@ fn button_update(
     }
 }
 
-fn button_commit_update(
-    interaction_query: Query<&Interaction, (Changed<Interaction>, With<SubmitButton>)>,
-    mut state: ResMut<ComposeState>,
-    mut send: EventWriter<FinishPlayer>,
-) {
+fn button_commit_update(interaction_query: Query<&Interaction, (Changed<Interaction>, With<SubmitButton>)>, mut state: ResMut<ComposeState>, mut send: EventWriter<FinishPlayer>) {
     if *state != ComposeState::Ready {
         return;
     }
@@ -600,27 +507,16 @@ fn button_commit_update(
     }
 }
 
-fn drag_drag(
-    mut commands: Commands,
-    mut receive: EventReader<DragDrag>,
-    holder_q: Query<(&GlobalTransform, &PlayerPartHolder)>,
-    asset_server: Res<AssetServer>,
-) {
+fn drag_drag(mut commands: Commands, mut receive: EventReader<DragDrag>, holder_q: Query<(&GlobalTransform, &PlayerPartHolder)>, asset_server: Res<AssetServer>) {
     for dragdrag in receive.read() {
         let (gt, holder) = holder_q.get(dragdrag.src).expect("");
         let transform = gt.compute_transform().translation.truncate();
         let font_info = font_size(&asset_server, 12.0);
 
         if let Some(part) = &holder.0 {
-            commands
-                .spawn((
-                    filled_rect(Val::Px(transform.x - 66.0), Val::Px(transform.y - 66.0), Val::Px(132.0), Val::Px(132.0), bevy::color::palettes::css::CHARTREUSE),
-                    Dragging(dragdrag.src)
-                ))
-                .with_children(|parent| {
-                    spawn_part(parent, part, &font_info);
-                })
-            ;
+            commands.spawn((filled_rect(Val::Px(transform.x - 66.0), Val::Px(transform.y - 66.0), Val::Px(132.0), Val::Px(132.0), bevy::color::palettes::css::CHARTREUSE), Dragging(dragdrag.src))).with_children(|parent| {
+                spawn_part(parent, part, &font_info);
+            });
         }
     }
 }
@@ -650,14 +546,7 @@ fn update_part_holder(kind: &PlayerPartHolderKind, kids: Option<&TextChildren>, 
     }
 }
 
-fn drag_drop(
-    mut commands: Commands,
-    mut receive: EventReader<DragDrop>,
-    holder_q: Query<(Option<&TextChildren>, &PlayerPartHolder, &PlayerPartHolderKind)>,
-    mut text_q: Query<&mut Text>,
-    mut send: EventWriter<FinishPlayer>,
-    state: Res<ComposeState>,
-) {
+fn drag_drop(mut commands: Commands, mut receive: EventReader<DragDrop>, holder_q: Query<(Option<&TextChildren>, &PlayerPartHolder, &PlayerPartHolderKind)>, mut text_q: Query<&mut Text>, mut send: EventWriter<FinishPlayer>, state: Res<ComposeState>) {
     if *state == ComposeState::Committed {
         receive.clear();
         return;
@@ -689,27 +578,20 @@ fn seed_from_holder(holder: &PlayerPartHolder) -> u64 {
     holder.0.as_ref().map(|o| o.seed).unwrap_or_default()
 }
 
-fn finish_player(
-    receive: EventReader<FinishPlayer>,
-    holder_q: Query<(&PlayerPartHolder, &PlayerPartHolderKind)>,
-    gate: Res<GateIFace>,
-    mut state: ResMut<ComposeState>,
-) {
+fn finish_player(receive: EventReader<FinishPlayer>, holder_q: Query<(&PlayerPartHolder, &PlayerPartHolderKind)>, gate: Res<GateIFace>, mut state: ResMut<ComposeState>) {
     if !receive.is_empty() {
-        let mut parts = [0, 0, 0, 0, 0, 0, 0, 0, ];
+        let mut parts = [0, 0, 0, 0, 0, 0, 0, 0];
 
         for (holder, holder_kind) in holder_q.iter() {
             match holder_kind {
-                PlayerPartHolderKind::StatRow(row) => {
-                    match row {
-                        StatRowKind::Analyze => parts[0] = seed_from_holder(holder),
-                        StatRowKind::Breach => parts[1] = seed_from_holder(holder),
-                        StatRowKind::Compute => parts[2] = seed_from_holder(holder),
-                        StatRowKind::Disrupt => parts[3] = seed_from_holder(holder),
-                        Build => parts[5] = seed_from_holder(holder),
-                        Detail => parts[7] = seed_from_holder(holder),
-                    }
-                }
+                PlayerPartHolderKind::StatRow(row) => match row {
+                    StatRowKind::Analyze => parts[0] = seed_from_holder(holder),
+                    StatRowKind::Breach => parts[1] = seed_from_holder(holder),
+                    StatRowKind::Compute => parts[2] = seed_from_holder(holder),
+                    StatRowKind::Disrupt => parts[3] = seed_from_holder(holder),
+                    Build => parts[5] = seed_from_holder(holder),
+                    Detail => parts[7] = seed_from_holder(holder),
+                },
                 PlayerPartHolderKind::Build => parts[4] = seed_from_holder(holder),
                 PlayerPartHolderKind::Detail => parts[6] = seed_from_holder(holder),
                 PlayerPartHolderKind::Unallocated => {}
@@ -725,15 +607,7 @@ fn finish_player(
     }
 }
 
-fn compose_update(
-    mut gate: ResMut<GateIFace>,
-    mut deck_q: Query<(&mut Text, &CardHolder), Without<InfoKind>>,
-    mut info_q: Query<(&mut Text, &InfoKind), Without<CardHolder>>,
-    wm: Res<WarehouseManager>,
-    dm: Res<DataManager>,
-    state: Res<ComposeState>,
-    mut app_state: ResMut<NextState<AppState>>,
-) {
+fn compose_update(mut gate: ResMut<GateIFace>, mut deck_q: Query<(&mut Text, &CardHolder), Without<InfoKind>>, mut info_q: Query<(&mut Text, &InfoKind), Without<CardHolder>>, wm: Res<WarehouseManager>, dm: Res<DataManager>, state: Res<ComposeState>, mut app_state: ResMut<NextState<AppState>>) {
     match gate.grx.try_recv() {
         Ok(GateCommand::GameBuild(gate_response)) => {
             if *state == ComposeState::Committed {
@@ -755,7 +629,7 @@ fn compose_update(
                         let deck = dm.convert_deck(gate_response.deck);
 
                         for (idx, card) in deck.iter().enumerate() {
-                            if let Some((mut card_text, _)) = deck_q.iter_mut().find(|o| o.1.0 == idx) {
+                            if let Some((mut card_text, _)) = deck_q.iter_mut().find(|o| o.1 .0 == idx) {
                                 card_text.sections[0].value.clone_from(&card.title);
                             }
                         }
@@ -774,10 +648,7 @@ fn compose_update(
     }
 }
 
-pub fn compose_exit(
-    mut commands: Commands,
-    screen_q: Query<Entity, With<Screen>>,
-) {
+pub fn compose_exit(mut commands: Commands, screen_q: Query<Entity, With<Screen>>) {
     commands.remove_resource::<ComposeState>();
     screen_exit(commands, screen_q);
 }

@@ -1,7 +1,4 @@
 max_width = 1024
 single_line_if_else_max_width = 0
 single_line_let_else_max_width = 0
-struct_lit_single_line = false
 struct_lit_width = 0
-where_single_line = false
-fn_single_line = false

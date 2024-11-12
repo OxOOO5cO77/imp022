@@ -4,16 +4,16 @@ use bevy::prelude::*;
 pub(crate) struct Screen;
 
 #[derive(Bundle)]
-pub(crate) struct ScreenBundle {
-    screen: Screen,
-    node: NodeBundle,
+pub(crate) struct ScreenBundle<T: Bundle> {
+    pub(crate) screen: Screen,
+    pub(crate) base: T,
 }
 
-impl Default for ScreenBundle {
+impl Default for ScreenBundle<NodeBundle> {
     fn default() -> Self {
         Self {
             screen: Screen,
-            node: filled_rect(ZERO, ZERO, HUNDRED, HUNDRED, Srgba::BLACK),
+            base: filled_rect(ZERO, ZERO, HUNDRED, HUNDRED, Srgba::BLACK),
         }
     }
 }

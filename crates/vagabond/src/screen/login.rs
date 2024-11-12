@@ -1,8 +1,8 @@
-use std::mem::discriminant;
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
-use tokio::sync::mpsc;
 use shared_data::types::AuthType;
+use std::mem::discriminant;
+use tokio::sync::mpsc;
 
 use crate::manager::NetworkManager;
 use crate::network::client_drawbridge;
@@ -14,14 +14,13 @@ pub struct LoginPlugin;
 
 impl Plugin for LoginPlugin {
     fn build(&self, app: &mut App) {
-        app
+        app //
             .add_systems(OnEnter(AppState::LoginDrawbridge), drawbridge_enter)
             .add_systems(Update, drawbridge_update.run_if(in_state(AppState::LoginDrawbridge)))
             .add_systems(Update, login_ui_update.run_if(in_state(AppState::LoginDrawbridge)))
             .add_systems(OnExit(AppState::LoginGate), drawbridge_exit)
             .add_systems(OnEnter(AppState::LoginGate), gate_enter)
-            .add_systems(Update, gate_update.run_if(in_state(AppState::LoginGate)))
-        ;
+            .add_systems(Update, gate_update.run_if(in_state(AppState::LoginGate)));
     }
 }
 
@@ -112,7 +111,7 @@ fn gate_update(mut app_state: ResMut<NextState<AppState>>, mut gate: ResMut<Gate
     if let Ok(gate_command) = gate.grx.try_recv() {
         match gate_command {
             GateCommand::Hello => app_state.set(AppState::ComposeInit),
-            _ => println!("[Login] Unexpected command received {:?}", discriminant(&gate_command))
+            _ => println!("[Login] Unexpected command received {:?}", discriminant(&gate_command)),
         }
     }
 }
