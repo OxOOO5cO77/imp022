@@ -33,7 +33,13 @@ fn composeinit_enter(gate: ResMut<GateIFace>) {
     gate.send_game_activate();
 }
 
-fn composeinit_update(mut commands: Commands, mut gate: ResMut<GateIFace>, mut app_state: ResMut<NextState<AppState>>, dm: Res<DataManager>) {
+fn composeinit_update(
+    // bevy system
+    mut commands: Commands,
+    mut gate: ResMut<GateIFace>,
+    mut app_state: ResMut<NextState<AppState>>,
+    dm: Res<DataManager>,
+) {
     if let Ok(GateCommand::GameActivate(response)) = gate.grx.try_recv() {
         let init_handoff = ComposeInitHandoff {
             parts: [dm.convert_part(&response.parts[0]).unwrap_or_default(), dm.convert_part(&response.parts[1]).unwrap_or_default(), dm.convert_part(&response.parts[2]).unwrap_or_default(), dm.convert_part(&response.parts[3]).unwrap_or_default(), dm.convert_part(&response.parts[4]).unwrap_or_default(), dm.convert_part(&response.parts[5]).unwrap_or_default(), dm.convert_part(&response.parts[6]).unwrap_or_default(), dm.convert_part(&response.parts[7]).unwrap_or_default()],
@@ -316,7 +322,12 @@ fn spawn_card_holder(parent: &mut ChildBuilder, idx: usize, font_info: &FontInfo
     parent.spawn(text("-", font_info)).insert(CardHolder(idx)).id()
 }
 
-fn compose_enter(mut commands: Commands, asset_server: Res<AssetServer>, init_handoff: Res<ComposeInitHandoff>) {
+fn compose_enter(
+    // bevy system
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    init_handoff: Res<ComposeInitHandoff>,
+) {
     let parts = init_handoff.parts.clone();
     commands.remove_resource::<ComposeInitHandoff>();
     commands.insert_resource(ComposeState::default());
@@ -471,7 +482,11 @@ fn build_ui_compose(mut commands: Commands, parts: [VagabondPart; 8], asset_serv
 
 type ButtonQuery<'a> = (&'a Interaction, &'a mut BackgroundColor, &'a mut BorderColor);
 
-fn button_update(mut interaction_query: Query<ButtonQuery, (Changed<Interaction>, With<Button>)>, state: Res<ComposeState>) {
+fn button_update(
+    // bevy system
+    mut interaction_query: Query<ButtonQuery, (Changed<Interaction>, With<Button>)>,
+    state: Res<ComposeState>,
+) {
     for (interaction, mut background_color, mut border_color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
@@ -495,7 +510,12 @@ fn button_update(mut interaction_query: Query<ButtonQuery, (Changed<Interaction>
     }
 }
 
-fn button_commit_update(interaction_query: Query<&Interaction, (Changed<Interaction>, With<SubmitButton>)>, mut state: ResMut<ComposeState>, mut send: EventWriter<FinishPlayer>) {
+fn button_commit_update(
+    // bevy system
+    interaction_query: Query<&Interaction, (Changed<Interaction>, With<SubmitButton>)>,
+    mut state: ResMut<ComposeState>,
+    mut send: EventWriter<FinishPlayer>,
+) {
     if *state != ComposeState::Ready {
         return;
     }
@@ -507,7 +527,13 @@ fn button_commit_update(interaction_query: Query<&Interaction, (Changed<Interact
     }
 }
 
-fn drag_drag(mut commands: Commands, mut receive: EventReader<DragDrag>, holder_q: Query<(&GlobalTransform, &PlayerPartHolder)>, asset_server: Res<AssetServer>) {
+fn drag_drag(
+    // bevy system
+    mut commands: Commands,
+    mut receive: EventReader<DragDrag>,
+    holder_q: Query<(&GlobalTransform, &PlayerPartHolder)>,
+    asset_server: Res<AssetServer>,
+) {
     for dragdrag in receive.read() {
         let (gt, holder) = holder_q.get(dragdrag.src).expect("");
         let transform = gt.compute_transform().translation.truncate();
@@ -546,7 +572,15 @@ fn update_part_holder(kind: &PlayerPartHolderKind, kids: Option<&TextChildren>, 
     }
 }
 
-fn drag_drop(mut commands: Commands, mut receive: EventReader<DragDrop>, holder_q: Query<(Option<&TextChildren>, &PlayerPartHolder, &PlayerPartHolderKind)>, mut text_q: Query<&mut Text>, mut send: EventWriter<FinishPlayer>, state: Res<ComposeState>) {
+fn drag_drop(
+    // bevy system
+    mut commands: Commands,
+    mut receive: EventReader<DragDrop>,
+    holder_q: Query<(Option<&TextChildren>, &PlayerPartHolder, &PlayerPartHolderKind)>,
+    mut text_q: Query<&mut Text>,
+    mut send: EventWriter<FinishPlayer>,
+    state: Res<ComposeState>,
+) {
     if *state == ComposeState::Committed {
         receive.clear();
         return;
@@ -578,7 +612,13 @@ fn seed_from_holder(holder: &PlayerPartHolder) -> u64 {
     holder.0.as_ref().map(|o| o.seed).unwrap_or_default()
 }
 
-fn finish_player(receive: EventReader<FinishPlayer>, holder_q: Query<(&PlayerPartHolder, &PlayerPartHolderKind)>, gate: Res<GateIFace>, mut state: ResMut<ComposeState>) {
+fn finish_player(
+    // bevy system
+    receive: EventReader<FinishPlayer>,
+    holder_q: Query<(&PlayerPartHolder, &PlayerPartHolderKind)>,
+    gate: Res<GateIFace>,
+    mut state: ResMut<ComposeState>,
+) {
     if !receive.is_empty() {
         let mut parts = [0, 0, 0, 0, 0, 0, 0, 0];
 
@@ -607,7 +647,16 @@ fn finish_player(receive: EventReader<FinishPlayer>, holder_q: Query<(&PlayerPar
     }
 }
 
-fn compose_update(mut gate: ResMut<GateIFace>, mut deck_q: Query<(&mut Text, &CardHolder), Without<InfoKind>>, mut info_q: Query<(&mut Text, &InfoKind), Without<CardHolder>>, wm: Res<WarehouseManager>, dm: Res<DataManager>, state: Res<ComposeState>, mut app_state: ResMut<NextState<AppState>>) {
+fn compose_update(
+    // bevy system
+    mut gate: ResMut<GateIFace>,
+    mut deck_q: Query<(&mut Text, &CardHolder), Without<InfoKind>>,
+    mut info_q: Query<(&mut Text, &InfoKind), Without<CardHolder>>,
+    wm: Res<WarehouseManager>,
+    dm: Res<DataManager>,
+    state: Res<ComposeState>,
+    mut app_state: ResMut<NextState<AppState>>,
+) {
     match gate.grx.try_recv() {
         Ok(GateCommand::GameBuild(gate_response)) => {
             if *state == ComposeState::Committed {
@@ -648,7 +697,11 @@ fn compose_update(mut gate: ResMut<GateIFace>, mut deck_q: Query<(&mut Text, &Ca
     }
 }
 
-pub fn compose_exit(mut commands: Commands, screen_q: Query<Entity, With<Screen>>) {
+pub fn compose_exit(
+    // bevy system
+    mut commands: Commands,
+    screen_q: Query<Entity, With<Screen>>,
+) {
     commands.remove_resource::<ComposeState>();
     screen_exit(commands, screen_q);
 }

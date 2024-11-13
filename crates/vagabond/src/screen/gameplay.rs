@@ -71,7 +71,11 @@ fn spacer(color: Color) -> NodeBundle {
     }
 }
 
-fn gameplay_enter(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn gameplay_enter(
+    // bevy system
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) {
     let font_info_black = font_size(&asset_server, 16.0);
     let font_info_erg = font_size_color(&asset_server, 48.0, bevy::color::palettes::basic::YELLOW);
     let font_info_green = font_size_color(&asset_server, 16.0, bevy::color::palettes::basic::GREEN);
@@ -270,7 +274,12 @@ fn gameplay_enter(mut commands: Commands, asset_server: Res<AssetServer>) {
     });
 }
 
-fn button_next_update(interaction_q: Query<&Interaction, (Changed<Interaction>, With<ContinueButton>)>, mut context: ResMut<GameplayContext>, gate: Res<GateIFace>) {
+fn button_next_update(
+    // bevy system
+    interaction_q: Query<&Interaction, (Changed<Interaction>, With<ContinueButton>)>,
+    mut context: ResMut<GameplayContext>,
+    gate: Res<GateIFace>,
+) {
     for &interaction in &interaction_q {
         if interaction == Interaction::Pressed {
             match context.state {
@@ -286,7 +295,11 @@ fn button_next_update(interaction_q: Query<&Interaction, (Changed<Interaction>, 
 }
 type ButtonQuery<'a> = (&'a Interaction, &'a mut BackgroundColor, &'a mut BorderColor);
 
-fn button_ui_update(mut interaction_query: Query<ButtonQuery, (Changed<Interaction>, With<Button>)>, context: Res<GameplayContext>) {
+fn button_ui_update(
+    // bevy system
+    mut interaction_query: Query<ButtonQuery, (Changed<Interaction>, With<Button>)>,
+    context: Res<GameplayContext>,
+) {
     for (interaction, mut background_color, mut border_color) in &mut interaction_query {
         match *interaction {
             Interaction::Pressed => {
@@ -308,7 +321,11 @@ fn button_ui_update(mut interaction_query: Query<ButtonQuery, (Changed<Interacti
     }
 }
 
-fn roll_ui_update(mut receive: EventReader<UiEvent>, mut roll_q: Query<(&mut Text, &RollText)>) {
+fn roll_ui_update(
+    // bevy system
+    mut receive: EventReader<UiEvent>,
+    mut roll_q: Query<(&mut Text, &RollText)>,
+) {
     for ui_event in receive.read() {
         if let UiEvent::Roll(roll) = ui_event {
             for (mut roll_text, RollText(index)) in roll_q.iter_mut() {
@@ -318,7 +335,11 @@ fn roll_ui_update(mut receive: EventReader<UiEvent>, mut roll_q: Query<(&mut Tex
     }
 }
 
-fn player_ui_update(mut receive: EventReader<UiEvent>, mut erg_q: Query<(&mut Text, &ErgText)>) {
+fn player_ui_update(
+    // bevy system
+    mut receive: EventReader<UiEvent>,
+    mut erg_q: Query<(&mut Text, &ErgText)>,
+) {
     for ui_event in receive.read() {
         if let UiEvent::PlayerState(player_state) = ui_event {
             for (mut erg_text, ErgText(index)) in erg_q.iter_mut() {
@@ -328,7 +349,12 @@ fn player_ui_update(mut receive: EventReader<UiEvent>, mut erg_q: Query<(&mut Te
     }
 }
 
-fn gameplay_update(mut gate: ResMut<GateIFace>, mut context: ResMut<GameplayContext>, mut send: EventWriter<UiEvent>) {
+fn gameplay_update(
+    // bevy system
+    mut gate: ResMut<GateIFace>,
+    mut context: ResMut<GameplayContext>,
+    mut send: EventWriter<UiEvent>,
+) {
     match gate.grx.try_recv() {
         Ok(GateCommand::GameStartTurn(gate_response)) => {
             if gate_response.success {
@@ -386,7 +412,11 @@ fn gameplay_update(mut gate: ResMut<GateIFace>, mut context: ResMut<GameplayCont
     }
 }
 
-pub fn gameplay_exit(mut commands: Commands, screen_q: Query<Entity, With<Screen>>) {
+pub fn gameplay_exit(
+    // bevy system
+    mut commands: Commands,
+    screen_q: Query<Entity, With<Screen>>,
+) {
     commands.remove_resource::<GameplayContext>();
     screen_exit(commands, screen_q);
 }

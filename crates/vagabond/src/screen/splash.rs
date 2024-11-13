@@ -21,7 +21,11 @@ struct Splash {
     timer: Timer,
 }
 
-fn splash_enter(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn splash_enter(
+    // bevy system
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) {
     commands
         .spawn((
             Splash {
@@ -49,7 +53,14 @@ fn splash_enter(mut commands: Commands, asset_server: Res<AssetServer>) {
         });
 }
 
-fn splash_update(mut splash_q: Query<&mut Splash>, mut app_state: ResMut<NextState<AppState>>, time: Res<Time>, keyboard_input: Res<ButtonInput<KeyCode>>, mouse_button: Res<ButtonInput<MouseButton>>) {
+fn splash_update(
+    // bevy system
+    mut splash_q: Query<&mut Splash>,
+    mut app_state: ResMut<NextState<AppState>>,
+    time: Res<Time>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mouse_button: Res<ButtonInput<MouseButton>>,
+) {
     let mut splash = splash_q.single_mut();
     splash.timer.tick(time.delta());
 
@@ -58,7 +69,11 @@ fn splash_update(mut splash_q: Query<&mut Splash>, mut app_state: ResMut<NextSta
     }
 }
 
-fn splash_exit(mut commands: Commands, splash_q: Query<Entity, With<Splash>>) {
+fn splash_exit(
+    // bevy system
+    mut commands: Commands,
+    splash_q: Query<Entity, With<Splash>>,
+) {
     let splash = splash_q.single();
     commands.entity(splash).despawn_recursive();
 }

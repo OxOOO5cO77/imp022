@@ -39,7 +39,11 @@ impl DrawbridgeHandoff {
     }
 }
 
-fn login_ui_update(egui_context: EguiContexts, mut drawbridge: ResMut<DrawbridgeIFace>) {
+fn login_ui_update(
+    // bevy system
+    egui_context: EguiContexts,
+    mut drawbridge: ResMut<DrawbridgeIFace>,
+) {
     egui::Window::new("Login").show(egui_context.ctx(), |ui| {
         ui.label("User");
         let username = ui.add(egui::TextEdit::singleline(&mut drawbridge.username));
@@ -59,7 +63,11 @@ fn login_ui_update(egui_context: EguiContexts, mut drawbridge: ResMut<Drawbridge
     });
 }
 
-fn drawbridge_enter(mut commands: Commands, mut net: ResMut<NetworkManager>) {
+fn drawbridge_enter(
+    // bevy system
+    mut commands: Commands,
+    mut net: ResMut<NetworkManager>,
+) {
     let (to_drawbridge_tx, to_drawbridge_rx) = mpsc::unbounded_channel();
     let (from_drawbridge_tx, from_drawbridge_rx) = mpsc::unbounded_channel();
     let drawbridge = DrawbridgeIFace {
@@ -77,18 +85,31 @@ fn drawbridge_enter(mut commands: Commands, mut net: ResMut<NetworkManager>) {
     net.current_task = DrawbridgeClient::start("[::1]:23450".to_string(), from_drawbridge_tx, to_drawbridge_rx, &net.runtime);
 }
 
-fn drawbridge_update(mut app_state: ResMut<NextState<AppState>>, mut commands: Commands, mut drawbridge: ResMut<DrawbridgeIFace>) {
+fn drawbridge_update(
+    // bevy system
+    mut app_state: ResMut<NextState<AppState>>,
+    mut commands: Commands,
+    mut drawbridge: ResMut<DrawbridgeIFace>,
+) {
     if let Ok(auth_info) = drawbridge.drx.try_recv() {
         commands.insert_resource(DrawbridgeHandoff::new(auth_info));
         app_state.set(AppState::LoginGate);
     }
 }
 
-fn drawbridge_exit(mut commands: Commands) {
+fn drawbridge_exit(
+    // bevy system
+    mut commands: Commands,
+) {
     commands.remove_resource::<DrawbridgeIFace>();
 }
 
-fn gate_enter(mut commands: Commands, handoff: Res<DrawbridgeHandoff>, mut net: ResMut<NetworkManager>) {
+fn gate_enter(
+    // bevy system
+    mut commands: Commands,
+    handoff: Res<DrawbridgeHandoff>,
+    mut net: ResMut<NetworkManager>,
+) {
     let (gtx, to_gate_rx) = mpsc::unbounded_channel();
     let (from_gate_tx, from_gate_rx) = mpsc::unbounded_channel();
     let gate = GateIFace {
@@ -107,7 +128,11 @@ fn gate_enter(mut commands: Commands, handoff: Res<DrawbridgeHandoff>, mut net: 
     commands.insert_resource(gate);
 }
 
-fn gate_update(mut app_state: ResMut<NextState<AppState>>, mut gate: ResMut<GateIFace>) {
+fn gate_update(
+    // bevy system
+    mut app_state: ResMut<NextState<AppState>>,
+    mut gate: ResMut<GateIFace>,
+) {
     if let Ok(gate_command) = gate.grx.try_recv() {
         match gate_command {
             GateCommand::Hello => app_state.set(AppState::ComposeInit),
