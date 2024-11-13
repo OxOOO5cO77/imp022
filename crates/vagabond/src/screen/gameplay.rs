@@ -81,7 +81,7 @@ fn gameplay_enter(mut commands: Commands, asset_server: Res<AssetServer>) {
             display: Display::Grid,
             width: HUNDRED,
             height: HUNDRED,
-            grid_template_columns: vec![GridTrack::px(342.0), GridTrack::flex(1.0), GridTrack::px(342.0)],
+            grid_template_columns: vec![GridTrack::px(338.0), GridTrack::flex(1.0), GridTrack::px(338.0)],
             grid_template_rows: GridTrack::auto(),
             ..default()
         },
@@ -93,7 +93,7 @@ fn gameplay_enter(mut commands: Commands, asset_server: Res<AssetServer>) {
             width: HUNDRED,
             height: HUNDRED,
             grid_template_columns: GridTrack::flex(1.0),
-            grid_template_rows: vec![GridTrack::px(116.0), GridTrack::px(320.0), GridTrack::px(336.0), GridTrack::auto()],
+            grid_template_rows: vec![GridTrack::px(372.0), GridTrack::flex(1.0)],
             ..default()
         },
         ..default()
@@ -104,6 +104,7 @@ fn gameplay_enter(mut commands: Commands, asset_server: Res<AssetServer>) {
             width: HUNDRED,
             height: HUNDRED,
             grid_template_columns: RepeatedGridTrack::flex(4, 1.0),
+            column_gap: Val::Px(10.0),
             grid_template_rows: GridTrack::flex(1.0),
             ..default()
         },
@@ -114,8 +115,10 @@ fn gameplay_enter(mut commands: Commands, asset_server: Res<AssetServer>) {
             display: Display::Grid,
             width: HUNDRED,
             height: HUNDRED,
-            grid_template_columns: RepeatedGridTrack::flex(4, 1.0),
+            grid_template_columns: GridTrack::flex(1.0),
             grid_template_rows: RepeatedGridTrack::flex(4, 1.0),
+            row_gap: Val::Px(10.0),
+            padding: UiRect::all(Val::Px(34.0)),
             ..default()
         },
         ..default()
@@ -126,7 +129,18 @@ fn gameplay_enter(mut commands: Commands, asset_server: Res<AssetServer>) {
             width: HUNDRED,
             height: HUNDRED,
             grid_template_columns: GridTrack::flex(1.0),
-            grid_template_rows: vec![GridTrack::px(696.0), GridTrack::px(88.0), GridTrack::flex(1.0)],
+            grid_template_rows: vec![GridTrack::px(128.0), GridTrack::px(572.0), GridTrack::px(86.0), GridTrack::flex(1.0)],
+            ..default()
+        },
+        ..default()
+    };
+    let roll_layout = NodeBundle {
+        style: Style {
+            display: Display::Grid,
+            width: HUNDRED,
+            height: HUNDRED,
+            grid_template_columns: vec![GridTrack::flex(1.0), GridTrack::px(290.0), GridTrack::flex(1.0)],
+            grid_template_rows: GridTrack::flex(1.0),
             ..default()
         },
         ..default()
@@ -170,7 +184,7 @@ fn gameplay_enter(mut commands: Commands, asset_server: Res<AssetServer>) {
             width: HUNDRED,
             height: HUNDRED,
             grid_template_columns: GridTrack::flex(1.0),
-            grid_template_rows: vec![GridTrack::px(298.0), GridTrack::px(308.0), GridTrack::px(390.0), GridTrack::flex(1.0)],
+            grid_template_rows: vec![GridTrack::px(86.0), GridTrack::px(308.0), GridTrack::px(450.0), GridTrack::px(100.0), GridTrack::flex(1.0)],
             ..default()
         },
         ..default()
@@ -199,19 +213,22 @@ fn gameplay_enter(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(screen).with_children(|parent| {
         parent.spawn(main_layout).with_children(|parent| {
             parent.spawn(attr_layout).with_children(|parent| {
-                parent.spawn(attr_values_layout.clone()).with_children(|parent| {
-                    parent.spawn(spacer(Color::NONE));
-                });
-                parent.spawn(attr_values_layout).with_children(|parent| {
-                    for i in 0..=3 {
-                        parent.spawn((RollText(i), text("-", &font_info_erg)));
-                    }
-                });
                 parent.spawn(attr_player_layout).with_children(|parent| {
                     parent.spawn(spacer(Color::NONE));
                 });
+                parent.spawn(spacer(Color::NONE));
+                parent.spawn(spacer(Color::NONE));
             });
             parent.spawn(center_layout).with_children(|parent| {
+                parent.spawn(roll_layout).with_children(|parent| {
+                    parent.spawn(spacer(Color::NONE));
+                    parent.spawn(attr_values_layout.clone()).with_children(|parent| {
+                        for i in 0..=3 {
+                            parent.spawn((RollText(i), text("-", &font_info_erg)));
+                        }
+                    });
+                    parent.spawn(spacer(Color::NONE));
+                });
                 parent.spawn(game_map_layout).with_children(|parent| {
                     parent.spawn(spacer(Color::NONE));
                 });
@@ -228,6 +245,9 @@ fn gameplay_enter(mut commands: Commands, asset_server: Res<AssetServer>) {
                 });
             });
             parent.spawn(machine_layout).with_children(|parent| {
+                parent.spawn(attr_values_layout).with_children(|parent| {
+                    parent.spawn(spacer(Color::NONE));
+                });
                 parent.spawn(spacer(Color::NONE));
                 parent.spawn(spacer(Color::NONE));
                 parent.spawn((PhaseText, text("Phase", &font_info_green)));
