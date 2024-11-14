@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use serde::{Deserialize, Serialize};
 
 use player_build::PlayerBuild;
-use shared_data::player::attribute::Attributes;
+use shared_data::player::attribute::{Attributes, ValueType};
 use shared_data::types::SeedType;
 
 use player_card::PlayerCard;
@@ -26,7 +26,7 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn get_attr(&self, kind: Kind) -> [u8; 4] {
+    pub fn get_attr(&self, kind: Kind) -> [ValueType; 4] {
         match kind {
             Kind::Analyze => self.attributes.analyze.to_array(),
             Kind::Breach => self.attributes.breach.to_array(),

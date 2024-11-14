@@ -199,7 +199,8 @@ fn recv_game_build(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>
             if let Some(user) = game.get_user_auth(header.user, header.auth) {
                 user.player = player;
                 if let Some(valid_player) = user.player.as_ref() {
-                    user.state.setup(valid_player.deck.iter().filter_map(|card| dm.lookup_player_card(card)).collect(), &mut rng);
+                    user.state.set_attr(valid_player.attributes);
+                    user.state.setup_deck(valid_player.deck.iter().filter_map(|card| dm.lookup_player_card(card)).collect(), &mut rng);
                     let message = GameUpdateStateMessage {
                         player_state: PlayerStatePlayerView::from(&user.state),
                     };
@@ -303,35 +304,26 @@ fn recv_game_choose_attr(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMe
     if let Some(game) = games.get_mut(&request.game_id) {
         if game.all_users_last_command(op::Command::GameChooseAttr) {
             let (erg_roll, users) = game.split_borrow_for_resolve();
-            for user in users.values_mut() {
+            for (id, user) in users.iter_mut() {
                 if let Some(player) = &user.player {
                     if let Some(kind) = user.state.resolve_kind {
-                        let [erg, _] = GameState::resolve_matchups(erg_roll, &player.get_attr(kind), &[5, 5, 5, 5]);
-                        user.state.add_erg(kind, erg);
+                        let (p_erg, a_erg) = GameState::resolve_matchups(erg_roll, &player.get_attr(kind), &[5, 5, 5, 5]);
+                        user.state.add_erg(kind, p_erg.iter().sum());
+
+                        let player_state_view = PlayerStatePlayerView::from(&user.state);
+                        let message = GameResourcesMessage {
+                            player_state_view,
+                            p_erg: p_erg.into(),
+                            a_erg: a_erg.into(),
+                        };
+                        if let Some((user_gate, user_vagabond)) = bx.gate_map.get(id) {
+                            let _ = send_routed_message(message, *user_gate, *user_vagabond, &bx.local_tx);
+                        }
                     }
                 }
             }
             game.set_phase(GamePhase::CardPlay);
-            send_each_player_resources(game, bx);
         }
-    }
-}
-
-fn send_each_player_resources(game: &mut GameState, bx: &mut Broadcaster) {
-    let mut errors = vec![];
-    for (id, (gate, vagabond)) in &bx.gate_map {
-        let player_state_view = PlayerStatePlayerView::from(&game.get_user(*id).unwrap().state);
-        let message = GameResourcesMessage {
-            player_state_view,
-        };
-        let result = send_routed_message(message, *gate, *vagabond, &bx.local_tx);
-        if result.is_err() {
-            errors.push(*id);
-        }
-    }
-
-    for id in &errors {
-        bx.gate_map.remove(id);
     }
 }
 

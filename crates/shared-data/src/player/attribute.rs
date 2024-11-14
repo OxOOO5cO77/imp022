@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 pub type ValueType = u8;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Default, Clone, Copy, Serialize, Deserialize)]
 pub struct Attribute {
     pub accuracy: ValueType,
     pub boost: ValueType,
@@ -10,7 +10,7 @@ pub struct Attribute {
     pub duration: ValueType,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Default, Clone, Copy, Serialize, Deserialize)]
 pub struct Attributes {
     pub analyze: Attribute,
     pub breach: Attribute,
@@ -23,24 +23,27 @@ impl Attribute {
         [self.accuracy, self.boost, self.celerity, self.duration]
     }
 
-    pub fn from_values(part: &[ValueType; 4]) -> Self {
+    pub fn from_array(array: [ValueType; 4]) -> Self {
         Self {
-            accuracy: part[0],
-            boost: part[1],
-            celerity: part[2],
-            duration: part[3],
+            accuracy: array[0],
+            boost: array[1],
+            celerity: array[2],
+            duration: array[3],
         }
     }
 }
 
-
 impl Attributes {
-    pub fn from_values(access: &[ValueType; 4], breach: &[ValueType; 4], compute: &[ValueType; 4], disrupt: &[ValueType; 4]) -> Self {
+    pub fn to_array(&self) -> [[ValueType; 4]; 4] {
+        [self.analyze.to_array(), self.breach.to_array(), self.compute.to_array(), self.disrupt.to_array()]
+    }
+
+    pub fn from_array(array: [[ValueType; 4]; 4]) -> Self {
         Self {
-            analyze: Attribute::from_values(access),
-            breach: Attribute::from_values(breach),
-            compute: Attribute::from_values(compute),
-            disrupt: Attribute::from_values(disrupt),
+            analyze: Attribute::from_array(array[0]),
+            breach: Attribute::from_array(array[1]),
+            compute: Attribute::from_array(array[2]),
+            disrupt: Attribute::from_array(array[3]),
         }
     }
 }

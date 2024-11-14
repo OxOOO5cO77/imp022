@@ -4,13 +4,15 @@ use crate::data::hall::hall_card::HallCard;
 use crate::data::player::player_card::PlayerCard;
 use rand::{seq::SliceRandom, Rng};
 use shared_data::game::card::{ErgType, Kind};
+use shared_data::player::attribute::{Attributes, ValueType};
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
 
 #[derive(Default)]
 pub struct PlayerState {
+    attr: Attributes,
     deck: VecDeque<HallCard>,
-    discard: Vec<HallCard>,
+    heap: Vec<HallCard>,
     hand: Vec<HallCard>,
     erg: HashMap<Kind, ErgType>,
     play: Vec<HallCard>,
@@ -19,7 +21,10 @@ pub struct PlayerState {
 }
 
 impl PlayerState {
-    pub fn setup(&mut self, deck: Vec<HallCard>, rng: &mut impl Rng) {
+    pub fn set_attr(&mut self, attr: Attributes) {
+        self.attr = attr;
+    }
+    pub fn setup_deck(&mut self, deck: Vec<HallCard>, rng: &mut impl Rng) {
         self.deck = deck.into();
         self.shuffle_deck(rng);
         self.fill_hand();
@@ -67,11 +72,13 @@ impl PlayerState {
 }
 
 type DeckCountType = u8;
+type AttributeArray = [[ValueType; 4]; 4];
 type ErgArray = [ErgType; 4];
 
 #[derive(Default)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct PlayerStatePlayerView {
+    pub attr: AttributeArray,
     pub deck: DeckCountType,
     pub heap: Vec<PlayerCard>,
     pub hand: Vec<PlayerCard>,
@@ -81,8 +88,9 @@ pub struct PlayerStatePlayerView {
 impl From<&PlayerState> for PlayerStatePlayerView {
     fn from(player_state: &PlayerState) -> Self {
         Self {
+            attr: player_state.attr.to_array(),
             deck: player_state.deck.len() as DeckCountType,
-            heap: player_state.discard.iter().map(HallCard::to_player_card).collect(),
+            heap: player_state.heap.iter().map(HallCard::to_player_card).collect(),
             hand: player_state.hand.iter().map(HallCard::to_player_card).collect(),
             erg: [
                 *player_state.erg.get(&Kind::Analyze).unwrap_or(&0),
@@ -97,6 +105,7 @@ impl From<&PlayerState> for PlayerStatePlayerView {
 
 impl Bufferable for PlayerStatePlayerView {
     fn push_into(&self, buf: &mut VSizedBuffer) {
+        self.attr.push_into(buf);
         self.deck.push_into(buf);
         self.heap.push_into(buf);
         self.hand.push_into(buf);
@@ -104,11 +113,13 @@ impl Bufferable for PlayerStatePlayerView {
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
+        let attr = AttributeArray::pull_from(buf);
         let deck = DeckCountType::pull_from(buf);
         let heap = Vec::<PlayerCard>::pull_from(buf);
         let hand = Vec::<PlayerCard>::pull_from(buf);
         let erg = ErgArray::pull_from(buf);
         Self {
+            attr,
             deck,
             heap,
             hand,
@@ -117,7 +128,7 @@ impl Bufferable for PlayerStatePlayerView {
     }
 
     fn size_in_buffer(&self) -> usize {
-        self.deck.size_in_buffer() + self.heap.size_in_buffer() + self.hand.size_in_buffer() + self.erg.size_in_buffer()
+        self.attr.size_in_buffer() + self.deck.size_in_buffer() + self.heap.size_in_buffer() + self.hand.size_in_buffer() + self.erg.size_in_buffer()
     }
 }
 
@@ -139,6 +150,7 @@ mod tests {
         };
 
         let orig_view = PlayerStatePlayerView {
+            attr: [[1,2,3,4],[1,2,3,4],[1,2,3,4],[1,2,3,4]],
             deck: 32,
             heap: vec![dummy_card; 12],
             hand: vec![dummy_card; 5],

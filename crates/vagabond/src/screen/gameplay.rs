@@ -1,10 +1,12 @@
 use crate::network::client_gate::{GateCommand, GateIFace};
+use crate::screen::compose::PlayerCache;
 use crate::system::app_state::AppState;
 use crate::system::ui::{font_size, font_size_color, screen_exit, text, Screen, ScreenBundle, HUNDRED, ZERO};
 use bevy::prelude::*;
 use hall::data::player::player_state::PlayerStatePlayerView;
 use hall::message::AttrKind;
 use shared_data::game::card::ErgType;
+use std::cmp::Ordering;
 
 pub struct GameplayPlugin;
 
@@ -49,10 +51,14 @@ struct ErgText(usize);
 #[derive(Component)]
 struct RollText(usize);
 
+#[derive(Component)]
+struct AttributeText(usize, usize);
+
 #[derive(Event)]
 enum UiEvent {
     PlayerState(PlayerStatePlayerView),
     Roll([ErgType; 4]),
+    Resources([ErgType; 4], [ErgType; 4]),
 }
 
 #[derive(Component)]
@@ -75,9 +81,10 @@ fn gameplay_enter(
     // bevy system
     mut commands: Commands,
     asset_server: Res<AssetServer>,
+    player_cache: Res<PlayerCache>,
 ) {
     let font_info_black = font_size(&asset_server, 16.0);
-    let font_info_erg = font_size_color(&asset_server, 48.0, bevy::color::palettes::basic::YELLOW);
+    let font_info_gray = font_size_color(&asset_server, 48.0, bevy::color::palettes::basic::GRAY);
     let font_info_green = font_size_color(&asset_server, 16.0, bevy::color::palettes::basic::GREEN);
 
     let main_layout = NodeBundle {
@@ -218,7 +225,26 @@ fn gameplay_enter(
         parent.spawn(main_layout).with_children(|parent| {
             parent.spawn(attr_layout).with_children(|parent| {
                 parent.spawn(attr_player_layout).with_children(|parent| {
-                    parent.spawn(spacer(Color::NONE));
+                    parent.spawn(attr_values_layout.clone()).with_children(|parent| {
+                        for i in 0..=3 {
+                            parent.spawn((AttributeText(0, i), text(format!("{}", player_cache.attr[0][i]), &font_info_gray)));
+                        }
+                    });
+                    parent.spawn(attr_values_layout.clone()).with_children(|parent| {
+                        for i in 0..=3 {
+                            parent.spawn((AttributeText(1, i), text(format!("{}", player_cache.attr[1][i]), &font_info_gray)));
+                        }
+                    });
+                    parent.spawn(attr_values_layout.clone()).with_children(|parent| {
+                        for i in 0..=3 {
+                            parent.spawn((AttributeText(2, i), text(format!("{}", player_cache.attr[2][i]), &font_info_gray)));
+                        }
+                    });
+                    parent.spawn(attr_values_layout.clone()).with_children(|parent| {
+                        for i in 0..=3 {
+                            parent.spawn((AttributeText(3, i), text(format!("{}", player_cache.attr[3][i]), &font_info_gray)));
+                        }
+                    });
                 });
                 parent.spawn(spacer(Color::NONE));
                 parent.spawn(spacer(Color::NONE));
@@ -228,7 +254,7 @@ fn gameplay_enter(
                     parent.spawn(spacer(Color::NONE));
                     parent.spawn(attr_values_layout.clone()).with_children(|parent| {
                         for i in 0..=3 {
-                            parent.spawn((RollText(i), text("-", &font_info_erg)));
+                            parent.spawn((RollText(i), text("-", &font_info_gray)));
                         }
                     });
                     parent.spawn(spacer(Color::NONE));
@@ -239,7 +265,7 @@ fn gameplay_enter(
                 parent.spawn(player_erg_layout).with_children(|parent| {
                     parent.spawn(spacer(Color::NONE));
                     for i in 0..=3 {
-                        parent.spawn((ErgText(i), text("00", &font_info_erg)));
+                        parent.spawn((ErgText(i), text("00", &font_info_gray)));
                     }
                     parent.spawn(spacer(Color::NONE));
                     parent.spawn(spacer(Color::NONE));
@@ -304,7 +330,8 @@ fn button_ui_update(
         match *interaction {
             Interaction::Pressed => {
                 *background_color = match context.state {
-                    GameplayState::Wait(_) => bevy::color::palettes::basic::RED.into(),
+                    GameplayState::Wait(WaitKind::One) => bevy::color::palettes::basic::RED.into(),
+                    GameplayState::Wait(WaitKind::All) => bevy::color::palettes::basic::YELLOW.into(),
                     _ => bevy::color::palettes::basic::GREEN.into(),
                 };
                 *border_color = bevy::color::palettes::basic::RED.into();
@@ -327,23 +354,43 @@ fn roll_ui_update(
     mut roll_q: Query<(&mut Text, &RollText)>,
 ) {
     for ui_event in receive.read() {
-        if let UiEvent::Roll(roll) = ui_event {
-            for (mut roll_text, RollText(index)) in roll_q.iter_mut() {
-                roll_text.sections[0].value = format!("{}", roll[*index])
+        match ui_event {
+            UiEvent::Roll(roll) => {
+                for (mut roll_text, RollText(index)) in roll_q.iter_mut() {
+                    roll_text.sections[0].value = format!("{}", roll[*index]);
+                    roll_text.sections[0].style.color = bevy::color::palettes::basic::GRAY.into();
+                }
             }
+            UiEvent::Resources(p_erg, a_erg) => {
+                for (mut roll_text, RollText(index)) in roll_q.iter_mut() {
+                    roll_text.sections[0].style.color = match p_erg[*index].cmp(&a_erg[*index]) {
+                        Ordering::Less => bevy::color::palettes::basic::RED,
+                        Ordering::Equal => bevy::color::palettes::basic::YELLOW,
+                        Ordering::Greater => bevy::color::palettes::basic::GREEN,
+                    }
+                    .into();
+                }
+            }
+            _ => {}
         }
     }
 }
 
+type ErgTextQuery<'a> = Query<'a, 'a, (&'a mut Text, &'a ErgText)>;
+type AttributeTextQuery<'a> = Query<'a, 'a, (&'a mut Text, &'a AttributeText)>;
+
 fn player_ui_update(
     // bevy system
     mut receive: EventReader<UiEvent>,
-    mut erg_q: Query<(&mut Text, &ErgText)>,
+    mut text_q: ParamSet<(ErgTextQuery, AttributeTextQuery)>,
 ) {
     for ui_event in receive.read() {
         if let UiEvent::PlayerState(player_state) = ui_event {
-            for (mut erg_text, ErgText(index)) in erg_q.iter_mut() {
+            for (mut erg_text, ErgText(index)) in text_q.p0().iter_mut() {
                 erg_text.sections[0].value = format!("{:02}", player_state.erg[*index])
+            }
+            for (mut attr_text, AttributeText(row, col)) in text_q.p1().iter_mut() {
+                attr_text.sections[0].value = format!("{}", player_state.attr[*row][*col]);
             }
         }
     }
@@ -376,6 +423,7 @@ fn gameplay_update(
         Ok(GateCommand::GameResources(gate_response)) => {
             println!("State: GameResources");
             send.send(UiEvent::PlayerState(gate_response.player_state_view));
+            send.send(UiEvent::Resources(gate_response.p_erg, gate_response.a_erg));
             context.state = GameplayState::Play;
         }
         Ok(GateCommand::GamePlayCard(gate_response)) => {
@@ -418,5 +466,6 @@ pub fn gameplay_exit(
     screen_q: Query<Entity, With<Screen>>,
 ) {
     commands.remove_resource::<GameplayContext>();
+    commands.remove_resource::<PlayerCache>();
     screen_exit(commands, screen_q);
 }

@@ -6,7 +6,7 @@ use shared_data::player::attribute::ValueType;
 use shared_data::types::{AuthType, UserIdType};
 
 use shared_net::op;
-use std::cmp::{Ordering, Reverse};
+use std::cmp::Ordering;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::iter::zip;
@@ -41,8 +41,8 @@ impl GameState {
                 GamePhase::ChooseAttr => self.stage == GameStage::Running(GamePhase::TurnStart),
                 GamePhase::CardPlay => self.stage == GameStage::Running(GamePhase::ChooseAttr),
                 GamePhase::TurnEnd => self.stage == GameStage::Running(GamePhase::CardPlay),
-            }
-            GameStage::End => matches!(self.stage, GameStage::Running(_))
+            },
+            GameStage::End => matches!(self.stage, GameStage::Running(_)),
         }
     }
 
@@ -110,104 +110,90 @@ impl GameState {
         }
     }
 
-    fn increment(alloc: &mut (ErgType, ErgType), erg: ErgType) {
-        alloc.0 += 1;
-        alloc.1 += erg;
-    }
-
     pub fn split_borrow_for_resolve(&mut self) -> (&[ErgType; 4], &mut HashMap<UserIdType, GameUser>) {
         (&self.erg_roll, &mut self.users)
     }
 
-    pub fn resolve_matchups(erg_roll: &[ErgType], p1: &[ValueType; 4], p2: &[ValueType; 4]) -> [ErgType; 2] {
-        let mut matchups = zip(erg_roll, zip(p1, p2)).collect::<Vec<_>>();
-        matchups.sort_unstable_by_key(|(erg, (_, _))| Reverse(*erg));
+    pub fn resolve_matchups(erg_roll: &[ErgType], p1: &[ValueType; 4], p2: &[ValueType; 4]) -> ([ErgType; 4], [ErgType; 4]) {
+        let matchups = zip(erg_roll, zip(p1, p2)).collect::<Vec<_>>();
 
-        let mut p_alloc = (0, 0);
-        let mut a_alloc = (0, 0);
+        let mut p_alloc = [0, 0, 0, 0];
+        let mut a_alloc = [0, 0, 0, 0];
 
-        for (erg, (protag, antag)) in matchups.iter() {
+        for (idx, (erg, (protag, antag))) in matchups.iter().enumerate() {
             match protag.cmp(antag) {
-                Ordering::Greater => Self::increment(&mut p_alloc, **erg),
-                Ordering::Less => Self::increment(&mut a_alloc, **erg),
-                Ordering::Equal => {}
+                Ordering::Greater => p_alloc[idx] = **erg,
+                Ordering::Less => a_alloc[idx] = **erg,
+                Ordering::Equal => {
+                    p_alloc[idx] = **erg / 2;
+                    a_alloc[idx] = **erg / 2;
+                }
             };
         }
 
-        for (erg, (protag, antag)) in matchups.iter() {
-            match protag.cmp(antag) {
-                Ordering::Greater => {}
-                Ordering::Less => {}
-                Ordering::Equal => match p_alloc.cmp(&a_alloc) {
-                    Ordering::Greater => Self::increment(&mut a_alloc, **erg),
-                    Ordering::Less => Self::increment(&mut p_alloc, **erg),
-                    Ordering::Equal => Self::increment(&mut p_alloc, **erg),
-                },
-            };
-        }
-
-        [p_alloc.1, a_alloc.1]
+        (p_alloc, a_alloc)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::data::game::GameState;
+    use shared_data::game::card::ErgType;
 
     #[test]
     fn test_resolve_1() {
-        let erg_roll = [1, 3, 5, 6];
+        let erg_roll = [1, 3, 3, 6];
 
         let p1_a = [9, 1, 9, 1];
         let p2_a = [1, 9, 1, 9];
 
         let result = GameState::resolve_matchups(&erg_roll, &p1_a, &p2_a);
-        assert_eq!(result[0], 6);
-        assert_eq!(result[1], 9);
+        assert_eq!(result.0.iter().sum::<ErgType>(), 4);
+        assert_eq!(result.1.iter().sum::<ErgType>(), 9);
     }
 
     #[test]
     fn test_resolve_2() {
-        let erg_roll = [1, 3, 5, 6];
+        let erg_roll = [1, 3, 3, 6];
 
         let p1_b = [5, 5, 5, 5];
         let p2_b = [5, 5, 5, 5];
 
         let result = GameState::resolve_matchups(&erg_roll, &p1_b, &p2_b);
-        assert_eq!(result[0], 7);
-        assert_eq!(result[1], 8);
+        assert_eq!(result.0.iter().sum::<ErgType>(), 5);
+        assert_eq!(result.1.iter().sum::<ErgType>(), 5);
     }
 
     #[test]
     fn test_resolve_3() {
-        let erg_roll = [1, 3, 5, 6];
+        let erg_roll = [1, 3, 3, 6];
 
         let p1_c = [9, 1, 5, 5];
         let p2_c = [1, 9, 5, 5];
         let result = GameState::resolve_matchups(&erg_roll, &p1_c, &p2_c);
-        assert_eq!(result[0], 7);
-        assert_eq!(result[1], 8);
+        assert_eq!(result.0.iter().sum::<ErgType>(), 5);
+        assert_eq!(result.1.iter().sum::<ErgType>(), 7);
     }
 
     #[test]
     fn test_resolve_4() {
-        let erg_roll = [1, 3, 5, 6];
+        let erg_roll = [1, 3, 3, 6];
 
         let p1_d = [5, 5, 9, 1];
         let p2_d = [5, 5, 1, 9];
         let result = GameState::resolve_matchups(&erg_roll, &p1_d, &p2_d);
-        assert_eq!(result[0], 8);
-        assert_eq!(result[1], 7);
+        assert_eq!(result.0.iter().sum::<ErgType>(), 4);
+        assert_eq!(result.1.iter().sum::<ErgType>(), 7);
     }
 
     #[test]
     fn test_resolve_5() {
-        let erg_roll = [1, 3, 5, 6];
+        let erg_roll = [1, 3, 3, 6];
 
         let p1_d = [5, 5, 9, 1];
         let p2_c = [1, 9, 5, 5];
         let result = GameState::resolve_matchups(&erg_roll, &p1_d, &p2_c);
-        assert_eq!(result[0], 6);
-        assert_eq!(result[1], 9);
+        assert_eq!(result.0.iter().sum::<ErgType>(), 4);
+        assert_eq!(result.1.iter().sum::<ErgType>(), 9);
     }
 }

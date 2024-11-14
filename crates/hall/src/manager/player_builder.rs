@@ -6,12 +6,12 @@ use rand::prelude::*;
 use hall::data::hall::hall_build::HallBuild;
 use hall::data::hall::hall_card::HallCard;
 use hall::data::hall::hall_detail::HallDetail;
-use hall::data::player::Player;
 use hall::data::player::player_build::PlayerBuild;
 use hall::data::player::player_card::PlayerCard;
 use hall::data::player::player_detail::PlayerDetail;
 use hall::data::player::player_part::PlayerPart;
-use shared_data::player::attribute::Attributes;
+use hall::data::player::Player;
+use shared_data::player::attribute::{Attributes, ValueType};
 use shared_data::types::{PartType, SeedType};
 
 use crate::manager::data_manager::DataManager;
@@ -19,13 +19,13 @@ use crate::manager::data_manager::DataManager;
 #[derive(Clone)]
 pub(crate) struct PlayerPartBuilder {
     seed: u64,
-    pub(crate) values: [u8; 4],
+    pub(crate) values: [ValueType; 4],
     pub(crate) build: [HallBuild; 4],
     pub(crate) detail: [HallDetail; 4],
 }
 
 impl PlayerPartBuilder {
-    fn pick_values(rng: &mut impl Rng) -> [u8; 4] {
+    fn pick_values(rng: &mut impl Rng) -> [ValueType; 4] {
         let v1 = rng.gen_range(1..=9);
         let v2 = rng.gen_range(1..=9);
         let remain = 20 - v1 - v2;
@@ -51,18 +51,8 @@ impl PlayerPartBuilder {
         PlayerPart {
             seed: self.seed,
             values: self.values,
-            build: [
-                self.build[0].to_player(&0),
-                self.build[1].to_player(&0),
-                self.build[2].to_player(&0),
-                self.build[3].to_player(&0),
-            ],
-            detail: [
-                self.detail[0].to_player(&0),
-                self.detail[1].to_player(&0),
-                self.detail[2].to_player(&0),
-                self.detail[3].to_player(&0),
-            ],
+            build: [self.build[0].to_player(&0), self.build[1].to_player(&0), self.build[2].to_player(&0), self.build[3].to_player(&0)],
+            detail: [self.detail[0].to_player(&0), self.detail[1].to_player(&0), self.detail[2].to_player(&0), self.detail[3].to_player(&0)],
         }
     }
 }
@@ -98,12 +88,7 @@ impl PlayerBuilder {
 
         let player = Player {
             seed,
-            attributes: Attributes::from_values(
-                &self.access.values,
-                &self.breach.values,
-                &self.compute.values,
-                &self.disrupt.values,
-            ),
+            attributes: Attributes::from_array([self.access.values, self.breach.values, self.compute.values, self.disrupt.values]),
             build: Self::build_from_parts(&self.build, &self.build_values),
             detail: Self::detail_from_parts(&self.detail, &self.detail_values),
             deck,
@@ -112,33 +97,15 @@ impl PlayerBuilder {
     }
 
     pub(crate) fn build_from_parts(build: &PlayerPartBuilder, values: &PlayerPartBuilder) -> [PlayerBuild; 4] {
-        [
-            build.build[0].to_player(&values.values[0]),
-            build.build[1].to_player(&values.values[1]),
-            build.build[2].to_player(&values.values[2]),
-            build.build[3].to_player(&values.values[3]),
-        ]
+        [build.build[0].to_player(&values.values[0]), build.build[1].to_player(&values.values[1]), build.build[2].to_player(&values.values[2]), build.build[3].to_player(&values.values[3])]
     }
 
     pub(crate) fn detail_from_parts(detail: &PlayerPartBuilder, values: &PlayerPartBuilder) -> [PlayerDetail; 4] {
-        [
-            detail.detail[0].to_player(&values.values[0]),
-            detail.detail[1].to_player(&values.values[1]),
-            detail.detail[2].to_player(&values.values[2]),
-            detail.detail[3].to_player(&values.values[3]),
-        ]
+        [detail.detail[0].to_player(&values.values[0]), detail.detail[1].to_player(&values.values[1]), detail.detail[2].to_player(&values.values[2]), detail.detail[3].to_player(&values.values[3])]
     }
 
-
     fn generate_seed(&self) -> SeedType {
-        0x00000000000000FF & self.access.seed
-            | 0x000000000000FF00 & &self.breach.seed
-            | 0x0000000000FF0000 & &self.compute.seed
-            | 0x00000000FF000000 & &self.disrupt.seed
-            | 0x000000FF00000000 & &self.build.seed
-            | 0x0000FF0000000000 & &self.build_values.seed
-            | 0x00FF000000000000 & &self.detail.seed
-            | 0xFF00000000000000 & &self.detail_values.seed
+        0x00000000000000FF & self.access.seed | 0x000000000000FF00 & &self.breach.seed | 0x0000000000FF0000 & &self.compute.seed | 0x00000000FF000000 & &self.disrupt.seed | 0x000000FF00000000 & &self.build.seed | 0x0000FF0000000000 & &self.build_values.seed | 0x00FF000000000000 & &self.detail.seed | 0xFF00000000000000 & &self.detail_values.seed
     }
 
     fn map_card(card: HallCard) -> PlayerCard {

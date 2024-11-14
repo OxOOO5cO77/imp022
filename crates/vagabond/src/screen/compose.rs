@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use pyri_tooltip::TooltipContent;
+use shared_data::player::attribute::ValueType;
 use vagabond::data::vagabond_part::VagabondPart;
-
+use warehouse::data::player_bio::PlayerBio;
 use crate::manager::{DataManager, WarehouseManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::compose::StatRowKind::{Build, Detail};
@@ -93,6 +94,12 @@ enum InfoKind {
     ID,
     Birthplace,
     DoB,
+}
+
+#[derive(Resource, Default)]
+pub(crate) struct PlayerCache {
+    bio: PlayerBio,
+    pub(crate) attr: [[ValueType;4];4],
 }
 
 const ATTRIB_SIZE: f32 = 48.0;
@@ -331,6 +338,7 @@ fn compose_enter(
     let parts = init_handoff.parts.clone();
     commands.remove_resource::<ComposeInitHandoff>();
     commands.insert_resource(ComposeState::default());
+    commands.insert_resource(PlayerCache::default());
     build_ui_compose(commands, parts, asset_server);
 }
 
@@ -612,12 +620,17 @@ fn seed_from_holder(holder: &PlayerPartHolder) -> u64 {
     holder.0.as_ref().map(|o| o.seed).unwrap_or_default()
 }
 
+fn values_from_holder(holder: &PlayerPartHolder) -> [ValueType;4] {
+    holder.0.as_ref().map(|o| o.values).unwrap_or_default()
+}
+
 fn finish_player(
     // bevy system
     receive: EventReader<FinishPlayer>,
     holder_q: Query<(&PlayerPartHolder, &PlayerPartHolderKind)>,
     gate: Res<GateIFace>,
     mut state: ResMut<ComposeState>,
+    mut player_cache: ResMut<PlayerCache>,
 ) {
     if !receive.is_empty() {
         let mut parts = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -625,10 +638,22 @@ fn finish_player(
         for (holder, holder_kind) in holder_q.iter() {
             match holder_kind {
                 PlayerPartHolderKind::StatRow(row) => match row {
-                    StatRowKind::Analyze => parts[0] = seed_from_holder(holder),
-                    StatRowKind::Breach => parts[1] = seed_from_holder(holder),
-                    StatRowKind::Compute => parts[2] = seed_from_holder(holder),
-                    StatRowKind::Disrupt => parts[3] = seed_from_holder(holder),
+                    StatRowKind::Analyze => {
+                        parts[0] = seed_from_holder(holder);
+                        player_cache.attr[0] = values_from_holder(holder);
+                    },
+                    StatRowKind::Breach => {
+                        parts[1] = seed_from_holder(holder);
+                        player_cache.attr[1] = values_from_holder(holder);
+                    },
+                    StatRowKind::Compute => {
+                        parts[2] = seed_from_holder(holder);
+                        player_cache.attr[2] = values_from_holder(holder);
+                    },
+                    StatRowKind::Disrupt => {
+                        parts[3] = seed_from_holder(holder);
+                        player_cache.attr[3] = values_from_holder(holder);
+                    },
                     Build => parts[5] = seed_from_holder(holder),
                     Detail => parts[7] = seed_from_holder(holder),
                 },
@@ -654,15 +679,11 @@ fn compose_update(
     mut info_q: Query<(&mut Text, &InfoKind), Without<CardHolder>>,
     wm: Res<WarehouseManager>,
     dm: Res<DataManager>,
-    state: Res<ComposeState>,
+    mut player_cache: ResMut<PlayerCache>,
     mut app_state: ResMut<NextState<AppState>>,
 ) {
     match gate.grx.try_recv() {
         Ok(GateCommand::GameBuild(gate_response)) => {
-            if *state == ComposeState::Committed {
-                return;
-            }
-
             match wm.fetch_player(gate_response.seed) {
                 Ok(warehouse_response) => {
                     if let Some(player_bio) = warehouse_response.player_bio {
@@ -682,6 +703,7 @@ fn compose_update(
                                 card_text.sections[0].value.clone_from(&card.title);
                             }
                         }
+                        player_cache.bio = player_bio;
                     }
                 }
                 Err(err) => println!("Error: {err}"),
