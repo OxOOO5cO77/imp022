@@ -1,11 +1,12 @@
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::compose::PlayerCache;
 use crate::system::app_state::AppState;
-use crate::system::ui::{font_size, font_size_color, screen_exit, text, Screen, ScreenBundle, HUNDRED, ZERO};
+use crate::system::ui::{font_size, font_size_color, screen_exit, text, FontInfo, Screen, ScreenBundle, HUNDRED, ZERO};
 use bevy::prelude::*;
 use hall::data::player::player_state::PlayerStatePlayerView;
 use hall::message::AttrKind;
 use shared_data::game::card::ErgType;
+use shared_data::player::build::ValueType;
 use std::cmp::Ordering;
 
 pub struct GameplayPlugin;
@@ -15,8 +16,8 @@ impl Plugin for GameplayPlugin {
         app //
             .add_event::<UiEvent>()
             .add_systems(OnEnter(AppState::Gameplay), gameplay_enter)
-            .add_systems(Update, (gameplay_update, button_ui_update, player_ui_update, roll_ui_update).run_if(in_state(AppState::Gameplay)))
-            .add_systems(Update, (button_next_update, button_attribute_update).after(button_ui_update).run_if(in_state(AppState::Gameplay)))
+            .add_systems(Update, (gameplay_update, button_next_ui_update, player_ui_update, roll_ui_update).run_if(in_state(AppState::Gameplay)))
+            .add_systems(Update, (button_next_update, button_attribute_update).after(button_next_ui_update).run_if(in_state(AppState::Gameplay)))
             .add_systems(OnExit(AppState::Gameplay), gameplay_exit);
     }
 }
@@ -58,25 +59,50 @@ struct AttributeText(usize, usize);
 #[derive(Component)]
 struct AttributeButton(AttrKind);
 
-#[derive(Component)]
-struct ButtonIgnoreUpdate;
-
 #[derive(Bundle)]
 struct AttributeButtonBundle {
-    attr_button: AttributeButton,
+    node: NodeBundle,
+    marker: AttributeButton,
     button: Button,
     interaction: Interaction,
-    ignore: ButtonIgnoreUpdate,
 }
 
 impl AttributeButtonBundle {
     fn new(kind: AttrKind) -> Self {
         Self {
-            attr_button: AttributeButton(kind),
+            node: NodeBundle {
+                style: Style {
+                    display: Display::Grid,
+                    width: HUNDRED,
+                    height: HUNDRED,
+                    grid_template_columns: RepeatedGridTrack::flex(5, 1.0),
+                    column_gap: Val::Px(10.0),
+                    grid_template_rows: GridTrack::flex(1.0),
+                    ..default()
+                },
+                ..default()
+            },
+            marker: AttributeButton(kind),
             button: Default::default(),
             interaction: Default::default(),
-            ignore: ButtonIgnoreUpdate,
         }
+    }
+    fn map_kind(kind: AttrKind) -> (&'static str, usize) {
+        match kind {
+            AttrKind::Analyze => ("A", 0),
+            AttrKind::Breach => ("B", 1),
+            AttrKind::Compute => ("C", 2),
+            AttrKind::Disrupt => ("D", 3),
+        }
+    }
+    fn spawn(parent: &mut ChildBuilder, kind: AttrKind, values: &[[ValueType; 4]; 4], font_info: &FontInfo) {
+        parent.spawn(AttributeButtonBundle::new(kind)).with_children(|parent| {
+            let (header, row_idx) = Self::map_kind(kind);
+            parent.spawn(text(header, font_info));
+            for (idx, value) in values[row_idx].iter().enumerate() {
+                parent.spawn((AttributeText(row_idx, idx), text(value.to_string(), font_info)));
+            }
+        });
     }
 }
 
@@ -89,7 +115,7 @@ enum UiEvent {
 }
 
 #[derive(Component)]
-struct ContinueButton;
+struct NextButton;
 
 fn spacer(color: Color) -> NodeBundle {
     NodeBundle {
@@ -145,18 +171,6 @@ fn gameplay_enter(
             grid_template_rows: RepeatedGridTrack::flex(4, 1.0),
             row_gap: Val::Px(10.0),
             padding: UiRect::all(Val::Px(30.0)),
-            ..default()
-        },
-        ..default()
-    };
-    let attr_player_values_layout = NodeBundle {
-        style: Style {
-            display: Display::Grid,
-            width: HUNDRED,
-            height: HUNDRED,
-            grid_template_columns: RepeatedGridTrack::flex(5, 1.0),
-            column_gap: Val::Px(10.0),
-            grid_template_rows: GridTrack::flex(1.0),
             ..default()
         },
         ..default()
@@ -253,30 +267,10 @@ fn gameplay_enter(
         parent.spawn(main_layout).with_children(|parent| {
             parent.spawn(attr_layout).with_children(|parent| {
                 parent.spawn(attr_player_layout).with_children(|parent| {
-                    parent.spawn((AttributeButtonBundle::new(AttrKind::Analyze), attr_player_values_layout.clone())).with_children(|parent| {
-                        parent.spawn(text("A", &font_info_gray));
-                        for i in 0..4 {
-                            parent.spawn((AttributeText(0, i), text(format!("{}", player_cache.attr[0][i]), &font_info_gray)));
-                        }
-                    });
-                    parent.spawn((AttributeButtonBundle::new(AttrKind::Breach), attr_player_values_layout.clone())).with_children(|parent| {
-                        parent.spawn(text("B", &font_info_gray));
-                        for i in 0..4 {
-                            parent.spawn((AttributeText(1, i), text(format!("{}", player_cache.attr[1][i]), &font_info_gray)));
-                        }
-                    });
-                    parent.spawn((AttributeButtonBundle::new(AttrKind::Compute), attr_player_values_layout.clone())).with_children(|parent| {
-                        parent.spawn(text("C", &font_info_gray));
-                        for i in 0..4 {
-                            parent.spawn((AttributeText(2, i), text(format!("{}", player_cache.attr[2][i]), &font_info_gray)));
-                        }
-                    });
-                    parent.spawn((AttributeButtonBundle::new(AttrKind::Disrupt), attr_player_values_layout.clone())).with_children(|parent| {
-                        parent.spawn(text("D", &font_info_gray));
-                        for i in 0..4 {
-                            parent.spawn((AttributeText(3, i), text(format!("{}", player_cache.attr[3][i]), &font_info_gray)));
-                        }
-                    });
+                    AttributeButtonBundle::spawn(parent, AttrKind::Analyze, &player_cache.attr, &font_info_gray);
+                    AttributeButtonBundle::spawn(parent, AttrKind::Breach, &player_cache.attr, &font_info_gray);
+                    AttributeButtonBundle::spawn(parent, AttrKind::Compute, &player_cache.attr, &font_info_gray);
+                    AttributeButtonBundle::spawn(parent, AttrKind::Disrupt, &player_cache.attr, &font_info_gray);
                 });
                 parent.spawn(spacer(Color::NONE));
                 parent.spawn(spacer(Color::NONE));
@@ -316,7 +310,7 @@ fn gameplay_enter(
                 parent.spawn((PhaseText, text("Phase", &font_info_green)));
                 parent
                     .spawn((
-                        ContinueButton,
+                        NextButton,
                         ButtonBundle {
                             background_color: bevy::color::palettes::css::DARK_GRAY.into(),
                             ..default()
@@ -333,7 +327,7 @@ fn gameplay_enter(
 
 fn button_next_update(
     // bevy system
-    interaction_q: Query<&Interaction, (Changed<Interaction>, With<ContinueButton>)>,
+    interaction_q: Query<&Interaction, (Changed<Interaction>, With<NextButton>)>,
     mut context: ResMut<GameplayContext>,
     gate: Res<GateIFace>,
 ) {
@@ -384,8 +378,8 @@ fn map_kind_to_row(kind: AttrKind) -> usize {
 }
 
 type ButtonQueryParams<'a> = (&'a Interaction, &'a mut BackgroundColor, &'a mut BorderColor);
-type ButtonQueryConditions = (Changed<Interaction>, With<Button>, Without<ButtonIgnoreUpdate>);
-fn button_ui_update(
+type ButtonQueryConditions = (Changed<Interaction>, With<NextButton>);
+fn button_next_ui_update(
     // bevy system
     mut interaction_query: Query<ButtonQueryParams, ButtonQueryConditions>,
     context: Res<GameplayContext>,
