@@ -16,18 +16,18 @@ impl Plugin for GameplayPlugin {
             .add_event::<UiEvent>()
             .add_systems(OnEnter(AppState::Gameplay), gameplay_enter)
             .add_systems(Update, (gameplay_update, button_ui_update, player_ui_update, roll_ui_update).run_if(in_state(AppState::Gameplay)))
-            .add_systems(Update, button_next_update.after(button_ui_update).run_if(in_state(AppState::Gameplay)))
+            .add_systems(Update, (button_next_update, button_attribute_update).after(button_ui_update).run_if(in_state(AppState::Gameplay)))
             .add_systems(OnExit(AppState::Gameplay), gameplay_exit);
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 enum WaitKind {
     One,
     All,
 }
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Debug, PartialEq)]
 enum GameplayState {
     #[default]
     Start,
@@ -37,9 +37,10 @@ enum GameplayState {
     Wait(WaitKind),
 }
 
-#[derive(Resource)]
+#[derive(Resource, Default)]
 struct GameplayContext {
     state: GameplayState,
+    attr_pick: Option<AttrKind>,
 }
 
 #[derive(Component)]
@@ -54,9 +55,35 @@ struct RollText(usize);
 #[derive(Component)]
 struct AttributeText(usize, usize);
 
+#[derive(Component)]
+struct AttributeButton(AttrKind);
+
+#[derive(Component)]
+struct ButtonIgnoreUpdate;
+
+#[derive(Bundle)]
+struct AttributeButtonBundle {
+    attr_button: AttributeButton,
+    button: Button,
+    interaction: Interaction,
+    ignore: ButtonIgnoreUpdate,
+}
+
+impl AttributeButtonBundle {
+    fn new(kind: AttrKind) -> Self {
+        Self {
+            attr_button: AttributeButton(kind),
+            button: Default::default(),
+            interaction: Default::default(),
+            ignore: ButtonIgnoreUpdate,
+        }
+    }
+}
+
 #[derive(Event)]
 enum UiEvent {
     PlayerState(PlayerStatePlayerView),
+    ChooseAttr(Option<usize>),
     Roll([ErgType; 4]),
     Resources([ErgType; 4], [ErgType; 4]),
 }
@@ -92,7 +119,7 @@ fn gameplay_enter(
             display: Display::Grid,
             width: HUNDRED,
             height: HUNDRED,
-            grid_template_columns: vec![GridTrack::px(338.0), GridTrack::flex(1.0), GridTrack::px(338.0)],
+            grid_template_columns: vec![GridTrack::px(422.0), GridTrack::flex(1.0), GridTrack::px(422.0)],
             grid_template_rows: GridTrack::auto(),
             ..default()
         },
@@ -104,19 +131,7 @@ fn gameplay_enter(
             width: HUNDRED,
             height: HUNDRED,
             grid_template_columns: GridTrack::flex(1.0),
-            grid_template_rows: vec![GridTrack::px(372.0), GridTrack::flex(1.0)],
-            ..default()
-        },
-        ..default()
-    };
-    let attr_values_layout = NodeBundle {
-        style: Style {
-            display: Display::Grid,
-            width: HUNDRED,
-            height: HUNDRED,
-            grid_template_columns: RepeatedGridTrack::flex(4, 1.0),
-            column_gap: Val::Px(10.0),
-            grid_template_rows: GridTrack::flex(1.0),
+            grid_template_rows: vec![GridTrack::px(368.0), GridTrack::px(312.0), GridTrack::flex(1.0)],
             ..default()
         },
         ..default()
@@ -129,7 +144,19 @@ fn gameplay_enter(
             grid_template_columns: GridTrack::flex(1.0),
             grid_template_rows: RepeatedGridTrack::flex(4, 1.0),
             row_gap: Val::Px(10.0),
-            padding: UiRect::all(Val::Px(34.0)),
+            padding: UiRect::all(Val::Px(30.0)),
+            ..default()
+        },
+        ..default()
+    };
+    let attr_player_values_layout = NodeBundle {
+        style: Style {
+            display: Display::Grid,
+            width: HUNDRED,
+            height: HUNDRED,
+            grid_template_columns: RepeatedGridTrack::flex(5, 1.0),
+            column_gap: Val::Px(10.0),
+            grid_template_rows: GridTrack::flex(1.0),
             ..default()
         },
         ..default()
@@ -140,7 +167,7 @@ fn gameplay_enter(
             width: HUNDRED,
             height: HUNDRED,
             grid_template_columns: GridTrack::flex(1.0),
-            grid_template_rows: vec![GridTrack::px(128.0), GridTrack::px(572.0), GridTrack::px(86.0), GridTrack::flex(1.0)],
+            grid_template_rows: vec![GridTrack::px(128.0), GridTrack::px(572.0), GridTrack::flex(1.0)],
             ..default()
         },
         ..default()
@@ -151,6 +178,18 @@ fn gameplay_enter(
             width: HUNDRED,
             height: HUNDRED,
             grid_template_columns: vec![GridTrack::flex(1.0), GridTrack::px(290.0), GridTrack::flex(1.0)],
+            grid_template_rows: GridTrack::flex(1.0),
+            ..default()
+        },
+        ..default()
+    };
+    let roll_values_layout = NodeBundle {
+        style: Style {
+            display: Display::Grid,
+            width: HUNDRED,
+            height: HUNDRED,
+            grid_template_columns: RepeatedGridTrack::flex(4, 1.0),
+            column_gap: Val::Px(10.0),
             grid_template_rows: GridTrack::flex(1.0),
             ..default()
         },
@@ -167,24 +206,13 @@ fn gameplay_enter(
         },
         ..default()
     };
-    let player_erg_layout = NodeBundle {
-        style: Style {
-            display: Display::Grid,
-            width: HUNDRED,
-            height: HUNDRED,
-            grid_template_columns: vec![GridTrack::px(80.0), GridTrack::flex(1.0), GridTrack::flex(1.0), GridTrack::flex(1.0), GridTrack::flex(1.0), GridTrack::flex(1.0), GridTrack::px(80.0)],
-            grid_template_rows: GridTrack::flex(1.0),
-            ..default()
-        },
-        ..default()
-    };
-    let player_card_layout = NodeBundle {
+    let player_erg_card_layout = NodeBundle {
         style: Style {
             display: Display::Grid,
             width: HUNDRED,
             height: HUNDRED,
             grid_template_columns: RepeatedGridTrack::flex(5, 1.0),
-            grid_template_rows: GridTrack::flex(1.0),
+            grid_template_rows: vec![GridTrack::px(86.0), GridTrack::flex(1.0)],
             ..default()
         },
         ..default()
@@ -225,23 +253,27 @@ fn gameplay_enter(
         parent.spawn(main_layout).with_children(|parent| {
             parent.spawn(attr_layout).with_children(|parent| {
                 parent.spawn(attr_player_layout).with_children(|parent| {
-                    parent.spawn(attr_values_layout.clone()).with_children(|parent| {
-                        for i in 0..=3 {
+                    parent.spawn((AttributeButtonBundle::new(AttrKind::Analyze), attr_player_values_layout.clone())).with_children(|parent| {
+                        parent.spawn(text("A", &font_info_gray));
+                        for i in 0..4 {
                             parent.spawn((AttributeText(0, i), text(format!("{}", player_cache.attr[0][i]), &font_info_gray)));
                         }
                     });
-                    parent.spawn(attr_values_layout.clone()).with_children(|parent| {
-                        for i in 0..=3 {
+                    parent.spawn((AttributeButtonBundle::new(AttrKind::Breach), attr_player_values_layout.clone())).with_children(|parent| {
+                        parent.spawn(text("B", &font_info_gray));
+                        for i in 0..4 {
                             parent.spawn((AttributeText(1, i), text(format!("{}", player_cache.attr[1][i]), &font_info_gray)));
                         }
                     });
-                    parent.spawn(attr_values_layout.clone()).with_children(|parent| {
-                        for i in 0..=3 {
+                    parent.spawn((AttributeButtonBundle::new(AttrKind::Compute), attr_player_values_layout.clone())).with_children(|parent| {
+                        parent.spawn(text("C", &font_info_gray));
+                        for i in 0..4 {
                             parent.spawn((AttributeText(2, i), text(format!("{}", player_cache.attr[2][i]), &font_info_gray)));
                         }
                     });
-                    parent.spawn(attr_values_layout.clone()).with_children(|parent| {
-                        for i in 0..=3 {
+                    parent.spawn((AttributeButtonBundle::new(AttrKind::Disrupt), attr_player_values_layout.clone())).with_children(|parent| {
+                        parent.spawn(text("D", &font_info_gray));
+                        for i in 0..4 {
                             parent.spawn((AttributeText(3, i), text(format!("{}", player_cache.attr[3][i]), &font_info_gray)));
                         }
                     });
@@ -252,8 +284,8 @@ fn gameplay_enter(
             parent.spawn(center_layout).with_children(|parent| {
                 parent.spawn(roll_layout).with_children(|parent| {
                     parent.spawn(spacer(Color::NONE));
-                    parent.spawn(attr_values_layout.clone()).with_children(|parent| {
-                        for i in 0..=3 {
+                    parent.spawn(roll_values_layout.clone()).with_children(|parent| {
+                        for i in 0..4 {
                             parent.spawn((RollText(i), text("-", &font_info_gray)));
                         }
                     });
@@ -262,20 +294,21 @@ fn gameplay_enter(
                 parent.spawn(game_map_layout).with_children(|parent| {
                     parent.spawn(spacer(Color::NONE));
                 });
-                parent.spawn(player_erg_layout).with_children(|parent| {
-                    parent.spawn(spacer(Color::NONE));
-                    for i in 0..=3 {
+                parent.spawn(player_erg_card_layout).with_children(|parent| {
+                    //erg
+                    for i in 0..4 {
                         parent.spawn((ErgText(i), text("00", &font_info_gray)));
                     }
                     parent.spawn(spacer(Color::NONE));
-                    parent.spawn(spacer(Color::NONE));
-                });
-                parent.spawn(player_card_layout).with_children(|parent| {
-                    parent.spawn(spacer(Color::NONE));
+
+                    //cards
+                    for _i in 0..5 {
+                        parent.spawn(spacer(Color::NONE));
+                    }
                 });
             });
             parent.spawn(machine_layout).with_children(|parent| {
-                parent.spawn(attr_values_layout).with_children(|parent| {
+                parent.spawn(roll_values_layout).with_children(|parent| {
                     parent.spawn(spacer(Color::NONE));
                 });
                 parent.spawn(spacer(Color::NONE));
@@ -295,9 +328,7 @@ fn gameplay_enter(
             });
         });
     });
-    commands.insert_resource(GameplayContext {
-        state: GameplayState::default(),
-    });
+    commands.insert_resource(GameplayContext::default());
 }
 
 fn button_next_update(
@@ -310,7 +341,13 @@ fn button_next_update(
         if interaction == Interaction::Pressed {
             match context.state {
                 GameplayState::Start => gate.send_game_start_turn(),
-                GameplayState::Pick => gate.send_game_choose_attr(AttrKind::Analyze),
+                GameplayState::Pick => {
+                    if let Some(kind) = context.attr_pick {
+                        gate.send_game_choose_attr(kind);
+                    } else {
+                        continue;
+                    }
+                }
                 GameplayState::Play => gate.send_game_play_card(0),
                 GameplayState::Draw => gate.send_game_end_turn(),
                 GameplayState::Wait(_) => {}
@@ -319,11 +356,38 @@ fn button_next_update(
         }
     }
 }
-type ButtonQuery<'a> = (&'a Interaction, &'a mut BackgroundColor, &'a mut BorderColor);
 
+fn button_attribute_update(
+    // bevy system
+    interaction_q: Query<(&AttributeButton, &Interaction), Changed<Interaction>>,
+    mut context: ResMut<GameplayContext>,
+    mut send: EventWriter<UiEvent>,
+) {
+    if context.state != GameplayState::Pick {
+        return;
+    }
+    for (AttributeButton(kind), &interaction) in &interaction_q {
+        if interaction == Interaction::Pressed {
+            context.attr_pick = Some(*kind);
+            send.send(UiEvent::ChooseAttr(Some(map_kind_to_row(*kind))));
+        }
+    }
+}
+
+fn map_kind_to_row(kind: AttrKind) -> usize {
+    match kind {
+        AttrKind::Analyze => 0,
+        AttrKind::Breach => 1,
+        AttrKind::Compute => 2,
+        AttrKind::Disrupt => 3,
+    }
+}
+
+type ButtonQueryParams<'a> = (&'a Interaction, &'a mut BackgroundColor, &'a mut BorderColor);
+type ButtonQueryConditions = (Changed<Interaction>, With<Button>, Without<ButtonIgnoreUpdate>);
 fn button_ui_update(
     // bevy system
-    mut interaction_query: Query<ButtonQuery, (Changed<Interaction>, With<Button>)>,
+    mut interaction_query: Query<ButtonQueryParams, ButtonQueryConditions>,
     context: Res<GameplayContext>,
 ) {
     for (interaction, mut background_color, mut border_color) in &mut interaction_query {
@@ -382,16 +446,29 @@ type AttributeTextQuery<'a> = Query<'a, 'a, (&'a mut Text, &'a AttributeText)>;
 fn player_ui_update(
     // bevy system
     mut receive: EventReader<UiEvent>,
-    mut text_q: ParamSet<(ErgTextQuery, AttributeTextQuery)>,
+    mut text_q: ParamSet<(AttributeTextQuery, ErgTextQuery)>,
 ) {
     for ui_event in receive.read() {
-        if let UiEvent::PlayerState(player_state) = ui_event {
-            for (mut erg_text, ErgText(index)) in text_q.p0().iter_mut() {
-                erg_text.sections[0].value = format!("{:02}", player_state.erg[*index])
+        match ui_event {
+            UiEvent::PlayerState(player_state) => {
+                for (mut attr_text, AttributeText(row, col)) in text_q.p0().iter_mut() {
+                    attr_text.sections[0].value = format!("{}", player_state.attr[*row][*col]);
+                }
+                for (mut erg_text, ErgText(index)) in text_q.p1().iter_mut() {
+                    erg_text.sections[0].value = format!("{:02}", player_state.erg[*index])
+                }
             }
-            for (mut attr_text, AttributeText(row, col)) in text_q.p1().iter_mut() {
-                attr_text.sections[0].value = format!("{}", player_state.attr[*row][*col]);
+            UiEvent::ChooseAttr(kind) => {
+                for (mut attr_text, AttributeText(row, _)) in text_q.p0().iter_mut() {
+                    attr_text.sections[0].style.color = if Some(row) == kind.into() {
+                        bevy::color::palettes::basic::GREEN
+                    } else {
+                        bevy::color::palettes::basic::GRAY
+                    }
+                    .into();
+                }
             }
+            _ => {}
         }
     }
 }
@@ -405,54 +482,56 @@ fn gameplay_update(
     match gate.grx.try_recv() {
         Ok(GateCommand::GameStartTurn(gate_response)) => {
             if gate_response.success {
-                println!("State: GameStartTurn");
+                println!("[RECV] GameStartTurn OK");
                 context.state = GameplayState::Wait(WaitKind::All);
             }
         }
         Ok(GateCommand::GameRoll(gate_response)) => {
-            println!("State: GameRoll");
+            println!("[RECV] GameRoll => Pick");
             context.state = GameplayState::Pick;
             send.send(UiEvent::Roll(gate_response.roll));
+            send.send(UiEvent::ChooseAttr(None));
         }
         Ok(GateCommand::GameChooseAttr(gate_response)) => {
             if gate_response.success {
-                println!("State: GameChooseAttr");
+                println!("[RECV] GameChooseAttr OK");
                 context.state = GameplayState::Wait(WaitKind::All);
             }
         }
         Ok(GateCommand::GameResources(gate_response)) => {
-            println!("State: GameResources");
+            println!("[RECV] GameResources => Play");
             send.send(UiEvent::PlayerState(gate_response.player_state_view));
             send.send(UiEvent::Resources(gate_response.p_erg, gate_response.a_erg));
             context.state = GameplayState::Play;
         }
         Ok(GateCommand::GamePlayCard(gate_response)) => {
             if gate_response.success {
-                println!("State: GamePlayCard");
+                println!("[RECV] GamePlayCard OK");
                 context.state = GameplayState::Wait(WaitKind::All);
             }
         }
-        Ok(GateCommand::GameResolveCards(gate_response)) => {
-            println!("State: GameResolveCards");
+        Ok(GateCommand::GameResolveCards(_gate_response)) => {
+            println!("[RECV] GameResolveCards => Draw");
             context.state = GameplayState::Draw;
         }
         Ok(GateCommand::GameEndTurn(gate_response)) => {
             if gate_response.success {
-                println!("State: GameEndTurn");
+                println!("[RECV] GameEndTurn OK");
                 context.state = GameplayState::Wait(WaitKind::All);
             }
         }
-        Ok(GateCommand::GameTick(gate_response)) => {
-            println!("State: GameTick");
+        Ok(GateCommand::GameTick(_gate_response)) => {
+            println!("[RECV] GameTick");
+            context.attr_pick = None;
             context.state = GameplayState::Start;
         }
         Ok(GateCommand::GameEndGame(gate_response)) => {
             if gate_response.success {
-                println!("State: GameEndGame");
+                println!("[RECV] GameEndGame OK");
             }
         }
         Ok(GateCommand::GameUpdateState(gate_response)) => {
-            println!("State: GameUpdateState");
+            println!("[RECV] GameUpdateState");
             send.send(UiEvent::PlayerState(gate_response.player_state));
         }
         Ok(_) => {}
