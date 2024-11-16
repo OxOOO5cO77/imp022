@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use shared_data::game::card::*;
 use shared_data::game::opcode::OpCode;
 use shared_data::player::attribute::AttributeKind;
-use crate::data::player::player_card::PlayerCard;
+use crate::data::player::PlayerCard;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HallCard {

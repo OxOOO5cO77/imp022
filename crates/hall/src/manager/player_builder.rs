@@ -1,19 +1,12 @@
 use std::collections::VecDeque;
 use std::iter::zip;
 
-use rand::prelude::*;
-
 use crate::manager::data_manager::DataManager;
-use hall::data::hall::hall_build::HallBuild;
-use hall::data::hall::hall_card::HallCard;
-use hall::data::hall::hall_detail::HallDetail;
-use hall::data::player::player_build::PlayerBuild;
-use hall::data::player::player_card::PlayerCard;
-use hall::data::player::player_detail::PlayerDetail;
-use hall::data::player::player_part::PlayerPart;
-use hall::data::player::Player;
+use hall::data::hall::{HallBuild, HallCard, HallDetail};
+use hall::data::player::{Player, PlayerBuild, PlayerCard, PlayerDetail, PlayerPart};
 use hall::data::util;
-use shared_data::player::attribute::{Attributes, AttributeValueType};
+use rand::prelude::*;
+use shared_data::player::attribute::{AttributeValueType, Attributes};
 use shared_data::types::{PartType, SeedType};
 
 #[derive(Clone)]

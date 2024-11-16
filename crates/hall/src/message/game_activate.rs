@@ -1,9 +1,8 @@
+use crate::data::player::PlayerPart;
+use crate::message::CommandMessage;
 use shared_data::types::GameIdType;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
-
-use crate::data::player::player_part::PlayerPart;
-use crate::message::CommandMessage;
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameActivateRequest {

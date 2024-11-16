@@ -3,15 +3,8 @@ use std::io::{Error, ErrorKind};
 use std::path::Path;
 
 use bevy::prelude::Resource;
-
-use hall::data::player::player_build::PlayerBuild;
-use hall::data::player::player_card::PlayerCard;
-use hall::data::player::player_detail::PlayerDetail;
-use hall::data::player::player_part::PlayerPart;
-use vagabond::data::vagabond_build::VagabondBuild;
-use vagabond::data::vagabond_card::VagabondCard;
-use vagabond::data::vagabond_detail::VagabondDetail;
-use vagabond::data::vagabond_part::VagabondPart;
+use hall::data::player::{PlayerBuild, PlayerCard, PlayerDetail, PlayerPart};
+use vagabond::data::{VagabondBuild, VagabondCard, VagabondDetail, VagabondPart};
 
 #[derive(Resource)]
 pub(crate) struct DataManager {

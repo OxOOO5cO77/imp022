@@ -2,13 +2,8 @@ use shared_data::player::build::{CompanyType, MarketType};
 use shared_data::player::detail::{GeneralType, SpecificType};
 use std::collections::HashMap;
 use std::io::Error;
-use vagabond::data::vagabond_build::VagabondBuild;
-use vagabond::data::vagabond_card::VagabondCard;
-use vagabond::data::vagabond_detail::VagabondDetail;
-
-use crate::data::build::DbBuild;
-use crate::data::card::DbCard;
-use crate::data::detail::DbDetail;
+use vagabond::data::{VagabondBuild, VagabondCard, VagabondDetail};
+use crate::data::{DbBuild, DbCard, DbDetail};
 use crate::save_load::save_data_single;
 
 fn make_vagabond_card(card: &DbCard) -> VagabondCard {

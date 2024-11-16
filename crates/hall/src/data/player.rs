@@ -2,12 +2,13 @@ use std::collections::VecDeque;
 
 use serde::{Deserialize, Serialize};
 
-use player_build::PlayerBuild;
+pub use player_build::PlayerBuild;
+pub use player_card::PlayerCard;
+pub use player_detail::PlayerDetail;
+pub use player_part::PlayerPart;
+
 use shared_data::player::attribute::Attributes;
 use shared_data::types::SeedType;
-
-use player_card::PlayerCard;
-use player_detail::PlayerDetail;
 
 pub mod player_build;
 pub mod player_card;

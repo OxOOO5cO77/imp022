@@ -1,12 +1,9 @@
 use std::io::{Error, ErrorKind};
 use std::path::Path;
 
+use hall::data::hall::{HallBuild, HallCard, HallDetail};
+use hall::data::player::PlayerCard;
 use rand::prelude::*;
-
-use hall::data::hall::hall_build::HallBuild;
-use hall::data::hall::hall_card::HallCard;
-use hall::data::hall::hall_detail::HallDetail;
-use hall::data::player::player_card::PlayerCard;
 use shared_data::game::card::CardSlot;
 use shared_data::player::build::Build;
 use shared_data::player::detail::Detail;
@@ -27,72 +24,22 @@ impl DataManager {
     }
 
     pub(crate) fn pick_build(&self, rng: &mut impl Rng) -> [HallBuild; 4] {
-        let build = [
-            self.build.iter()
-                .filter(|o| o.is(Build::ANT))
-                .choose(rng)
-                .unwrap()
-                .clone(),
-            self.build.iter()
-                .filter(|o| o.is(Build::BRD))
-                .choose(rng)
-                .unwrap()
-                .clone(),
-            self.build.iter()
-                .filter(|o| o.is(Build::CPU))
-                .choose(rng)
-                .unwrap()
-                .clone(),
-            self.build.iter()
-                .filter(|o| o.is(Build::DSK))
-                .choose(rng)
-                .unwrap()
-                .clone(),
-        ];
+        let build = [self.build.iter().filter(|o| o.is(Build::ANT)).choose(rng).unwrap().clone(), self.build.iter().filter(|o| o.is(Build::BRD)).choose(rng).unwrap().clone(), self.build.iter().filter(|o| o.is(Build::CPU)).choose(rng).unwrap().clone(), self.build.iter().filter(|o| o.is(Build::DSK)).choose(rng).unwrap().clone()];
         build
     }
 
     pub(crate) fn pick_detail(&self, rng: &mut impl Rng) -> [HallDetail; 4] {
-        let detail = [
-            self.detail.iter()
-                .filter(|o| o.is(Detail::Institution))
-                .choose(rng)
-                .unwrap()
-                .clone(),
-            self.detail.iter()
-                .filter(|o| o.is(Detail::Role))
-                .choose(rng)
-                .unwrap()
-                .clone(),
-            self.detail.iter()
-                .filter(|o| o.is(Detail::Location))
-                .choose(rng)
-                .unwrap()
-                .clone(),
-            self.detail.iter()
-                .filter(|o| o.is(Detail::Distro))
-                .choose(rng)
-                .unwrap()
-                .clone(),
-        ];
+        let detail = [self.detail.iter().filter(|o| o.is(Detail::Institution)).choose(rng).unwrap().clone(), self.detail.iter().filter(|o| o.is(Detail::Role)).choose(rng).unwrap().clone(), self.detail.iter().filter(|o| o.is(Detail::Location)).choose(rng).unwrap().clone(), self.detail.iter().filter(|o| o.is(Detail::Distro)).choose(rng).unwrap().clone()];
         detail
     }
 
     fn pick_card(&self, rng: &mut impl Rng, slot: &CardSlot) -> Option<HallCard> {
-        self.card.iter()
-            .filter(|o| o.matches(slot))
-            .choose(rng)
-            .cloned()
+        self.card.iter().filter(|o| o.matches(slot)).choose(rng).cloned()
     }
 
     pub(crate) fn pick_cards(&self, rng: &mut impl Rng, from: &[CardSlot], count: u8) -> Vec<HallCard> {
-        let slots = from
-            .choose_multiple(rng, count as usize)
-            .cloned()
-            .collect::<Vec<_>>();
-        slots.iter()
-            .filter_map(|slot| self.pick_card(rng, slot))
-            .collect()
+        let slots = from.choose_multiple(rng, count as usize).cloned().collect::<Vec<_>>();
+        slots.iter().filter_map(|slot| self.pick_card(rng, slot)).collect()
     }
 
     pub(crate) fn lookup_player_card(&self, player_card: &PlayerCard) -> Option<HallCard> {

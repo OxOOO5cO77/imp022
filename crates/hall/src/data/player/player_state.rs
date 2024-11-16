@@ -1,10 +1,10 @@
 use std::collections::{HashMap, VecDeque};
 
-use crate::data::hall::hall_card::HallCard;
-use crate::data::player::player_card::PlayerCard;
+use crate::data::hall::HallCard;
+use crate::data::player::PlayerCard;
 use rand::{seq::SliceRandom, Rng};
 use shared_data::game::card::ErgType;
-use shared_data::player::attribute::{AttributeKind, Attributes, AttributeValueType};
+use shared_data::player::attribute::{AttributeKind, AttributeValueType, Attributes};
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
 

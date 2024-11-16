@@ -4,8 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use shared_data::game::card::CardSlot;
 use shared_data::player::detail::{Detail, GeneralType, DetailNumberType, SpecificType};
-
-use crate::data::player::player_detail::PlayerDetail;
+use crate::data::player::PlayerDetail;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HallDetail {

@@ -1,9 +1,8 @@
+use crate::data::player::PlayerCard;
+use crate::message::CommandMessage;
 use shared_data::types::{GameIdType, PartType, SeedType};
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
-
-use crate::data::player::player_card::PlayerCard;
-use crate::message::CommandMessage;
 
 type PartsArray = [PartType; 8];
 

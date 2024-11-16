@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use pyri_tooltip::TooltipContent;
 use shared_data::player::attribute::AttributeValueType;
-use vagabond::data::vagabond_part::VagabondPart;
+use vagabond::data::VagabondPart;
 use warehouse::data::player_bio::PlayerBio;
 use crate::manager::{DataManager, WarehouseManager};
 use crate::network::client_gate::{GateCommand, GateIFace};

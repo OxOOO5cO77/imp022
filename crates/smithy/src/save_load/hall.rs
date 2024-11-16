@@ -1,12 +1,8 @@
-use crate::data::build::DbBuild;
-use crate::data::card::DbCard;
-use crate::data::detail::DbDetail;
 use crate::save_load::save_data_single;
-use hall::data::hall::hall_build::HallBuild;
-use hall::data::hall::hall_card::HallCard;
-use hall::data::hall::hall_detail::HallDetail;
 use shared_data::game::opcode::OpCode;
 use std::io::Error;
+use hall::data::hall::{HallBuild, HallCard, HallDetail};
+use crate::data::{DbBuild, DbCard, DbDetail};
 
 fn make_hall_card(card: &DbCard) -> HallCard {
     HallCard {
