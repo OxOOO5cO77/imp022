@@ -1,5 +1,5 @@
+use shared_data::player::attribute::AttributeKind;
 use crate::message::CommandMessage;
-use shared_data::game::card::Kind;
 use shared_data::types::GameIdType;
 
 use shared_net::sizedbuffers::Bufferable;
@@ -41,24 +41,24 @@ impl Bufferable for AttrKind {
     }
 }
 
-impl From<Kind> for AttrKind {
-    fn from(value: Kind) -> Self {
+impl From<AttributeKind> for AttrKind {
+    fn from(value: AttributeKind) -> Self {
         match value {
-            Kind::Analyze => AttrKind::Analyze,
-            Kind::Breach => AttrKind::Breach,
-            Kind::Compute => AttrKind::Compute,
-            Kind::Disrupt => AttrKind::Disrupt,
+            AttributeKind::Analyze => AttrKind::Analyze,
+            AttributeKind::Breach => AttrKind::Breach,
+            AttributeKind::Compute => AttrKind::Compute,
+            AttributeKind::Disrupt => AttrKind::Disrupt,
         }
     }
 }
 
-impl From<AttrKind> for Kind {
+impl From<AttrKind> for AttributeKind {
     fn from(value: AttrKind) -> Self {
         match value {
-            AttrKind::Analyze => Kind::Analyze,
-            AttrKind::Breach => Kind::Breach,
-            AttrKind::Compute => Kind::Compute,
-            AttrKind::Disrupt => Kind::Disrupt,
+            AttrKind::Analyze => AttributeKind::Analyze,
+            AttrKind::Breach => AttributeKind::Breach,
+            AttrKind::Compute => AttributeKind::Compute,
+            AttrKind::Disrupt => AttributeKind::Disrupt,
         }
     }
 }

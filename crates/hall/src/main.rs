@@ -140,15 +140,17 @@ fn recv_game_start(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>
     let temp_builder = PlayerBuilder::new(&user.parts, &context.data_manager);
     user.parts.clear();
 
+    let mut rng = thread_rng();
     let mut game_id = request.game_id;
     while game_id == 0 {
-        let new_id = thread_rng().random::<GameIdType>();
+        let new_id = rng.random::<GameIdType>();
         if !context.games.contains_key(&new_id) {
             game_id = new_id;
         }
     }
 
-    let game = context.games.entry(game_id).or_default();
+    let game = context.games.entry(game_id).or_insert(GameState::new(4, &mut rng));
+    user.enemy = game.pick_enemy();
     game.user_add(header.user, user);
     game.set_stage(GameStage::Building);
 
@@ -303,18 +305,21 @@ fn recv_game_choose_attr(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMe
 
     if let Some(game) = games.get_mut(&request.game_id) {
         if game.all_users_last_command(op::Command::GameChooseAttr) {
-            let (erg_roll, users) = game.split_borrow_for_resolve();
+            let (erg_roll, users, enemies) = game.split_borrow_for_resolve();
             for (id, user) in users.iter_mut() {
                 if let Some(player) = &user.player {
                     if let Some(kind) = user.state.resolve_kind {
-                        let (p_erg, a_erg) = GameState::resolve_matchups(erg_roll, &player.get_attr(kind), &[5, 5, 5, 5]);
-                        user.state.add_erg(kind, p_erg.iter().sum());
+                        let enemy = enemies.get(&user.enemy.unwrap()).unwrap();
+                        let enemy_attr = enemy.attributes.get(kind);
+                        let (p_erg, a_erg) = GameState::resolve_matchups(erg_roll, &player.attributes.get(kind), &enemy_attr);
+                        user.state.add_erg(kind, p_erg);
 
                         let player_state_view = PlayerStatePlayerView::from(&user.state);
                         let message = GameResourcesMessage {
                             player_state_view,
-                            p_erg: p_erg.into(),
-                            a_erg: a_erg.into(),
+                            enemy_attr,
+                            p_erg,
+                            a_erg,
                         };
                         if let Some((user_gate, user_vagabond)) = bx.gate_map.get(id) {
                             let _ = send_routed_message(message, *user_gate, *user_vagabond, &bx.local_tx);

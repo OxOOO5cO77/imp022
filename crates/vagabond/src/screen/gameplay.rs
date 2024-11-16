@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use hall::data::player::player_state::PlayerStatePlayerView;
 use hall::message::AttrKind;
 use shared_data::game::card::ErgType;
-use shared_data::player::build::ValueType;
+use shared_data::player::build::BuildValueType;
 use std::cmp::Ordering;
 
 pub struct GameplayPlugin;
@@ -16,7 +16,7 @@ impl Plugin for GameplayPlugin {
         app //
             .add_event::<UiEvent>()
             .add_systems(OnEnter(AppState::Gameplay), gameplay_enter)
-            .add_systems(Update, (gameplay_update, button_next_ui_update, player_ui_update, roll_ui_update).run_if(in_state(AppState::Gameplay)))
+            .add_systems(Update, (gameplay_update, button_next_ui_update, player_ui_update, roll_ui_update, enemy_ui_update).run_if(in_state(AppState::Gameplay)))
             .add_systems(Update, (button_next_update, button_attribute_update).after(button_next_ui_update).run_if(in_state(AppState::Gameplay)))
             .add_systems(OnExit(AppState::Gameplay), gameplay_exit);
     }
@@ -46,6 +46,9 @@ struct GameplayContext {
 
 #[derive(Component)]
 struct PhaseText;
+
+#[derive(Component)]
+struct EnemyAttrText(usize);
 
 #[derive(Component)]
 struct ErgText(usize);
@@ -95,8 +98,8 @@ impl AttributeButtonBundle {
             AttrKind::Disrupt => ("D", 3),
         }
     }
-    fn spawn(parent: &mut ChildBuilder, kind: AttrKind, values: &[[ValueType; 4]; 4], font_info: &FontInfo) {
-        parent.spawn(AttributeButtonBundle::new(kind)).with_children(|parent| {
+    fn spawn(parent: &mut ChildBuilder, kind: AttrKind, values: &[[BuildValueType; 4]; 4], font_info: &FontInfo) {
+        parent.spawn(Self::new(kind)).with_children(|parent| {
             let (header, row_idx) = Self::map_kind(kind);
             parent.spawn(text(header, font_info));
             for (idx, value) in values[row_idx].iter().enumerate() {
@@ -106,12 +109,41 @@ impl AttributeButtonBundle {
     }
 }
 
+#[derive(Bundle)]
+struct NextButtonBundle {
+    marker: NextButton,
+    button: ButtonBundle,
+}
+
+impl NextButtonBundle {
+    fn new() -> Self {
+        Self {
+            marker: NextButton,
+            button: ButtonBundle {
+                background_color: bevy::color::palettes::css::DARK_GRAY.into(),
+                style: Style {
+                    width: Val::Percent(90.0),
+                    height: Val::Percent(90.0),
+                    padding: UiRect::all(Val::Px(10.0)),
+                    ..default()
+                },
+                ..default()
+            },
+        }
+    }
+    fn spawn(parent: &mut ChildBuilder, font_info: &FontInfo) {
+        parent.spawn(Self::new()).with_children(|parent| {
+            parent.spawn(text("Next", font_info));
+        });
+    }
+}
+
 #[derive(Event)]
 enum UiEvent {
     PlayerState(PlayerStatePlayerView),
     ChooseAttr(Option<usize>),
     Roll([ErgType; 4]),
-    Resources([ErgType; 4], [ErgType; 4]),
+    Resources([ErgType; 4], [ErgType; 4], [BuildValueType; 4]),
 }
 
 #[derive(Component)]
@@ -231,18 +263,44 @@ fn gameplay_enter(
         },
         ..default()
     };
-    let machine_layout = NodeBundle {
+    let enemy_layout = NodeBundle {
         style: Style {
             display: Display::Grid,
             width: HUNDRED,
             height: HUNDRED,
             grid_template_columns: GridTrack::flex(1.0),
-            grid_template_rows: vec![GridTrack::px(86.0), GridTrack::px(308.0), GridTrack::px(450.0), GridTrack::px(100.0), GridTrack::flex(1.0)],
+            grid_template_rows: vec![GridTrack::px(130.0), GridTrack::px(290.0), GridTrack::px(312.0), GridTrack::flex(1.0)],
             ..default()
         },
         ..default()
     };
-
+    let enemy_attr_layout = NodeBundle {
+        style: Style {
+            display: Display::Grid,
+            width: HUNDRED,
+            height: HUNDRED,
+            grid_template_columns: RepeatedGridTrack::flex(4, 1.0),
+            column_gap: Val::Px(10.0),
+            grid_template_rows: GridTrack::flex(1.0),
+            padding: UiRect::new(Val::Px(66.0), Val::Px(66.0), Val::Px(32.0), Val::Px(32.0)),
+            ..default()
+        },
+        ..default()
+    };
+    let turn_control_layout = NodeBundle {
+        style: Style {
+            display: Display::Grid,
+            width: HUNDRED,
+            height: HUNDRED,
+            grid_template_columns: GridTrack::flex(1.0),
+            grid_template_rows: vec![GridTrack::flex(1.0), GridTrack::px(100.0)],
+            padding: UiRect::new(Val::Px(28.0), Val::Px(28.0), Val::Px(18.0), Val::Px(18.0)),
+            align_items: AlignItems::Center,
+            justify_items: JustifyItems::Center,
+            ..default()
+        },
+        ..default()
+    };
     let screen = ScreenBundle {
         screen: Screen,
         base: ImageBundle {
@@ -278,7 +336,7 @@ fn gameplay_enter(
             parent.spawn(center_layout).with_children(|parent| {
                 parent.spawn(roll_layout).with_children(|parent| {
                     parent.spawn(spacer(Color::NONE));
-                    parent.spawn(roll_values_layout.clone()).with_children(|parent| {
+                    parent.spawn(roll_values_layout).with_children(|parent| {
                         for i in 0..4 {
                             parent.spawn((RollText(i), text("-", &font_info_gray)));
                         }
@@ -301,24 +359,18 @@ fn gameplay_enter(
                     }
                 });
             });
-            parent.spawn(machine_layout).with_children(|parent| {
-                parent.spawn(roll_values_layout).with_children(|parent| {
-                    parent.spawn(spacer(Color::NONE));
+            parent.spawn(enemy_layout).with_children(|parent| {
+                parent.spawn(enemy_attr_layout).with_children(|parent| {
+                    for i in 0..4 {
+                        parent.spawn((EnemyAttrText(i), text("?", &font_info_gray)));
+                    }
                 });
                 parent.spawn(spacer(Color::NONE));
                 parent.spawn(spacer(Color::NONE));
-                parent.spawn((PhaseText, text("Phase", &font_info_green)));
-                parent
-                    .spawn((
-                        NextButton,
-                        ButtonBundle {
-                            background_color: bevy::color::palettes::css::DARK_GRAY.into(),
-                            ..default()
-                        },
-                    ))
-                    .with_children(|parent| {
-                        parent.spawn(text("Next", &font_info_black));
-                    });
+                parent.spawn(turn_control_layout).with_children(|parent| {
+                    parent.spawn((PhaseText, text("Phase", &font_info_green)));
+                    NextButtonBundle::spawn(parent, &font_info_black);
+                });
             });
         });
     });
@@ -419,7 +471,7 @@ fn roll_ui_update(
                     roll_text.sections[0].style.color = bevy::color::palettes::basic::GRAY.into();
                 }
             }
-            UiEvent::Resources(p_erg, a_erg) => {
+            UiEvent::Resources(p_erg, a_erg, _) => {
                 for (mut roll_text, RollText(index)) in roll_q.iter_mut() {
                     roll_text.sections[0].style.color = match p_erg[*index].cmp(&a_erg[*index]) {
                         Ordering::Less => bevy::color::palettes::basic::RED,
@@ -467,6 +519,32 @@ fn player_ui_update(
     }
 }
 
+type EnemyAttrTextParams<'a> = (&'a mut Text, &'a EnemyAttrText);
+
+fn enemy_ui_update(
+    // bevy system
+    mut receive: EventReader<UiEvent>,
+    mut text_q: Query<EnemyAttrTextParams>,
+) {
+    for ui_event in receive.read() {
+        match ui_event {
+            UiEvent::Roll(_) => {
+                for (mut attr_text, EnemyAttrText(_)) in text_q.iter_mut() {
+                    attr_text.sections[0].value = "?".to_string();
+                    attr_text.sections[0].style.color = bevy::color::palettes::basic::GRAY.into();
+                }
+            }
+            UiEvent::Resources(_, _, enemy_attr) => {
+                for (mut attr_text, EnemyAttrText(index)) in text_q.iter_mut() {
+                    attr_text.sections[0].value = enemy_attr[*index].to_string();
+                    attr_text.sections[0].style.color = bevy::color::palettes::basic::RED.into();
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
 fn gameplay_update(
     // bevy system
     mut gate: ResMut<GateIFace>,
@@ -495,7 +573,7 @@ fn gameplay_update(
         Ok(GateCommand::GameResources(gate_response)) => {
             println!("[RECV] GameResources => Play");
             send.send(UiEvent::PlayerState(gate_response.player_state_view));
-            send.send(UiEvent::Resources(gate_response.p_erg, gate_response.a_erg));
+            send.send(UiEvent::Resources(gate_response.p_erg, gate_response.a_erg, gate_response.enemy_attr));
             context.state = GameplayState::Play;
         }
         Ok(GateCommand::GamePlayCard(gate_response)) => {

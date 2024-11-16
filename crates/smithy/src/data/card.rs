@@ -1,14 +1,15 @@
 use crate::data::common::DbRarity;
 use shared_data::game::card::*;
+use shared_data::player::attribute::AttributeKind;
 use sqlx::postgres::PgRow;
 use sqlx::{Pool, Postgres, Row};
 
 pub(crate) struct DbCard {
     pub title: String,
     pub rarity: Rarity,
-    pub number: NumberType,
+    pub number: CardNumberType,
     pub set: SetType,
-    pub kind: Kind,
+    pub kind: AttributeKind,
     pub cost: ErgType,
     pub delay: DelayType,
     pub priority: PriorityType,
@@ -26,12 +27,12 @@ enum DbKind {
 }
 
 impl DbKind {
-    fn to_kind(&self) -> Kind {
+    fn to_kind(&self) -> AttributeKind {
         match self {
-            DbKind::Analyze => Kind::Analyze,
-            DbKind::Breach => Kind::Breach,
-            DbKind::Compute => Kind::Compute,
-            DbKind::Disrupt => Kind::Disrupt,
+            DbKind::Analyze => AttributeKind::Analyze,
+            DbKind::Breach => AttributeKind::Breach,
+            DbKind::Compute => AttributeKind::Compute,
+            DbKind::Disrupt => AttributeKind::Disrupt,
         }
     }
 }
@@ -40,7 +41,7 @@ fn row_to_card(row: &PgRow) -> DbCard {
     DbCard {
         title: row.get("title"),
         rarity: row.get::<DbRarity, _>("rarity").to_rarity(),
-        number: row.get::<i32, _>("number") as NumberType,
+        number: row.get::<i32, _>("number") as CardNumberType,
         set: row.get::<i32, _>("set") as SetType,
         kind: row.get::<DbKind, _>("kind").to_kind(),
         cost: row.get::<i32, _>("cost") as ErgType,
@@ -53,11 +54,7 @@ fn row_to_card(row: &PgRow) -> DbCard {
 
 pub(crate) async fn process_card(pool: &Pool<Postgres>) -> Result<Vec<DbCard>, sqlx::Error> {
     let rows = sqlx::query("SELECT * FROM card").fetch_all(pool).await?;
-    let cards = rows
-        .iter()
-        .map(row_to_card)
-        .collect::<Vec<DbCard>>()
-        ;
+    let cards = rows.iter().map(row_to_card).collect::<Vec<DbCard>>();
 
     Ok(cards)
 }

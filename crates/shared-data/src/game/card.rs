@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub type SetType = u8;
-pub type NumberType = u8;
+pub type CardNumberType = u8;
 pub type ErgType = u16;
 pub type PriorityType = u8;
 pub type DelayType = u8;
@@ -20,15 +20,7 @@ pub enum Rarity {
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub enum Slot {
     Any,
-    Number(NumberType),
-}
-
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
-pub enum Kind {
-    Analyze,
-    Breach,
-    Compute,
-    Disrupt,
+    Number(CardNumberType),
 }
 
 #[derive(Clone, Serialize, Deserialize)]

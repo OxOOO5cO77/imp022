@@ -2,14 +2,15 @@ use serde::{Deserialize, Serialize};
 
 use shared_data::game::card::*;
 use shared_data::game::opcode::OpCode;
+use shared_data::player::attribute::AttributeKind;
 use crate::data::player::player_card::PlayerCard;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HallCard {
     pub rarity: Rarity,
-    pub number: NumberType,
+    pub number: CardNumberType,
     pub set: SetType,
-    pub kind: Kind,
+    pub kind: AttributeKind,
     pub cost: ErgType,
     pub delay: DelayType,
     pub launch_code: Vec<OpCode>,

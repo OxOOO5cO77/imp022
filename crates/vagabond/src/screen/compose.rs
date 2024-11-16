@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use pyri_tooltip::TooltipContent;
-use shared_data::player::attribute::ValueType;
+use shared_data::player::attribute::AttributeValueType;
 use vagabond::data::vagabond_part::VagabondPart;
 use warehouse::data::player_bio::PlayerBio;
 use crate::manager::{DataManager, WarehouseManager};
@@ -99,7 +99,7 @@ enum InfoKind {
 #[derive(Resource, Default)]
 pub(crate) struct PlayerCache {
     bio: PlayerBio,
-    pub(crate) attr: [[ValueType;4];4],
+    pub(crate) attr: [[AttributeValueType;4];4],
 }
 
 const ATTRIB_SIZE: f32 = 48.0;
@@ -620,7 +620,7 @@ fn seed_from_holder(holder: &PlayerPartHolder) -> u64 {
     holder.0.as_ref().map(|o| o.seed).unwrap_or_default()
 }
 
-fn values_from_holder(holder: &PlayerPartHolder) -> [ValueType;4] {
+fn values_from_holder(holder: &PlayerPartHolder) -> [AttributeValueType;4] {
     holder.0.as_ref().map(|o| o.values).unwrap_or_default()
 }
 

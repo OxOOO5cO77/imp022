@@ -3,7 +3,7 @@
 use crate::data::common::extract_cards;
 use serde::Deserialize;
 use shared_data::game::card::CardSlot;
-use shared_data::player::build::{Build, CompanyType, MarketType, NumberType};
+use shared_data::player::build::{Build, CompanyType, MarketType, BuildNumberType};
 use shared_data::player::detail::{GeneralType, SpecificType};
 use sqlx::postgres::PgRow;
 use sqlx::{Pool, Postgres, Row};
@@ -11,7 +11,7 @@ use std::collections::HashMap;
 
 #[derive(Deserialize)]
 pub(crate) struct DbBuild {
-    pub number: NumberType,
+    pub number: BuildNumberType,
     pub build: Build,
     pub title: String,
     pub cards: Vec<CardSlot>,
@@ -37,7 +37,7 @@ fn compose_build(kind: DbBuildType, company: CompanyType, market: MarketType) ->
 
 fn row_to_build(row: &PgRow) -> DbBuild {
     DbBuild {
-        number: row.get::<i32, _>("number") as NumberType,
+        number: row.get::<i32, _>("number") as BuildNumberType,
         build: compose_build(row.get("kind"), row.get::<i32, _>("company") as CompanyType, row.get::<i32, _>("market") as SpecificType),
         title: row.get("title"),
         cards: extract_cards(row),

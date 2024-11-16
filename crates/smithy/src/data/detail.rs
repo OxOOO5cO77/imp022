@@ -1,6 +1,6 @@
 use crate::data::common::extract_cards;
 use shared_data::game::card::CardSlot;
-use shared_data::player::build::NumberType;
+use shared_data::player::build::BuildNumberType;
 use shared_data::player::detail::*;
 use sqlx::postgres::PgRow;
 use sqlx::{FromRow, Pool, Postgres, Row};
@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 #[derive(FromRow)]
 pub(crate) struct DbDetail {
-    pub number: NumberType,
+    pub number: BuildNumberType,
     pub detail: Detail,
     pub title: String,
     pub cards: Vec<CardSlot>,
@@ -34,7 +34,7 @@ fn compose_detail(kind: DbDetailType, general: GeneralType, specific: SpecificTy
 
 fn row_to_detail(row: &PgRow) -> DbDetail {
     DbDetail {
-        number: row.get::<i32, _>("number") as NumberType,
+        number: row.get::<i32, _>("number") as BuildNumberType,
         detail: compose_detail(row.get("kind"), row.get::<i32, _>("general") as GeneralType, row.get::<i32, _>("specific") as SpecificType),
         title: row.get("title"),
         cards: extract_cards(row),

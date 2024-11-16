@@ -4,11 +4,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::data::player::player_build::PlayerBuild;
 use shared_data::game::card::CardSlot;
-use shared_data::player::build::{Build, CompanyType, MarketType, NumberType};
+use shared_data::player::build::{Build, CompanyType, MarketType, BuildNumberType};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HallBuild {
-    pub number: NumberType,
+    pub number: BuildNumberType,
     pub build: Build,
     pub cards: Vec<CardSlot>,
 }

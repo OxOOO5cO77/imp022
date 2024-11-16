@@ -2,8 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
-pub type NumberType = u8;
-pub type ValueType = u8;
+pub type BuildNumberType = u8;
+pub type BuildValueType = u8;
 
 pub type CompanyType = u8;
 pub type MarketType = u8;

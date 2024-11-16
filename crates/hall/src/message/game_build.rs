@@ -107,7 +107,7 @@ mod test {
         for i in 0..CARD_COUNT {
             orig.deck.push(PlayerCard {
                 rarity: Legendary,
-                number: i as card::NumberType,
+                number: i as card::CardNumberType,
                 set: 1,
             });
         }

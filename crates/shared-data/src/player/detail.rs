@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-pub type NumberType = u8;
-pub type ValueType = u8;
+pub type DetailNumberType = u8;
+pub type DetailValueType = u8;
 
 pub type GeneralType = u8;
 pub type SpecificType = u8;

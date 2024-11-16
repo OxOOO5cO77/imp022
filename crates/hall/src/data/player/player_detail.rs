@@ -1,7 +1,7 @@
 use std::mem::size_of;
 
 use serde::{Deserialize, Serialize};
-use shared_data::player::detail::{Detail, GeneralType, NumberType, SpecificType, ValueType};
+use shared_data::player::detail::{Detail, GeneralType, DetailNumberType, SpecificType, DetailValueType};
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 
@@ -10,9 +10,9 @@ pub type PackedDetailType = u64;
 #[derive(Default, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq, Debug))]
 pub struct PlayerDetail {
-    pub number: NumberType,
+    pub number: DetailNumberType,
     pub detail: Detail,
-    pub value: ValueType,
+    pub value: DetailValueType,
 }
 
 
@@ -73,9 +73,9 @@ impl PlayerDetail {
         let packed_number = (packed >> SHIFT_FOR_NUMBER) & MASK_FOR_NUMBER;
         let packed_value = (packed >> SHIFT_FOR_VALUE) & MASK_FOR_VALUE;
         Self {
-            number: packed_number as NumberType,
+            number: packed_number as DetailNumberType,
             detail: Self::unpack_detail(packed_build),
-            value: packed_value as ValueType,
+            value: packed_value as DetailValueType,
         }
     }
 }

@@ -7,7 +7,7 @@ use crate::data::vagabond_detail::VagabondDetail;
 #[derive(Default, Clone)]
 pub struct VagabondPart {
     pub seed: SeedType,
-    pub values: [attribute::ValueType; 4],
+    pub values: [attribute::AttributeValueType; 4],
     pub build: [VagabondBuild; 4],
     pub detail: [VagabondDetail; 4],
 }

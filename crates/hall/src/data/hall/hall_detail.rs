@@ -3,13 +3,13 @@ use std::mem::discriminant;
 use serde::{Deserialize, Serialize};
 
 use shared_data::game::card::CardSlot;
-use shared_data::player::detail::{Detail, GeneralType, NumberType, SpecificType};
+use shared_data::player::detail::{Detail, GeneralType, DetailNumberType, SpecificType};
 
 use crate::data::player::player_detail::PlayerDetail;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HallDetail {
-    pub number: NumberType,
+    pub number: DetailNumberType,
     pub detail: Detail,
     pub cards: Vec<CardSlot>,
 }

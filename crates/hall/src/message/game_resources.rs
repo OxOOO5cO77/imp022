@@ -1,12 +1,14 @@
 use crate::data::player::player_state::PlayerStatePlayerView;
 use crate::message::CommandMessage;
 use shared_data::game::card::ErgType;
+use shared_data::player::attribute::AttributeValueType;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameResourcesMessage {
     pub player_state_view: PlayerStatePlayerView,
+    pub enemy_attr: [AttributeValueType; 4],
     pub p_erg: [ErgType; 4],
     pub a_erg: [ErgType; 4],
 }
@@ -18,23 +20,26 @@ impl CommandMessage for GameResourcesMessage {
 impl Bufferable for GameResourcesMessage {
     fn push_into(&self, buf: &mut VSizedBuffer) {
         self.player_state_view.push_into(buf);
+        self.enemy_attr.push_into(buf);
         self.p_erg.push_into(buf);
         self.a_erg.push_into(buf);
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
         let player_state_view = PlayerStatePlayerView::pull_from(buf);
+        let enemy_attr = <[AttributeValueType; 4]>::pull_from(buf);
         let p_erg = <[ErgType; 4]>::pull_from(buf);
         let a_erg = <[ErgType; 4]>::pull_from(buf);
         Self {
             player_state_view,
+            enemy_attr,
             p_erg,
             a_erg,
         }
     }
 
     fn size_in_buffer(&self) -> usize {
-        self.player_state_view.size_in_buffer() + self.p_erg.size_in_buffer() + self.a_erg.size_in_buffer()
+        self.player_state_view.size_in_buffer() + self.enemy_attr.size_in_buffer() + self.p_erg.size_in_buffer() + self.a_erg.size_in_buffer()
     }
 }
 
@@ -49,6 +54,7 @@ mod test {
     fn test_response() {
         let orig = GameResourcesMessage {
             player_state_view: PlayerStatePlayerView::default(),
+            enemy_attr: [4, 5, 6, 5],
             p_erg: [0, 6, 0, 2],
             a_erg: [5, 0, 1, 0],
         };

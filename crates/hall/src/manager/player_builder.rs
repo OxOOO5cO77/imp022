@@ -3,6 +3,7 @@ use std::iter::zip;
 
 use rand::prelude::*;
 
+use crate::manager::data_manager::DataManager;
 use hall::data::hall::hall_build::HallBuild;
 use hall::data::hall::hall_card::HallCard;
 use hall::data::hall::hall_detail::HallDetail;
@@ -11,37 +12,24 @@ use hall::data::player::player_card::PlayerCard;
 use hall::data::player::player_detail::PlayerDetail;
 use hall::data::player::player_part::PlayerPart;
 use hall::data::player::Player;
-use shared_data::player::attribute::{Attributes, ValueType};
+use hall::data::util;
+use shared_data::player::attribute::{Attributes, AttributeValueType};
 use shared_data::types::{PartType, SeedType};
-
-use crate::manager::data_manager::DataManager;
 
 #[derive(Clone)]
 pub(crate) struct PlayerPartBuilder {
     seed: u64,
-    pub(crate) values: [ValueType; 4],
+    pub(crate) values: [AttributeValueType; 4],
     pub(crate) build: [HallBuild; 4],
     pub(crate) detail: [HallDetail; 4],
 }
 
 impl PlayerPartBuilder {
-    fn pick_values(rng: &mut impl Rng) -> [ValueType; 4] {
-        let v1 = rng.gen_range(1..=9);
-        let v2 = rng.gen_range(1..=9);
-        let remain = 20 - v1 - v2;
-        let v3_lower = remain.max(10) - 9;
-        let v3_upper = (remain - 1).min(9);
-        let v3 = rng.gen_range(v3_lower..=v3_upper);
-        let v4 = remain - v3;
-
-        [v1, v2, v3, v4]
-    }
-
     pub(crate) fn new(seed: u64, dm: &DataManager) -> Self {
         let mut rng = StdRng::seed_from_u64(seed);
         PlayerPartBuilder {
             seed,
-            values: Self::pick_values(&mut rng),
+            values: util::pick_values(&mut rng),
             build: dm.pick_build(&mut rng),
             detail: dm.pick_detail(&mut rng),
         }
@@ -88,7 +76,7 @@ impl PlayerBuilder {
 
         let player = Player {
             seed,
-            attributes: Attributes::from_array([self.access.values, self.breach.values, self.compute.values, self.disrupt.values]),
+            attributes: Attributes::from_arrays([self.access.values, self.breach.values, self.compute.values, self.disrupt.values]),
             build: Self::build_from_parts(&self.build, &self.build_values),
             detail: Self::detail_from_parts(&self.detail, &self.detail_values),
             deck,
@@ -136,9 +124,6 @@ impl PlayerBuilder {
 
 #[cfg(test)]
 mod player_builder_test {
-    use rand::prelude::StdRng;
-    use rand::SeedableRng;
-
     use crate::manager::data_manager::DataManager;
     use crate::manager::player_builder::{PlayerBuilder, PlayerPartBuilder};
 
@@ -166,15 +151,6 @@ mod player_builder_test {
 
         assert_eq!(player.unwrap().deck.len(), 40);
 
-        Ok(())
-    }
-
-    #[test]
-    fn test_pick_values() -> Result<(), String> {
-        let mut rng = StdRng::seed_from_u64(0x1234567890ABCDEF);
-
-        let values = PlayerPartBuilder::pick_values(&mut rng);
-        assert_eq!(values.iter().sum::<u8>(), 20);
         Ok(())
     }
 }

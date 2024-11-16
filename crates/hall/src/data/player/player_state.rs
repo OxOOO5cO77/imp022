@@ -3,8 +3,8 @@ use std::collections::{HashMap, VecDeque};
 use crate::data::hall::hall_card::HallCard;
 use crate::data::player::player_card::PlayerCard;
 use rand::{seq::SliceRandom, Rng};
-use shared_data::game::card::{ErgType, Kind};
-use shared_data::player::attribute::{Attributes, ValueType};
+use shared_data::game::card::ErgType;
+use shared_data::player::attribute::{AttributeKind, Attributes, AttributeValueType};
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
 
@@ -14,10 +14,10 @@ pub struct PlayerState {
     deck: VecDeque<HallCard>,
     heap: Vec<HallCard>,
     hand: Vec<HallCard>,
-    erg: HashMap<Kind, ErgType>,
+    erg: HashMap<AttributeKind, ErgType>,
     play: Vec<HallCard>,
     pub last_command: Option<op::Command>,
-    pub resolve_kind: Option<Kind>,
+    pub resolve_kind: Option<AttributeKind>,
 }
 
 impl PlayerState {
@@ -34,7 +34,7 @@ impl PlayerState {
     }
 
     fn fill_hand(&mut self) {
-        let mut kinds = vec![Kind::Analyze, Kind::Breach, Kind::Compute, Kind::Disrupt];
+        let mut kinds = vec![AttributeKind::Analyze, AttributeKind::Breach, AttributeKind::Compute, AttributeKind::Disrupt];
         for card in &self.hand {
             if let Some(index) = kinds.iter().position(|kind| card.kind == *kind) {
                 kinds.remove(index);
@@ -65,20 +65,27 @@ impl PlayerState {
         false
     }
 
-    pub fn add_erg(&mut self, kind: Kind, erg: ErgType) {
-        let entry = self.erg.entry(kind).or_insert(0);
-        *entry += erg;
+    const KIND_MAP: [AttributeKind; 4] = [AttributeKind::Analyze, AttributeKind::Breach, AttributeKind::Compute, AttributeKind::Disrupt];
+
+    pub fn add_erg(&mut self, kind: AttributeKind, erg_array: ErgArray) {
+        for (idx, erg) in erg_array.iter().enumerate() {
+            let entry = self.erg.entry(Self::KIND_MAP[idx]).or_insert(0);
+            *entry += erg;
+            if kind == Self::KIND_MAP[idx] {
+                *entry += 1;
+            }
+        }
     }
 }
 
 type DeckCountType = u8;
-type AttributeArray = [[ValueType; 4]; 4];
+type AttributeArrays = [[AttributeValueType; 4]; 4];
 type ErgArray = [ErgType; 4];
 
 #[derive(Default)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct PlayerStatePlayerView {
-    pub attr: AttributeArray,
+    pub attr: AttributeArrays,
     pub deck: DeckCountType,
     pub heap: Vec<PlayerCard>,
     pub hand: Vec<PlayerCard>,
@@ -88,17 +95,11 @@ pub struct PlayerStatePlayerView {
 impl From<&PlayerState> for PlayerStatePlayerView {
     fn from(player_state: &PlayerState) -> Self {
         Self {
-            attr: player_state.attr.to_array(),
+            attr: player_state.attr.to_arrays(),
             deck: player_state.deck.len() as DeckCountType,
             heap: player_state.heap.iter().map(HallCard::to_player_card).collect(),
             hand: player_state.hand.iter().map(HallCard::to_player_card).collect(),
-            erg: [
-                *player_state.erg.get(&Kind::Analyze).unwrap_or(&0),
-                *player_state.erg.get(&Kind::Breach).unwrap_or(&0),
-                *player_state.erg.get(&Kind::Compute).unwrap_or(&0),
-                *player_state.erg.get(&Kind::Disrupt).unwrap_or(&0),
-            ],
-
+            erg: [*player_state.erg.get(&AttributeKind::Analyze).unwrap_or(&0), *player_state.erg.get(&AttributeKind::Breach).unwrap_or(&0), *player_state.erg.get(&AttributeKind::Compute).unwrap_or(&0), *player_state.erg.get(&AttributeKind::Disrupt).unwrap_or(&0)],
         }
     }
 }
@@ -113,7 +114,7 @@ impl Bufferable for PlayerStatePlayerView {
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let attr = AttributeArray::pull_from(buf);
+        let attr = AttributeArrays::pull_from(buf);
         let deck = DeckCountType::pull_from(buf);
         let heap = Vec::<PlayerCard>::pull_from(buf);
         let hand = Vec::<PlayerCard>::pull_from(buf);
@@ -150,7 +151,7 @@ mod tests {
         };
 
         let orig_view = PlayerStatePlayerView {
-            attr: [[1,2,3,4],[1,2,3,4],[1,2,3,4],[1,2,3,4]],
+            attr: [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]],
             deck: 32,
             heap: vec![dummy_card; 12],
             hand: vec![dummy_card; 5],

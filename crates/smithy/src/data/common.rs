@@ -1,5 +1,5 @@
 use shared_data::game::card::{CardSlot, Rarity, Set, SetType, Slot};
-use shared_data::player::build::NumberType;
+use shared_data::player::build::BuildNumberType;
 use sqlx::postgres::PgRow;
 use sqlx::Row;
 
@@ -36,7 +36,7 @@ impl DbCardSlot {
         CardSlot(
             Set(self.set as SetType),
             self.rarity.to_rarity(),
-            if self.number == 0 { Slot::Any } else { Slot::Number(self.number as NumberType) },
+            if self.number == 0 { Slot::Any } else { Slot::Number(self.number as BuildNumberType) },
         )
     }
 }

@@ -13,7 +13,7 @@ pub type PackedCardType = u16;
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct PlayerCard {
     pub rarity: Rarity,
-    pub number: card::NumberType,
+    pub number: card::CardNumberType,
     pub set: card::SetType,
 }
 
@@ -47,7 +47,7 @@ impl PlayerCard {
         let unpacked_set = (packed >> SHIFT_FOR_SET) & MASK_FOR_SET;
         let unpacked_rarity = (packed >> SHIFT_FOR_RARITY) & MASK_FOR_RARITY;
         Self {
-            number: unpacked_number as card::NumberType,
+            number: unpacked_number as card::CardNumberType,
             set: unpacked_set as card::SetType,
             rarity: match unpacked_rarity {
                 1 => Rarity::Uncommon,

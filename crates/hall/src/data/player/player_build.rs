@@ -2,7 +2,7 @@ use std::mem::size_of;
 
 use serde::{Deserialize, Serialize};
 
-use shared_data::player::build::{Build, NumberType, MarketType, CompanyType, ValueType};
+use shared_data::player::build::{Build, BuildNumberType, MarketType, CompanyType, BuildValueType};
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 
@@ -11,9 +11,9 @@ pub type PackedBuildType = u32;
 #[derive(Default, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq, Debug))]
 pub struct PlayerBuild {
-    pub number: NumberType,
+    pub number: BuildNumberType,
     pub build: Build,
-    pub value: ValueType,
+    pub value: BuildValueType,
 }
 
 const BITS_FOR_BUILD: PackedBuildType = 16;
@@ -73,9 +73,9 @@ impl PlayerBuild {
         let packed_number = (packed >> SHIFT_FOR_NUMBER) & MASK_FOR_NUMBER;
         let packed_value = (packed >> SHIFT_FOR_VALUE) & MASK_FOR_VALUE;
         Self {
-            number: packed_number as NumberType,
+            number: packed_number as BuildNumberType,
             build: Self::unpack_build(packed_build),
-            value: packed_value as ValueType,
+            value: packed_value as BuildValueType,
         }
     }
 }

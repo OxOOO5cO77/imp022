@@ -1,23 +1,25 @@
 use crate::data::game::game_stage::{GamePhase, GameStage};
-use crate::data::game::{GameMachine, GameUser};
+use crate::data::game::GameUser;
 use rand::{distr::Uniform, rngs::ThreadRng, Rng};
 use shared_data::game::card::ErgType;
-use shared_data::player::attribute::ValueType;
+use shared_data::player::attribute::{Attributes, AttributeValueType};
 use shared_data::types::{AuthType, UserIdType};
 
+use crate::data::game::game_enemy::GameEnemy;
+use crate::data::util;
 use shared_net::op;
 use std::cmp::Ordering;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::iter::zip;
 
-type CpuType = u128;
+pub(crate) type EnemyIdType = u128;
 type TickType = u32;
 
 #[derive(Default)]
 pub struct GameState {
     users: HashMap<UserIdType, GameUser>,
-    cpus: HashMap<CpuType, GameMachine>,
+    enemies: HashMap<EnemyIdType, GameEnemy>,
     current_tick: TickType,
     stage: GameStage,
     pub erg_roll: [ErgType; 4],
@@ -25,6 +27,20 @@ pub struct GameState {
 }
 
 impl GameState {
+    pub fn new(num_enemies: usize, mut rng: &mut impl Rng) -> Self {
+        //temp
+        let mut enemies = HashMap::new();
+        for i in 1..=num_enemies {
+            let attributes = Attributes::from_arrays([util::pick_values(&mut rng), util::pick_values(&mut rng), util::pick_values(&mut rng), util::pick_values(&mut rng)]);
+            enemies.insert(i as EnemyIdType, GameEnemy::new(attributes));
+        }
+
+        Self {
+            enemies,
+            ..Default::default()
+        }
+    }
+
     pub fn get_stage(&self) -> GameStage {
         self.stage
     }
@@ -92,6 +108,10 @@ impl GameState {
         };
     }
 
+    pub fn pick_enemy(&mut self) -> Option<EnemyIdType> {
+        self.enemies.keys().next().cloned()
+    }
+
     pub fn is_empty(&self) -> bool {
         self.users.is_empty()
     }
@@ -100,7 +120,7 @@ impl GameState {
         self.current_tick += 1;
 
         self.users.values_mut().for_each(|user| user.machine.tick());
-        self.cpus.values_mut().for_each(|machine| machine.tick());
+        self.enemies.values_mut().for_each(|enemy| enemy.machine.tick());
     }
 
     pub fn roll(&mut self) {
@@ -110,11 +130,11 @@ impl GameState {
         }
     }
 
-    pub fn split_borrow_for_resolve(&mut self) -> (&[ErgType; 4], &mut HashMap<UserIdType, GameUser>) {
-        (&self.erg_roll, &mut self.users)
+    pub fn split_borrow_for_resolve(&mut self) -> (&[ErgType; 4], &mut HashMap<UserIdType, GameUser>, &mut HashMap<EnemyIdType, GameEnemy>) {
+        (&self.erg_roll, &mut self.users, &mut self.enemies)
     }
 
-    pub fn resolve_matchups(erg_roll: &[ErgType], p1: &[ValueType; 4], p2: &[ValueType; 4]) -> ([ErgType; 4], [ErgType; 4]) {
+    pub fn resolve_matchups(erg_roll: &[ErgType], p1: &[AttributeValueType; 4], p2: &[AttributeValueType; 4]) -> ([ErgType; 4], [ErgType; 4]) {
         let matchups = zip(erg_roll, zip(p1, p2)).collect::<Vec<_>>();
 
         let mut p_alloc = [0, 0, 0, 0];

@@ -8,7 +8,7 @@ use shared_net::VSizedBuffer;
 use crate::data::player::player_build::PlayerBuild;
 use crate::data::player::player_detail::PlayerDetail;
 
-type AttributeArray = [attribute::ValueType; 4];
+type AttributeArray = [attribute::AttributeValueType; 4];
 type BuildArray = [PlayerBuild; 4];
 type DetailArray = [PlayerDetail; 4];
 
