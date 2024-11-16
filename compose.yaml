@@ -21,6 +21,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      courtyard:
+        condition: service_started
   bazaar:
     image: registry.impending.org:5050/bazaar:latest
     command: courtyard:12345
@@ -29,6 +31,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      courtyard:
+        condition: service_started
   courtyard:
     image: registry.impending.org:5050/courtyard:latest
     ports:
@@ -38,20 +42,35 @@ services:
     command: courtyard:12345
     ports:
       - "23450:23450"
+    depends_on:
+      courtyard:
+        condition: service_started
   forum:
     image: registry.impending.org:5050/forum:latest
     command: courtyard:12345
+    depends_on:
+      courtyard:
+        condition: service_started
   gate:
     image: registry.impending.org:5050/gate:latest
     command: courtyard:12345
     ports:
       - "23451:23451"
+    depends_on:
+      courtyard:
+        condition: service_started
   hall:
     image: registry.impending.org:5050/hall:latest
     command: courtyard:12345
+    depends_on:
+      courtyard:
+        condition: service_started
   jail:
     image: registry.impending.org:5050/jail:latest
     command: courtyard:12345
+    depends_on:
+      courtyard:
+        condition: service_started
   lookout:
     image: registry.impending.org:5050/lookout:latest
     command: courtyard:12345
@@ -60,6 +79,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      courtyard:
+        condition: service_started
   warehouse:
     image: registry.impending.org:5050/warehouse:latest
     ports:
