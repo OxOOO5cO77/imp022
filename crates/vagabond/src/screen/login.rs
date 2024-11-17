@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 use shared_data::types::AuthType;
+use std::env;
 use std::mem::discriminant;
 use tokio::sync::mpsc;
 
@@ -45,8 +46,12 @@ fn login_ui_update(
     mut drawbridge: ResMut<DrawbridgeIFace>,
 ) {
     egui::Window::new("Login").show(egui_context.ctx(), |ui| {
+        let focus = ui.memory(|mem| mem.focused());
         ui.label("User");
         let username = ui.add(egui::TextEdit::singleline(&mut drawbridge.username));
+        if focus.is_none() {
+            username.request_focus();
+        }
         let enter_pressed = ui.input(|i| i.key_pressed(egui::Key::Enter));
         let mut password_focus = false;
         if username.lost_focus() && enter_pressed {
@@ -70,9 +75,13 @@ fn drawbridge_enter(
 ) {
     let (to_drawbridge_tx, to_drawbridge_rx) = mpsc::unbounded_channel();
     let (from_drawbridge_tx, from_drawbridge_rx) = mpsc::unbounded_channel();
+
+    let username = env::var("VAGABOND_USERNAME").unwrap_or("".to_string());
+    let password = env::var("VAGABOND_PASSWORD").unwrap_or("".to_string());
+
     let drawbridge = DrawbridgeIFace {
-        username: "".to_string(),
-        password: "".to_string(),
+        username,
+        password,
         dtx: to_drawbridge_tx,
         drx: from_drawbridge_rx,
     };
