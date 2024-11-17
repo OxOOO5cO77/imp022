@@ -2,6 +2,7 @@ use std::mem::size_of;
 
 use serde::{Deserialize, Serialize};
 
+use crate::data::hall::HallCard;
 use shared_data::game::card;
 use shared_data::game::card::Rarity;
 use shared_net::sizedbuffers::Bufferable;
@@ -53,11 +54,23 @@ impl PlayerCard {
                 1 => Rarity::Uncommon,
                 2 => Rarity::Rare,
                 3 => Rarity::Legendary,
-                _ => Rarity::Common
+                _ => Rarity::Common,
             },
         }
     }
-    pub fn size_in_bytes() -> usize {size_of::<PackedCardType>()}
+    pub fn size_in_bytes() -> usize {
+        size_of::<PackedCardType>()
+    }
+}
+
+impl From<&HallCard> for PlayerCard {
+    fn from(card: &HallCard) -> PlayerCard {
+        PlayerCard {
+            rarity: card.rarity,
+            number: card.number,
+            set: card.set,
+        }
+    }
 }
 
 impl Bufferable for PlayerCard {
@@ -76,9 +89,9 @@ impl Bufferable for PlayerCard {
 
 #[cfg(test)]
 mod test {
+    use crate::data::player::player_card::PlayerCard;
     use shared_data::game::card::Rarity;
     use shared_net::VSizedBuffer;
-    use crate::data::player::player_card::PlayerCard;
 
     #[test]
     fn test_player_card() {

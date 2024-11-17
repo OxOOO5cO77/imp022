@@ -1,11 +1,13 @@
+use crate::manager::DataManager;
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::compose::PlayerCache;
 use crate::system::app_state::AppState;
-use crate::system::ui::{font_size, font_size_color, screen_exit, text, FontInfo, Screen, ScreenBundle, HUNDRED, ZERO};
+use crate::system::ui::{font_size, font_size_color, screen_exit, text, text_centered, FontInfo, Screen, ScreenBundle, HUNDRED, ZERO};
 use bevy::prelude::*;
+use hall::data::game::GameMachinePlayerView;
 use hall::data::player::player_state::PlayerStatePlayerView;
 use hall::message::AttrKind;
-use shared_data::game::card::ErgType;
+use shared_data::game::card::{DelayType, ErgType};
 use shared_data::player::build::BuildValueType;
 use std::cmp::Ordering;
 
@@ -16,7 +18,7 @@ impl Plugin for GameplayPlugin {
         app //
             .add_event::<UiEvent>()
             .add_systems(OnEnter(AppState::Gameplay), gameplay_enter)
-            .add_systems(Update, (gameplay_update, button_next_ui_update, player_ui_update, roll_ui_update, enemy_ui_update).run_if(in_state(AppState::Gameplay)))
+            .add_systems(Update, (gameplay_update, button_next_ui_update, local_ui_update, roll_ui_update, remote_ui_update, machine_ui_update).run_if(in_state(AppState::Gameplay)))
             .add_systems(Update, (button_next_update, button_attribute_update).after(button_next_ui_update).run_if(in_state(AppState::Gameplay)))
             .add_systems(OnExit(AppState::Gameplay), gameplay_exit);
     }
@@ -48,7 +50,7 @@ struct GameplayContext {
 struct PhaseText;
 
 #[derive(Component)]
-struct EnemyAttrText(usize);
+struct RemoteAttrText(usize);
 
 #[derive(Component)]
 struct ErgText(usize);
@@ -101,9 +103,9 @@ impl AttributeButtonBundle {
     fn spawn(parent: &mut ChildBuilder, kind: AttrKind, values: &[[BuildValueType; 4]; 4], font_info: &FontInfo) {
         parent.spawn(Self::new(kind)).with_children(|parent| {
             let (header, row_idx) = Self::map_kind(kind);
-            parent.spawn(text(header, font_info));
+            parent.spawn(text_centered(header, font_info));
             for (idx, value) in values[row_idx].iter().enumerate() {
-                parent.spawn((AttributeText(row_idx, idx), text(value.to_string(), font_info)));
+                parent.spawn((AttributeText(row_idx, idx), text_centered(value.to_string(), font_info)));
             }
         });
     }
@@ -133,9 +135,184 @@ impl NextButtonBundle {
     }
     fn spawn(parent: &mut ChildBuilder, font_info: &FontInfo) {
         parent.spawn(Self::new()).with_children(|parent| {
-            parent.spawn(text("Next", font_info));
+            parent.spawn(text_centered("Next", font_info));
         });
     }
+}
+
+#[derive(Component)]
+struct MachineNameText;
+
+#[derive(Component)]
+struct MachineStatText(usize);
+
+#[derive(Component)]
+struct MachineCurrentProgramText;
+
+#[derive(Component)]
+struct MachineQueueItem(DelayType);
+
+#[derive(Component)]
+struct MachineProcessText(usize);
+
+#[derive(Bundle)]
+struct MachineBundle {
+    node: NodeBundle,
+    machine_kind: MachineKind,
+}
+
+impl MachineBundle {
+    fn new(machine_kind: MachineKind, border_color: Srgba) -> Self {
+        Self {
+            node: NodeBundle {
+                style: Style {
+                    display: Display::Grid,
+                    width: HUNDRED,
+                    height: HUNDRED,
+                    grid_template_columns: GridTrack::flex(1.0),
+                    grid_template_rows: vec![GridTrack::flex(1.0), GridTrack::flex(4.0), GridTrack::flex(2.0), GridTrack::flex(6.0)],
+                    border: UiRect::all(Val::Px(2.0)),
+                    ..default()
+                },
+                background_color: bevy::color::palettes::basic::SILVER.into(),
+                border_color: border_color.into(),
+                ..default()
+            },
+            machine_kind,
+        }
+    }
+    fn spawn(parent: &mut ChildBuilder, machine_kind: MachineKind, name: impl Into<String>, border_color: Srgba, font_info: &FontInfo) {
+        let machine_layout = NodeBundle {
+            style: Style {
+                padding: UiRect::new(Val::Px(40.0), Val::Px(40.0), Val::Px(10.0), Val::Px(10.0)),
+                ..default()
+            },
+            ..default()
+        };
+
+        let stats_layout = NodeBundle {
+            style: Style {
+                display: Display::Grid,
+                width: HUNDRED,
+                height: HUNDRED,
+                grid_template_columns: vec![GridTrack::flex(2.0), GridTrack::flex(1.0), GridTrack::flex(1.0)],
+                grid_template_rows: RepeatedGridTrack::flex(2, 1.0),
+                ..default()
+            },
+            ..default()
+        };
+
+        let stats_graphic = NodeBundle {
+            style: Style {
+                width: Val::Percent(90.0),
+                height: Val::Percent(90.0),
+                grid_row: GridPlacement::span(2),
+                align_self: AlignSelf::Center,
+                justify_self: JustifySelf::Center,
+                ..default()
+            },
+            background_color: border_color.into(),
+            ..default()
+        };
+
+        let current_layout = NodeBundle {
+            style: Style {
+                display: Display::Grid,
+                width: HUNDRED,
+                height: HUNDRED,
+                grid_template_columns: GridTrack::flex(1.0),
+                grid_template_rows: RepeatedGridTrack::flex(2, 1.0),
+                ..default()
+            },
+            ..default()
+        };
+
+        let queue_layout = NodeBundle {
+            style: Style {
+                display: Display::Grid,
+                width: Val::Percent(80.0),
+                height: HUNDRED,
+                grid_template_columns: RepeatedGridTrack::flex(10, 1.0),
+                column_gap: Val::Px(10.0),
+                grid_template_rows: GridTrack::flex(1.0),
+                ..default()
+            },
+            ..default()
+        };
+
+        let queue_item = NodeBundle {
+            style: Style {
+                display: Display::Grid,
+                width: HUNDRED,
+                height: HUNDRED,
+                border: UiRect::all(Val::Px(2.0)),
+                ..default()
+            },
+            background_color: Color::WHITE.into(),
+            border_color: Color::BLACK.into(),
+            ..default()
+        };
+
+        let process_layout = NodeBundle {
+            style: Style {
+                display: Display::Grid,
+                width: HUNDRED,
+                height: Val::Percent(80.0),
+                grid_template_columns: GridTrack::flex(1.0),
+                grid_template_rows: vec![GridTrack::flex(1.5), GridTrack::flex(1.0), GridTrack::flex(1.0), GridTrack::flex(1.0), GridTrack::flex(1.0)],
+                align_items: AlignItems::End,
+                ..default()
+            },
+            ..default()
+        };
+
+        parent.spawn(machine_layout).with_children(|parent| {
+            parent.spawn(Self::new(machine_kind, border_color)).with_children(|parent| {
+                parent.spawn(NodeBundle::default()).with_children(|parent| {
+                    parent.spawn((machine_kind, MachineNameText, text(name, AlignSelf::Center, JustifySelf::Start, font_info)));
+                });
+
+                parent.spawn(stats_layout).with_children(|parent| {
+                    parent.spawn(stats_graphic);
+                    parent.spawn((machine_kind, MachineStatText(0), text_centered("[1] meow", font_info)));
+                    parent.spawn((machine_kind, MachineStatText(1), text_centered("[2] meow", font_info)));
+                    parent.spawn((machine_kind, MachineStatText(2), text_centered("[3] meow", font_info)));
+                    parent.spawn((machine_kind, MachineStatText(3), text_centered("[4] meow", font_info)));
+                });
+                parent.spawn(current_layout).with_children(|parent| {
+                    parent.spawn(NodeBundle::default()).with_children(|parent| {
+                        parent.spawn((machine_kind, MachineCurrentProgramText, text(" v- <idle>", AlignSelf::Start, JustifySelf::Center, font_info)));
+                    });
+                    parent.spawn(queue_layout).with_children(|parent| {
+                        for i in 0..10 {
+                            parent.spawn((machine_kind, MachineQueueItem(i), queue_item.clone()));
+                        }
+                    });
+                });
+                parent.spawn(process_layout).with_children(|parent| {
+                    parent.spawn(text_centered("--Running Processes--", font_info));
+                    parent.spawn(NodeBundle::default()).with_children(|parent| {
+                        parent.spawn((machine_kind, MachineProcessText(0), text("?", AlignSelf::Start, JustifySelf::Center, font_info)));
+                    });
+                    parent.spawn(NodeBundle::default()).with_children(|parent| {
+                        parent.spawn((machine_kind, MachineProcessText(1), text("?", AlignSelf::Start, JustifySelf::Center, font_info)));
+                    });
+                    parent.spawn(NodeBundle::default()).with_children(|parent| {
+                        parent.spawn((machine_kind, MachineProcessText(2), text("?", AlignSelf::Start, JustifySelf::Center, font_info)));
+                    });
+                    parent.spawn(NodeBundle::default()).with_children(|parent| {
+                        parent.spawn((machine_kind, MachineProcessText(3), text("?", AlignSelf::Start, JustifySelf::Center, font_info)));
+                    });
+                });
+            });
+        });
+    }
+}
+
+#[derive(Component, Copy, Clone, PartialEq)]
+enum MachineKind {
+    Local,
+    Remote,
 }
 
 #[derive(Event)]
@@ -144,6 +321,7 @@ enum UiEvent {
     ChooseAttr(Option<usize>),
     Roll([ErgType; 4]),
     Resources([ErgType; 4], [ErgType; 4], [BuildValueType; 4]),
+    MachineUpdate(GameMachinePlayerView, GameMachinePlayerView),
 }
 
 #[derive(Component)]
@@ -189,7 +367,7 @@ fn gameplay_enter(
             width: HUNDRED,
             height: HUNDRED,
             grid_template_columns: GridTrack::flex(1.0),
-            grid_template_rows: vec![GridTrack::px(368.0), GridTrack::px(312.0), GridTrack::flex(1.0)],
+            grid_template_rows: vec![GridTrack::px(368.0), GridTrack::px(290.0), GridTrack::flex(1.0)],
             ..default()
         },
         ..default()
@@ -258,12 +436,13 @@ fn gameplay_enter(
             width: HUNDRED,
             height: HUNDRED,
             grid_template_columns: RepeatedGridTrack::flex(5, 1.0),
+            column_gap: Val::Px(4.0),
             grid_template_rows: vec![GridTrack::px(86.0), GridTrack::flex(1.0)],
             ..default()
         },
         ..default()
     };
-    let enemy_layout = NodeBundle {
+    let remote_layout = NodeBundle {
         style: Style {
             display: Display::Grid,
             width: HUNDRED,
@@ -274,7 +453,7 @@ fn gameplay_enter(
         },
         ..default()
     };
-    let enemy_attr_layout = NodeBundle {
+    let remote_attr_layout = NodeBundle {
         style: Style {
             display: Display::Grid,
             width: HUNDRED,
@@ -330,7 +509,8 @@ fn gameplay_enter(
                     AttributeButtonBundle::spawn(parent, AttrKind::Compute, &player_cache.attr, &font_info_gray);
                     AttributeButtonBundle::spawn(parent, AttrKind::Disrupt, &player_cache.attr, &font_info_gray);
                 });
-                parent.spawn(spacer(Color::NONE));
+                let name = format!("{} [{}]", &player_cache.bio.name, &player_cache.bio.id);
+                MachineBundle::spawn(parent, MachineKind::Local, name, bevy::color::palettes::basic::GREEN, &font_info_black);
                 parent.spawn(spacer(Color::NONE));
             });
             parent.spawn(center_layout).with_children(|parent| {
@@ -338,7 +518,7 @@ fn gameplay_enter(
                     parent.spawn(spacer(Color::NONE));
                     parent.spawn(roll_values_layout).with_children(|parent| {
                         for i in 0..4 {
-                            parent.spawn((RollText(i), text("-", &font_info_gray)));
+                            parent.spawn((RollText(i), text_centered("-", &font_info_gray)));
                         }
                     });
                     parent.spawn(spacer(Color::NONE));
@@ -349,7 +529,7 @@ fn gameplay_enter(
                 parent.spawn(player_erg_card_layout).with_children(|parent| {
                     //erg
                     for i in 0..4 {
-                        parent.spawn((ErgText(i), text("00", &font_info_gray)));
+                        parent.spawn((ErgText(i), text_centered("00", &font_info_gray)));
                     }
                     parent.spawn(spacer(Color::NONE));
 
@@ -359,16 +539,16 @@ fn gameplay_enter(
                     }
                 });
             });
-            parent.spawn(enemy_layout).with_children(|parent| {
-                parent.spawn(enemy_attr_layout).with_children(|parent| {
+            parent.spawn(remote_layout).with_children(|parent| {
+                parent.spawn(remote_attr_layout).with_children(|parent| {
                     for i in 0..4 {
-                        parent.spawn((EnemyAttrText(i), text("?", &font_info_gray)));
+                        parent.spawn((RemoteAttrText(i), text_centered("?", &font_info_gray)));
                     }
                 });
-                parent.spawn(spacer(Color::NONE));
+                MachineBundle::spawn(parent, MachineKind::Remote, "meow meow meow", bevy::color::palettes::basic::RED, &font_info_black);
                 parent.spawn(spacer(Color::NONE));
                 parent.spawn(turn_control_layout).with_children(|parent| {
-                    parent.spawn((PhaseText, text("Phase", &font_info_green)));
+                    parent.spawn((PhaseText, text_centered("Phase", &font_info_green)));
                     NextButtonBundle::spawn(parent, &font_info_black);
                 });
             });
@@ -471,9 +651,9 @@ fn roll_ui_update(
                     roll_text.sections[0].style.color = bevy::color::palettes::basic::GRAY.into();
                 }
             }
-            UiEvent::Resources(p_erg, a_erg, _) => {
+            UiEvent::Resources(local_erg, remote_erg, _) => {
                 for (mut roll_text, RollText(index)) in roll_q.iter_mut() {
-                    roll_text.sections[0].style.color = match p_erg[*index].cmp(&a_erg[*index]) {
+                    roll_text.sections[0].style.color = match local_erg[*index].cmp(&remote_erg[*index]) {
                         Ordering::Less => bevy::color::palettes::basic::RED,
                         Ordering::Equal => bevy::color::palettes::basic::YELLOW,
                         Ordering::Greater => bevy::color::palettes::basic::GREEN,
@@ -489,7 +669,7 @@ fn roll_ui_update(
 type ErgTextQuery<'a> = Query<'a, 'a, (&'a mut Text, &'a ErgText)>;
 type AttributeTextQuery<'a> = Query<'a, 'a, (&'a mut Text, &'a AttributeText)>;
 
-fn player_ui_update(
+fn local_ui_update(
     // bevy system
     mut receive: EventReader<UiEvent>,
     mut text_q: ParamSet<(AttributeTextQuery, ErgTextQuery)>,
@@ -519,28 +699,101 @@ fn player_ui_update(
     }
 }
 
-type EnemyAttrTextParams<'a> = (&'a mut Text, &'a EnemyAttrText);
+type RemoteAttrTextParams<'a> = (&'a mut Text, &'a RemoteAttrText);
 
-fn enemy_ui_update(
+fn remote_ui_update(
     // bevy system
     mut receive: EventReader<UiEvent>,
-    mut text_q: Query<EnemyAttrTextParams>,
+    mut text_q: Query<RemoteAttrTextParams>,
 ) {
     for ui_event in receive.read() {
         match ui_event {
             UiEvent::Roll(_) => {
-                for (mut attr_text, EnemyAttrText(_)) in text_q.iter_mut() {
+                for (mut attr_text, RemoteAttrText(_)) in text_q.iter_mut() {
                     attr_text.sections[0].value = "?".to_string();
                     attr_text.sections[0].style.color = bevy::color::palettes::basic::GRAY.into();
                 }
             }
-            UiEvent::Resources(_, _, enemy_attr) => {
-                for (mut attr_text, EnemyAttrText(index)) in text_q.iter_mut() {
-                    attr_text.sections[0].value = enemy_attr[*index].to_string();
+            UiEvent::Resources(_, _, remote_attr) => {
+                for (mut attr_text, RemoteAttrText(index)) in text_q.iter_mut() {
+                    attr_text.sections[0].value = remote_attr[*index].to_string();
                     attr_text.sections[0].style.color = bevy::color::palettes::basic::RED.into();
                 }
             }
             _ => {}
+        }
+    }
+}
+
+type MachineStatTextQuery<'a> = Query<'a, 'a, (&'a MachineKind, &'a mut Text, &'a MachineStatText)>;
+type MachineCurrentProgramTextQuery<'a> = Query<'a, 'a, (&'a MachineKind, &'a mut Text, &'a MachineCurrentProgramText)>;
+type MachineQueueItemQuery<'a> = Query<'a, 'a, (&'a MachineKind, &'a mut BackgroundColor, &'a MachineQueueItem)>;
+type MachineProcessTextQuery<'a> = Query<'a, 'a, (&'a MachineKind, &'a mut Text, &'a MachineProcessText)>;
+
+fn machine_ui_update(
+    // bevy system
+    mut receive: EventReader<UiEvent>,
+    mut machine_q: ParamSet<(MachineStatTextQuery, MachineCurrentProgramTextQuery, MachineQueueItemQuery, MachineProcessTextQuery)>,
+    dm: Res<DataManager>,
+) {
+    for ui_event in receive.read() {
+        if let UiEvent::MachineUpdate(local, remote) = ui_event {
+            for (machine_component, mut text, MachineStatText(index)) in machine_q.p0().iter_mut() {
+                let machine = if *machine_component == MachineKind::Local {
+                    local
+                } else {
+                    remote
+                };
+                text.sections[0].value = machine.stats[*index].to_string();
+            }
+
+            for (machine_component, mut text, MachineCurrentProgramText) in machine_q.p1().iter_mut() {
+                let machine = if *machine_component == MachineKind::Local {
+                    local
+                } else {
+                    remote
+                };
+                let mut result = " v- <idle>".to_string();
+                if let Some(current) = machine.queue.iter().find(|item| item.delay == 0) {
+                    if let Some(card) = dm.convert_card(&current.player_card) {
+                        result = format!(" v- {}", card.title);
+                    }
+                }
+                text.sections[0].value = result;
+            }
+
+            for (machine_component, mut color, MachineQueueItem(index)) in machine_q.p2().iter_mut() {
+                let machine = if *machine_component == MachineKind::Local {
+                    local
+                } else {
+                    remote
+                };
+                *color = if let Some(process) = machine.queue.iter().find(|item| item.delay == *index) {
+                    if process.local {
+                        bevy::color::palettes::basic::GREEN
+                    } else {
+                        bevy::color::palettes::basic::RED
+                    }
+                } else {
+                    bevy::color::palettes::basic::WHITE
+                }
+                .into();
+            }
+
+            for (machine_component, mut text, MachineProcessText(index)) in machine_q.p3().iter_mut() {
+                let machine = if *machine_component == MachineKind::Local {
+                    local
+                } else {
+                    remote
+                };
+                let mut result = "?".to_string();
+                if let Some(process) = machine.running.get(*index) {
+                    if let Some(card) = dm.convert_card(&process.player_card) {
+                        result = format!("v- {}", card.title);
+                    }
+                }
+                text.sections[0].value = result;
+            }
         }
     }
 }
@@ -573,7 +826,7 @@ fn gameplay_update(
         Ok(GateCommand::GameResources(gate_response)) => {
             println!("[RECV] GameResources => Play");
             send.send(UiEvent::PlayerState(gate_response.player_state_view));
-            send.send(UiEvent::Resources(gate_response.p_erg, gate_response.a_erg, gate_response.enemy_attr));
+            send.send(UiEvent::Resources(gate_response.local_erg, gate_response.remote_erg, gate_response.remote_attr));
             context.state = GameplayState::Play;
         }
         Ok(GateCommand::GamePlayCard(gate_response)) => {
@@ -605,6 +858,7 @@ fn gameplay_update(
         Ok(GateCommand::GameUpdateState(gate_response)) => {
             println!("[RECV] GameUpdateState");
             send.send(UiEvent::PlayerState(gate_response.player_state));
+            send.send(UiEvent::MachineUpdate(gate_response.local_machine, gate_response.remote_machine));
         }
         Ok(_) => {}
         Err(_) => {}

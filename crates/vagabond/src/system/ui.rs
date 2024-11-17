@@ -51,19 +51,24 @@ pub struct FontInfo {
     pub(crate) color: Color,
 }
 
-pub(crate) fn text(text: impl Into<String>, font_info: &FontInfo) -> TextBundle {
+pub(crate) fn text(contents: impl Into<String>, align_self: AlignSelf, justify_self: JustifySelf, font_info: &FontInfo) -> TextBundle {
     TextBundle::from_section(
-        text,
+        contents,
         TextStyle {
             font: font_info.handle.clone(),
             font_size: font_info.size,
             color: font_info.color,
         },
-    ).with_style(Style {
-        align_self: AlignSelf::Center,
-        justify_self: JustifySelf::Center,
+    )
+    .with_style(Style {
+        align_self,
+        justify_self,
         ..default()
     })
+}
+
+pub(crate) fn text_centered(contents: impl Into<String>, font_info: &FontInfo) -> TextBundle {
+    text(contents, AlignSelf::Center, JustifySelf::Center, font_info)
 }
 
 pub(crate) fn font_size(asset_server: &Res<AssetServer>, size: f32) -> FontInfo {

@@ -3,7 +3,7 @@ use std::str::Chars;
 
 type ContextValueType = i16;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Copy, Serialize, Deserialize)]
 pub enum OpCode {
     NoOp,
     ChangeFreeSpace(ContextValueType),

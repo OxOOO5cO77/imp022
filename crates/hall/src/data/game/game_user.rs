@@ -1,4 +1,4 @@
-use crate::data::game::game_state::EnemyIdType;
+use crate::data::game::game_state::RemoteIdType;
 use crate::data::game::GameMachine;
 use crate::data::player::player_state::PlayerState;
 use crate::data::player::Player;
@@ -11,7 +11,7 @@ pub struct GameUser {
     pub player: Option<Player>,
     pub machine: GameMachine,
     pub state: PlayerState,
-    pub enemy: Option<EnemyIdType>,
+    pub remote: Option<RemoteIdType>,
 }
 
 impl GameUser {
@@ -22,7 +22,7 @@ impl GameUser {
             player: None,
             machine: GameMachine::default(),
             state: PlayerState::default(),
-            enemy: None,
+            remote: None,
         }
     }
 }

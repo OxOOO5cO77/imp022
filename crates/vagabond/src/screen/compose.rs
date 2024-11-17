@@ -8,7 +8,7 @@ use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::compose::StatRowKind::{Build, Detail};
 use crate::system::app_state::AppState;
 use crate::system::dragdrop::{DragDrag, DragDrop, DragTarget, Dragging, DropTarget};
-use crate::system::ui::{filled_rect, font_size, screen_exit, text, FontInfo, Screen, ScreenBundle, HUNDRED};
+use crate::system::ui::{filled_rect, font_size, screen_exit, text_centered, FontInfo, Screen, ScreenBundle, HUNDRED};
 
 pub struct ComposePlugin;
 
@@ -98,7 +98,7 @@ enum InfoKind {
 
 #[derive(Resource, Default)]
 pub(crate) struct PlayerCache {
-    bio: PlayerBio,
+    pub(crate) bio: PlayerBio,
     pub(crate) attr: [[AttributeValueType;4];4],
 }
 
@@ -166,7 +166,7 @@ fn spawn_with_text(parent: &mut ChildBuilder, node: NodeBundle, string: impl Int
         parent.spawn(node)
     };
     base_node.with_children(|parent| {
-        id = parent.spawn(text(string, font_info)).id();
+        id = parent.spawn(text_centered(string, font_info)).id();
     });
     id
 }
@@ -179,8 +179,8 @@ fn spawn_labelled(parent: &mut ChildBuilder, header: impl Into<String>, font_inf
 
     let mut id = Entity::PLACEHOLDER;
     parent.spawn(v_label).with_children(|parent| {
-        parent.spawn(text(header, &header_font_info));
-        id = parent.spawn(text("-", font_info)).id();
+        parent.spawn(text_centered(header, &header_font_info));
+        id = parent.spawn(text_centered("-", font_info)).id();
     });
     id
 }
@@ -192,8 +192,8 @@ fn spawn_info(parent: &mut ChildBuilder, header: impl Into<String>, info: InfoKi
     header_font_info.size *= 0.6;
 
     parent.spawn(v_label).with_children(|parent| {
-        parent.spawn(text(header, &header_font_info));
-        parent.spawn((text("-", font_info), info));
+        parent.spawn(text_centered(header, &header_font_info));
+        parent.spawn((text_centered("-", font_info), info));
     });
 }
 
@@ -302,22 +302,22 @@ fn spawn_part(parent: &mut ChildBuilder, part: &VagabondPart, font_info: &FontIn
         .with_children(|parent| {
             parent.spawn(label_container.clone()).with_children(|parent| {
                 for build in &part.build {
-                    text_children.push(parent.spawn(text(build.title.clone(), font_info)).id());
+                    text_children.push(parent.spawn(text_centered(build.title.clone(), font_info)).id());
                 }
             });
 
-            parent.spawn(text("-", font_info));
+            parent.spawn(text_centered("-", font_info));
 
             parent.spawn(label_container.clone()).with_children(|parent| {
                 for detail in &part.detail {
-                    text_children.push(parent.spawn(text(detail.title.clone(), font_info)).id());
+                    text_children.push(parent.spawn(text_centered(detail.title.clone(), font_info)).id());
                 }
             });
 
-            parent.spawn(text("-", font_info));
+            parent.spawn(text_centered("-", font_info));
             parent.spawn(val_container.clone()).with_children(|parent| {
                 for value in &part.values {
-                    text_children.push(parent.spawn(text(value.to_string(), font_info)).id());
+                    text_children.push(parent.spawn(text_centered(value.to_string(), font_info)).id());
                 }
             });
         })
@@ -326,7 +326,7 @@ fn spawn_part(parent: &mut ChildBuilder, part: &VagabondPart, font_info: &FontIn
 }
 
 fn spawn_card_holder(parent: &mut ChildBuilder, idx: usize, font_info: &FontInfo) -> Entity {
-    parent.spawn(text("-", font_info)).insert(CardHolder(idx)).id()
+    parent.spawn(text_centered("-", font_info)).insert(CardHolder(idx)).id()
 }
 
 fn compose_enter(
@@ -481,7 +481,7 @@ fn build_ui_compose(mut commands: Commands, parts: [VagabondPart; 8], asset_serv
                         },
                     ))
                     .with_children(|parent| {
-                        parent.spawn(text("Submit", &font_info_label));
+                        parent.spawn(text_centered("Submit", &font_info_label));
                     });
             });
         });

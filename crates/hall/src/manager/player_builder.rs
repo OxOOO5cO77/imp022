@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use std::iter::zip;
 
 use crate::manager::data_manager::DataManager;
-use hall::data::hall::{HallBuild, HallCard, HallDetail};
+use hall::data::hall::{HallBuild, HallDetail};
 use hall::data::player::{Player, PlayerBuild, PlayerCard, PlayerDetail, PlayerPart};
 use hall::data::util;
 use rand::prelude::*;
@@ -89,23 +89,15 @@ impl PlayerBuilder {
         0x00000000000000FF & self.access.seed | 0x000000000000FF00 & &self.breach.seed | 0x0000000000FF0000 & &self.compute.seed | 0x00000000FF000000 & &self.disrupt.seed | 0x000000FF00000000 & &self.build.seed | 0x0000FF0000000000 & &self.build_values.seed | 0x00FF000000000000 & &self.detail.seed | 0xFF00000000000000 & &self.detail_values.seed
     }
 
-    fn map_card(card: HallCard) -> PlayerCard {
-        PlayerCard {
-            rarity: card.rarity,
-            number: card.number,
-            set: card.set,
-        }
-    }
-
     fn fill_deck(&self, rng: &mut impl Rng, dm: &DataManager) -> Option<VecDeque<PlayerCard>> {
         let mut deck = VecDeque::new();
 
         let build_zip = zip(&self.build.build, self.build_values.values);
-        let build_cards = build_zip.flat_map(|(item, value)| dm.pick_cards(rng, &item.cards, value)).map(Self::map_card);
+        let build_cards = build_zip.flat_map(|(item, value)| dm.pick_cards(rng, &item.cards, value)).map(|hall_card| PlayerCard::from(&hall_card));
         deck.extend(build_cards);
 
         let detail_zip = zip(&self.detail.detail, self.detail_values.values);
-        let detail_cards = detail_zip.flat_map(|(item, value)| dm.pick_cards(rng, &item.cards, value)).map(Self::map_card);
+        let detail_cards = detail_zip.flat_map(|(item, value)| dm.pick_cards(rng, &item.cards, value)).map(|hall_card| PlayerCard::from(&hall_card));
 
         deck.extend(detail_cards);
 

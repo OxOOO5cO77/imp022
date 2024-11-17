@@ -22,7 +22,7 @@ impl DataManager {
         })
     }
 
-    fn convert_card(&self, in_card: &PlayerCard) -> Option<VagabondCard> {
+    pub(crate) fn convert_card(&self, in_card: &PlayerCard) -> Option<VagabondCard> {
         self.card.iter().find(|card| card.set == in_card.set && card.rarity == in_card.rarity && card.number == in_card.number).cloned()
     }
 

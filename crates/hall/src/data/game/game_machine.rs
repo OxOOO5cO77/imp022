@@ -1,7 +1,9 @@
 use crate::data::game::GameProcess;
-use std::collections::VecDeque;
 
-use crate::data::hall::hall_card::HallCard;
+use crate::data::game::game_process::GameProcessPlayerView;
+use crate::data::hall::HallCard;
+use shared_net::sizedbuffers::Bufferable;
+use shared_net::VSizedBuffer;
 use std::fmt;
 
 type MachineValueType = u16;
@@ -17,14 +19,15 @@ pub(crate) struct GameMachineContext {
 #[derive(Default)]
 pub struct GameMachine {
     context: GameMachineContext,
-    queue: VecDeque<GameProcess>,
-    heap: Vec<GameProcess>,
+    queue: Vec<GameProcess>,
+    running: Vec<GameProcess>,
     state: GameMachineState,
 }
 
 #[derive(Default, PartialEq)]
 enum GameMachineState {
-    #[default] Running,
+    #[default]
+    Active,
     Terminated(GameMachineTerminationReason),
 }
 
@@ -50,25 +53,26 @@ impl fmt::Display for GameMachineTerminationReason {
 }
 
 impl GameMachine {
-    pub fn enqueue(&mut self, card: HallCard) {
-        let process = GameProcess::new_from_card(card);
+    pub fn enqueue(&mut self, card: HallCard, local: bool) {
+        let process = GameProcess::new_from_card(card, local);
         self.queue.insert(process.get_delay() as usize, process);
     }
 
     pub(crate) fn tick(&mut self) {
-        if self.state == GameMachineState::Running {
+        if self.state == GameMachineState::Active {
             return;
         }
 
-        if let Some(mut process) = self.queue.pop_front() {
+        if !self.queue.is_empty() {
+            let mut process = self.queue.remove(0);
             process.launch(&mut self.context);
-            self.heap.push(process);
+            self.running.push(process);
         }
 
-        self.heap.retain(|process| process.get_ttl() > 0);
-        self.heap.sort();
+        self.running.retain(|process| process.get_ttl() > 0);
+        self.running.sort();
 
-        for process in self.heap.iter_mut() {
+        for process in self.running.iter_mut() {
             process.run(&mut self.context);
         }
 
@@ -88,7 +92,81 @@ impl GameMachineContext {
         } else if self.open_ports == 0 {
             Terminated(GameMachineTerminationReason::OpenPorts)
         } else {
-            Running
+            Active
         }
+    }
+}
+
+#[cfg_attr(test, derive(Debug, PartialEq))]
+pub struct GameMachinePlayerView {
+    pub stats: [MachineValueType; 4],
+    pub queue: Vec<GameProcessPlayerView>,
+    pub running: Vec<GameProcessPlayerView>,
+}
+
+impl From<&GameMachine> for GameMachinePlayerView {
+    fn from(value: &GameMachine) -> Self {
+        let stats = [value.context.free_space, value.context.thermal_capacity, value.context.system_health, value.context.open_ports];
+        let queue = value.queue.iter().map(GameProcessPlayerView::from).collect::<Vec<_>>();
+        let running = value.running.iter().map(GameProcessPlayerView::from).collect::<Vec<_>>();
+        Self {
+            stats,
+            queue,
+            running,
+        }
+    }
+}
+
+impl Bufferable for GameMachinePlayerView {
+    fn push_into(&self, buf: &mut VSizedBuffer) {
+        self.stats.push_into(buf);
+        self.queue.push_into(buf);
+        self.running.push_into(buf);
+    }
+
+    fn pull_from(buf: &mut VSizedBuffer) -> Self {
+        let stats = <[MachineValueType; 4]>::pull_from(buf);
+        let queue = <Vec<GameProcessPlayerView>>::pull_from(buf);
+        let running = <Vec<GameProcessPlayerView>>::pull_from(buf);
+        Self {
+            stats,
+            queue,
+            running,
+        }
+    }
+
+    fn size_in_buffer(&self) -> usize {
+        self.stats.size_in_buffer() + self.queue.size_in_buffer() + self.running.size_in_buffer()
+    }
+}
+
+#[cfg(test)]
+impl GameMachinePlayerView {
+    pub fn test_default() -> Self {
+        Self {
+            stats: [1, 2, 3, 4],
+            queue: vec![GameProcessPlayerView::test_default(), GameProcessPlayerView::test_default(), GameProcessPlayerView::test_default(), GameProcessPlayerView::test_default()],
+            running: vec![GameProcessPlayerView::test_default(), GameProcessPlayerView::test_default(), GameProcessPlayerView::test_default()],
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::data::game::game_machine::GameMachinePlayerView;
+    use shared_net::VSizedBuffer;
+
+    #[test]
+    fn test_machine_player_view() {
+        let mut buf = VSizedBuffer::new(64);
+
+        let orig = GameMachinePlayerView::test_default();
+
+        buf.push(&orig);
+        let result = buf.pull::<GameMachinePlayerView>();
+
+        assert_eq!(orig.stats, result.stats);
+        assert_eq!(orig.queue, result.queue);
+        assert_eq!(orig.running, result.running);
     }
 }

@@ -5,7 +5,7 @@ use shared_data::game::card::ErgType;
 use shared_data::player::attribute::{Attributes, AttributeValueType};
 use shared_data::types::{AuthType, UserIdType};
 
-use crate::data::game::game_enemy::GameEnemy;
+use crate::data::game::game_remote::GameRemote;
 use crate::data::util;
 use shared_net::op;
 use std::cmp::Ordering;
@@ -13,13 +13,16 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::iter::zip;
 
-pub(crate) type EnemyIdType = u128;
+pub(crate) type RemoteIdType = u128;
 type TickType = u32;
+
+type UserMapType = HashMap<UserIdType, GameUser>;
+type RemoteMapType = HashMap<RemoteIdType, GameRemote>;
 
 #[derive(Default)]
 pub struct GameState {
-    users: HashMap<UserIdType, GameUser>,
-    enemies: HashMap<EnemyIdType, GameEnemy>,
+    pub users: UserMapType,
+    pub remotes: RemoteMapType,
     current_tick: TickType,
     stage: GameStage,
     pub erg_roll: [ErgType; 4],
@@ -27,16 +30,16 @@ pub struct GameState {
 }
 
 impl GameState {
-    pub fn new(num_enemies: usize, mut rng: &mut impl Rng) -> Self {
-        //temp
-        let mut enemies = HashMap::new();
-        for i in 1..=num_enemies {
+    pub fn new(num_remotes: usize, mut rng: &mut impl Rng) -> Self {
+        //TODO: temp
+        let mut remotes = HashMap::new();
+        for i in 1..=num_remotes {
             let attributes = Attributes::from_arrays([util::pick_values(&mut rng), util::pick_values(&mut rng), util::pick_values(&mut rng), util::pick_values(&mut rng)]);
-            enemies.insert(i as EnemyIdType, GameEnemy::new(attributes));
+            remotes.insert(i as RemoteIdType, GameRemote::new(attributes));
         }
 
         Self {
-            enemies,
+            remotes,
             ..Default::default()
         }
     }
@@ -80,8 +83,8 @@ impl GameState {
         self.users.get_mut(&user_id_type)
     }
 
-    pub fn get_user_auth(&mut self, user_id_type: UserIdType, user_auth: AuthType) -> Option<&mut GameUser> {
-        if let Some(user) = self.users.get_mut(&user_id_type) {
+    pub fn split_get_user_auth_mut(users: &mut UserMapType, user_id_type: UserIdType, user_auth: AuthType) -> Option<&mut GameUser> {
+        if let Some(user) = users.get_mut(&user_id_type) {
             if user.auth == user_auth {
                 return Some(user);
             }
@@ -108,8 +111,12 @@ impl GameState {
         };
     }
 
-    pub fn pick_enemy(&mut self) -> Option<EnemyIdType> {
-        self.enemies.keys().next().cloned()
+    pub fn pick_remote(&mut self) -> Option<RemoteIdType> {
+        self.remotes.keys().next().cloned()
+    }
+
+    pub fn split_get_remote(remotes: &mut RemoteMapType, remote: RemoteIdType) -> Option<&GameRemote> {
+        remotes.get(&remote)
     }
 
     pub fn is_empty(&self) -> bool {
@@ -120,7 +127,7 @@ impl GameState {
         self.current_tick += 1;
 
         self.users.values_mut().for_each(|user| user.machine.tick());
-        self.enemies.values_mut().for_each(|enemy| enemy.machine.tick());
+        self.remotes.values_mut().for_each(|remote| remote.machine.tick());
     }
 
     pub fn roll(&mut self) {
@@ -130,8 +137,8 @@ impl GameState {
         }
     }
 
-    pub fn split_borrow_for_resolve(&mut self) -> (&[ErgType; 4], &mut HashMap<UserIdType, GameUser>, &mut HashMap<EnemyIdType, GameEnemy>) {
-        (&self.erg_roll, &mut self.users, &mut self.enemies)
+    pub fn split_borrow_for_resolve(&mut self) -> (&[ErgType; 4], &mut UserMapType, &mut RemoteMapType) {
+        (&self.erg_roll, &mut self.users, &mut self.remotes)
     }
 
     pub fn resolve_matchups(erg_roll: &[ErgType], p1: &[AttributeValueType; 4], p2: &[AttributeValueType; 4]) -> ([ErgType; 4], [ErgType; 4]) {

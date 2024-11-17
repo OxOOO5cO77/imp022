@@ -134,7 +134,11 @@ bufferable_ints!(for u8, u16, u32, u64, u128);
 
 impl Bufferable for bool {
     fn push_into(&self, buf: &mut VSizedBuffer) {
-        let as_byte = if *self { 1u8 } else { 0 };
+        let as_byte = if *self {
+            1u8
+        } else {
+            0
+        };
         as_byte.push_into(buf);
     }
 
@@ -212,6 +216,23 @@ impl<T: Bufferable + Default + Copy, const N: usize> Bufferable for [T; N] {
     fn size_in_buffer(&self) -> usize {
         let dummy = T::default();
         dummy.size_in_buffer() * N
+    }
+}
+
+impl<T: Bufferable + Default, U: Bufferable + Default> Bufferable for (T, U) {
+    fn push_into(&self, buf: &mut VSizedBuffer) {
+        self.0.push_into(buf);
+        self.1.push_into(buf);
+    }
+
+    fn pull_from(buf: &mut VSizedBuffer) -> Self {
+        let first = T::pull_from(buf);
+        let second = U::pull_from(buf);
+        (first, second)
+    }
+
+    fn size_in_buffer(&self) -> usize {
+        self.0.size_in_buffer() + self.1.size_in_buffer()
     }
 }
 
@@ -373,6 +394,32 @@ mod test {
             let result = TestArrayArray::pull_from(&mut buf);
 
             assert_eq!(orig.len(), result.len());
+            assert_eq!(orig, result);
+        }
+
+        #[test]
+        fn test_tuple() {
+            type TestTuple = (u128, u8);
+            let mut buf = VSizedBuffer::new(256);
+            let orig: TestTuple = (128, 8);
+
+            buf.push(&orig);
+            let result = <TestTuple>::pull_from(&mut buf);
+
+            assert_eq!(orig, result);
+        }
+
+        #[test]
+        fn test_tuple_arrays() {
+            type TestTuple = ([u128; 4], Vec<bool>);
+            let mut buf = VSizedBuffer::new(256);
+            let orig: TestTuple = ([128, 8, 0, 8172637813], vec![true, false, true, true, false, true]);
+
+            buf.push(&orig);
+            let result = <TestTuple>::pull_from(&mut buf);
+
+            assert_eq!(orig.0.len(), result.0.len());
+            assert_eq!(orig.1.len(), result.1.len());
             assert_eq!(orig, result);
         }
     }
