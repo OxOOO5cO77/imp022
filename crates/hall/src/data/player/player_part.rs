@@ -58,7 +58,6 @@ mod test {
 
     #[test]
     fn test_player_part() {
-        let mut buf = VSizedBuffer::new(64);
         let orig = PlayerPart {
             seed: 1234567890,
             values: [9, 1, 9, 1],
@@ -107,6 +106,7 @@ mod test {
                 },
             ],
         };
+        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
         buf.push(&orig);
         let result = buf.pull::<PlayerPart>();
 

@@ -153,15 +153,15 @@ impl GameMachinePlayerView {
 
 #[cfg(test)]
 mod tests {
+    use shared_net::sizedbuffers::Bufferable;
     use crate::data::game::game_machine::GameMachinePlayerView;
     use shared_net::VSizedBuffer;
 
     #[test]
     fn test_machine_player_view() {
-        let mut buf = VSizedBuffer::new(64);
-
         let orig = GameMachinePlayerView::test_default();
 
+        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
         buf.push(&orig);
         let result = buf.pull::<GameMachinePlayerView>();
 

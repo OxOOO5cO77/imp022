@@ -138,12 +138,11 @@ mod tests {
     use crate::data::player::player_card::PlayerCard;
     use crate::data::player::player_state::PlayerStatePlayerView;
     use shared_data::game::card::Rarity;
+    use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
 
     #[test]
     fn test_player_state_player_view() {
-        let mut buf = VSizedBuffer::new(64);
-
         let dummy_card = PlayerCard {
             rarity: Rarity::Legendary,
             number: 123,
@@ -158,6 +157,7 @@ mod tests {
             erg: [5, 6, 7, 8],
         };
 
+        let mut buf = VSizedBuffer::new(orig_view.size_in_buffer());
         buf.push(&orig_view);
         let new_view = buf.pull::<PlayerStatePlayerView>();
 

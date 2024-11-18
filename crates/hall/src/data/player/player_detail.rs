@@ -104,12 +104,13 @@ mod test {
 
     #[test]
     fn test_player_detail() {
-        let mut buf = VSizedBuffer::new(64);
         let orig = PlayerDetail {
             number: 123,
             detail: Detail::Role(4,16),
             value: 9,
         };
+
+        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
         buf.push(&orig);
         let result = buf.pull::<PlayerDetail>();
 

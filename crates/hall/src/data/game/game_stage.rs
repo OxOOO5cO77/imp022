@@ -8,7 +8,8 @@ use strum_macros::EnumIter;
 #[derive(Default, Clone, Copy, PartialEq)]
 #[cfg_attr(test, derive(Debug, EnumIter))]
 pub enum GameStage {
-    #[default] Idle,
+    #[default]
+    Idle,
     Building,
     Running(GamePhase),
     End,
@@ -18,12 +19,12 @@ pub enum GameStage {
 #[derive(Default, Clone, Copy, PartialEq)]
 #[cfg_attr(test, derive(Debug, EnumIter))]
 pub enum GamePhase {
-    #[default] TurnStart,
+    #[default]
+    TurnStart,
     ChooseAttr,
     CardPlay,
     TurnEnd,
 }
-
 
 impl Bufferable for GameStage {
     fn push_into(&self, buf: &mut VSizedBuffer) {
@@ -52,10 +53,11 @@ impl Bufferable for GameStage {
     }
 
     fn size_in_buffer(&self) -> usize {
-        match self {
-            GameStage::Running(_) => 0u8.size_in_buffer() + 0u8.size_in_buffer(),
-            _ => 0u8.size_in_buffer(),
-        }
+        0u8.size_in_buffer()
+            + match self {
+                GameStage::Running(phase) => phase.size_in_buffer(),
+                _ => 0,
+            }
     }
 }
 
@@ -65,8 +67,9 @@ impl Bufferable for GamePhase {
             GamePhase::TurnStart => 0u8,
             GamePhase::ChooseAttr => 1,
             GamePhase::CardPlay => 2,
-            GamePhase::TurnEnd => 3
-        }.push_into(buf);
+            GamePhase::TurnEnd => 3,
+        }
+        .push_into(buf);
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {

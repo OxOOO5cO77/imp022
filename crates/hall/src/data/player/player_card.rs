@@ -91,18 +91,18 @@ impl Bufferable for PlayerCard {
 mod test {
     use crate::data::player::player_card::PlayerCard;
     use shared_data::game::card::Rarity;
+    use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
 
     #[test]
     fn test_player_card() {
-        let mut buf = VSizedBuffer::new(64);
-
         let orig_card = PlayerCard {
             rarity: Rarity::Legendary,
             number: 34,
             set: 12,
         };
 
+        let mut buf = VSizedBuffer::new(orig_card.size_in_buffer());
         buf.push(&orig_card);
         let new_card = buf.pull::<PlayerCard>();
 

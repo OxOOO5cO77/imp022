@@ -120,7 +120,7 @@ impl Bufferable for GameProcessPlayerView {
     }
 
     fn size_in_buffer(&self) -> usize {
-        self.player_card.size_in_buffer() + self.delay.size_in_buffer() + self.local.size_in_buffer()
+        self.player_card.size_in_buffer() + self.delay.size_in_buffer() + self.priority.size_in_buffer() + self.local.size_in_buffer()
     }
 }
 
@@ -143,14 +143,14 @@ impl GameProcessPlayerView {
 #[cfg(test)]
 mod tests {
     use crate::data::game::game_process::GameProcessPlayerView;
+    use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
 
     #[test]
     fn test_process_player_view() {
-        let mut buf = VSizedBuffer::new(64);
-
         let orig = GameProcessPlayerView::test_default();
 
+        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
         buf.push(&orig);
         let result = buf.pull::<GameProcessPlayerView>();
 
