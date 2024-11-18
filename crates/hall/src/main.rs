@@ -308,12 +308,13 @@ fn recv_game_choose_attr(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMe
 
     if let Some(game) = games.get_mut(&request.game_id) {
         if game.all_users_last_command(op::Command::GameChooseAttr) {
+            let mut rng = thread_rng();
             let (erg_roll, users, remotes) = game.split_borrow_for_resolve();
             for (id, user) in users.iter_mut() {
                 if let Some(player) = &user.player {
                     if let Some(kind) = user.state.resolve_kind {
                         let remote = remotes.get(&user.remote.unwrap()).unwrap();
-                        let remote_attr = remote.attributes.get(kind);
+                        let remote_attr = remote.choose_attr(&mut rng);
                         let (local_erg, remote_erg) = GameState::resolve_matchups(erg_roll, &player.attributes.get(kind), &remote_attr);
                         user.state.add_erg(kind, local_erg);
 
@@ -385,6 +386,11 @@ fn recv_game_end_turn(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessa
             let message = GameTickMessage {
                 success: true,
             };
+
+            for remote in game.remotes.values_mut() {
+                remote.reset();
+            }
+
             game.set_phase(GamePhase::TurnStart);
             context.bx.broadcast(message);
         }
