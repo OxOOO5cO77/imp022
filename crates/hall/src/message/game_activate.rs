@@ -1,6 +1,6 @@
 use crate::data::player::PlayerPart;
 use crate::message::CommandMessage;
-use shared_data::types::GameIdType;
+use shared_net::types::GameIdType;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
 
@@ -64,8 +64,8 @@ impl Bufferable for GameActivateResponse {
 
 #[cfg(test)]
 mod test {
-    use shared_data::player::build::Build;
-    use shared_data::player::detail::Detail;
+    use shared_data::build::Build;
+    use shared_data::detail::Detail;
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
 

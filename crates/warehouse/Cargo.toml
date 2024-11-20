@@ -6,13 +6,13 @@ edition = "2021"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 
 [dependencies]
-axum = { version = "0.7.7" , features = ["macros"]}
-chrono = { version = "0.4.38", default-features = false, features = ["std","serde"] }
+axum = { version = "0.7.7", features = ["macros"] }
+chrono = { version = "0.4.38", default-features = false, features = ["std", "serde"] }
 rand = { version = "0.9.0-alpha.2" }
 ron = { version = "0.9.0-alpha.0" }
 serde = { version = "1.0.214", features = ["derive"] }
-tokio = { version = "1.41.1" , features = ["full"]}
-shared-data = { path = "../shared-data" }
+tokio = { version = "1.41.1", features = ["full"] }
+shared-net = { path = "../shared-net" }
 
 [dev-dependencies]
 httpc-test = "0.1.10"

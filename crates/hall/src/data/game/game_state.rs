@@ -1,9 +1,9 @@
 use crate::data::game::game_stage::{GamePhase, GameStage};
 use crate::data::game::GameUser;
 use rand::{distr::Uniform, rngs::ThreadRng, Rng};
-use shared_data::game::card::ErgType;
-use shared_data::player::attribute::{Attributes, AttributeValueType};
-use shared_data::types::{AuthType, UserIdType};
+use shared_data::attribute::{AttributeValueType, Attributes};
+use shared_data::card::ErgType;
+use shared_net::types::{AuthType, UserIdType};
 
 use crate::data::game::game_remote::GameRemote;
 use crate::data::util;
@@ -165,7 +165,7 @@ impl GameState {
 #[cfg(test)]
 mod tests {
     use crate::data::game::GameState;
-    use shared_data::game::card::ErgType;
+    use shared_data::card::ErgType;
 
     #[test]
     fn test_resolve_1() {

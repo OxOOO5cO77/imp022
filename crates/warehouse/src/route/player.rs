@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use axum::extract::{Path, State};
 use axum::Json;
 use axum::response::IntoResponse;
-use shared_data::types::SeedType;
+use shared_net::types::SeedType;
 use warehouse::rest::player::PlayerBioResponse;
 use crate::AppState;
 

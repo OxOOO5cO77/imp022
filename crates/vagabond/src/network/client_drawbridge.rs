@@ -2,7 +2,7 @@ use bevy::prelude::Resource;
 use std::net::IpAddr;
 
 use fasthash::farm::fingerprint128;
-use shared_data::types::AuthType;
+use shared_net::types::AuthType;
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};

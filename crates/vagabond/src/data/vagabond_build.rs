@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use shared_data::player::build::Build;
+use shared_data::build::Build;
 
 type NumberType = u8;
 

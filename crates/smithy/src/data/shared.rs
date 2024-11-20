@@ -1,5 +1,5 @@
-use shared_data::game::card::{CardSlot, Rarity, Set, SetType, Slot};
-use shared_data::player::build::BuildNumberType;
+use shared_data::card::{CardSlot, Rarity, Set, SetType, Slot};
+use shared_data::build::BuildNumberType;
 use sqlx::postgres::PgRow;
 use sqlx::Row;
 
@@ -41,9 +41,9 @@ impl DbCardSlot {
     }
 }
 
-pub(crate) fn extract_cards(row: &PgRow) -> Vec<CardSlot> {
+pub(crate) fn extract_cards(row: &PgRow, count: usize) -> Vec<CardSlot> {
     let mut cards: Vec<CardSlot> = Vec::new();
-    for i in 1..=15 {
+    for i in 1..=count {
         let row_name = format!("cardslot_{i}");
         let slot = row.get::<DbCardSlot, _>(row_name.as_str()).to_cardslot();
         cards.push(slot);

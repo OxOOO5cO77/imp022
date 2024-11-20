@@ -1,6 +1,6 @@
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
-use shared_data::types::SeedType;
+use shared_net::types::SeedType;
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct PlayerBio {

@@ -1,6 +1,6 @@
-use crate::data::common::DbRarity;
-use shared_data::game::card::*;
-use shared_data::player::attribute::AttributeKind;
+use crate::data::shared::DbRarity;
+use shared_data::card::*;
+use shared_data::attribute::AttributeKind;
 use sqlx::postgres::PgRow;
 use sqlx::{Pool, Postgres, Row};
 

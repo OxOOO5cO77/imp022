@@ -7,8 +7,8 @@ pub use player_card::PlayerCard;
 pub use player_detail::PlayerDetail;
 pub use player_part::PlayerPart;
 
-use shared_data::player::attribute::Attributes;
-use shared_data::types::SeedType;
+use shared_data::attribute::Attributes;
+use shared_net::types::SeedType;
 
 pub mod player_build;
 pub mod player_card;

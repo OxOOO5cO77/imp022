@@ -6,8 +6,8 @@ use hall::data::hall::{HallBuild, HallDetail};
 use hall::data::player::{Player, PlayerBuild, PlayerCard, PlayerDetail, PlayerPart};
 use hall::data::util;
 use rand::prelude::*;
-use shared_data::player::attribute::{AttributeValueType, Attributes};
-use shared_data::types::{PartType, SeedType};
+use shared_data::attribute::{AttributeValueType, Attributes};
+use shared_net::types::{PartType, SeedType};
 
 #[derive(Clone)]
 pub(crate) struct PlayerPartBuilder {

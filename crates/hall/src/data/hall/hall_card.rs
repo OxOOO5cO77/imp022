@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use shared_data::game::card::*;
-use shared_data::game::opcode::OpCode;
-use shared_data::player::attribute::AttributeKind;
 use crate::data::player::PlayerCard;
+use shared_data::attribute::AttributeKind;
+use shared_data::card::*;
+use shared_data::instruction::Instruction;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HallCard {
@@ -13,15 +13,14 @@ pub struct HallCard {
     pub kind: AttributeKind,
     pub cost: ErgType,
     pub delay: DelayType,
-    pub launch_code: Vec<OpCode>,
+    pub launch_code: Vec<Instruction>,
     pub priority: PriorityType,
-    pub run_code: Vec<OpCode>,
+    pub run_code: Vec<Instruction>,
 }
-
 
 impl HallCard {
     pub fn matches(&self, slot: &CardSlot) -> bool {
-        let set_match = self.set == slot.0.0;
+        let set_match = self.set == slot.0 .0;
         let rarity_match = self.rarity == slot.1;
         let slot_match = match slot.2 {
             Slot::Any => true,

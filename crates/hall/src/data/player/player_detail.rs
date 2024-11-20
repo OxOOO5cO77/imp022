@@ -1,7 +1,7 @@
 use std::mem::size_of;
 
 use serde::{Deserialize, Serialize};
-use shared_data::player::detail::{Detail, GeneralType, DetailNumberType, SpecificType, DetailValueType};
+use shared_data::detail::{Detail, DetailNumberType, DetailValueType, GeneralType, SpecificType};
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 
@@ -14,7 +14,6 @@ pub struct PlayerDetail {
     pub detail: Detail,
     pub value: DetailValueType,
 }
-
 
 const BITS_FOR_DETAIL: PackedDetailType = 24;
 const BITS_FOR_NUMBER: PackedDetailType = 8;
@@ -96,7 +95,7 @@ impl Bufferable for PlayerDetail {
 
 #[cfg(test)]
 mod test {
-    use shared_data::player::detail::Detail;
+    use shared_data::detail::Detail;
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
 
@@ -106,7 +105,7 @@ mod test {
     fn test_player_detail() {
         let orig = PlayerDetail {
             number: 123,
-            detail: Detail::Role(4,16),
+            detail: Detail::Role(4, 16),
             value: 9,
         };
 

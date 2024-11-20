@@ -9,7 +9,7 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 
 use gate::message::gate_header::GateHeader;
-use shared_data::types::{AuthType, NodeType, TimestampType, UserIdType};
+use shared_net::types::{AuthType, NodeType, TimestampType, UserIdType};
 use shared_net::{op, IdMessage, RoutedMessage, VClientMode, VSizedBuffer};
 
 struct GateUser {

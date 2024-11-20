@@ -5,7 +5,7 @@ use hall::data::game::{GameMachinePlayerView, GamePhase, GameStage, GameState, G
 use hall::data::player::player_state::PlayerStatePlayerView;
 use hall::message::*;
 use rand::prelude::*;
-use shared_data::types::{AuthType, GameIdType, NodeType, UserIdType};
+use shared_net::types::{AuthType, GameIdType, NodeType, UserIdType};
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 use std::collections::HashMap;

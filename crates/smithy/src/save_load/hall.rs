@@ -1,8 +1,9 @@
 use crate::save_load::save_data_single;
-use shared_data::game::opcode::OpCode;
 use std::io::Error;
-use hall::data::hall::{HallBuild, HallCard, HallDetail};
-use crate::data::{DbBuild, DbCard, DbDetail};
+use std::str::Chars;
+use hall::data::hall::{HallBuild, HallCard, HallDetail, HallMission, HallMissionNode};
+use shared_data::instruction::{Instruction, InstructionValueType};
+use crate::data::{DbBuild, DbCard, DbDetail, DbMission, DbMissionNode};
 
 fn make_hall_card(card: &DbCard) -> HallCard {
     HallCard {
@@ -18,12 +19,40 @@ fn make_hall_card(card: &DbCard) -> HallCard {
     }
 }
 
-fn parse_rules(rules: &str) -> Vec<OpCode> {
+fn char_as_delta(c: char) -> InstructionValueType {
+    ((c as i32) - ('a' as i32)) as InstructionValueType
+}
+
+pub fn process_code(c: char, chars: &mut Chars) -> Option<Instruction> {
+    use Instruction::*;
+    match c {
+        'f' => {
+            let amount_c = chars.next().unwrap_or_default();
+            Some(ChangeFreeSpace(char_as_delta(amount_c)))
+        }
+        't' => {
+            let amount_c = chars.next().unwrap_or_default();
+            Some(ChangeThermalCapacity(char_as_delta(amount_c)))
+        }
+        's' => {
+            let amount_c = chars.next().unwrap_or_default();
+            Some(ChangeSystemHealth(char_as_delta(amount_c)))
+        }
+        'o' => {
+            let amount_c = chars.next().unwrap_or_default();
+            Some(ChangeOpenPorts(char_as_delta(amount_c)))
+        }
+        _ => None,
+    }
+}
+
+
+fn parse_rules(rules: &str) -> Vec<Instruction> {
     let mut result= vec![];
     let mut chars = rules.chars();
     while let Some(c) = chars.next() {
-        if let Some(opcode) = OpCode::process(c, &mut chars) {
-            result.push(opcode);
+        if let Some(instruction) = process_code(c, &mut chars) {
+            result.push(instruction);
         }
     }
     result
@@ -58,4 +87,27 @@ fn make_hall_detail(detail_instance: &DbDetail) -> HallDetail {
 pub(crate) fn output_details_for_hall(details: &[DbDetail]) -> Result<(), Error> {
     let hall_details = details.iter().map(make_hall_detail).collect::<Vec<_>>();
     save_data_single(hall_details, "output/hall_details.ron")
+}
+
+fn make_hall_mission_node(mission_node_instance: &DbMissionNode) -> HallMissionNode {
+    HallMissionNode {
+        id: mission_node_instance.node_id,
+        kind: mission_node_instance.kind,
+        state: mission_node_instance.state,
+        links: mission_node_instance.links.clone(),
+        content: vec![],
+    }
+}
+
+fn make_hall_mission(mission_instance: &DbMission) -> HallMission {
+    HallMission {
+        id: mission_instance.mission_id,
+        node: mission_instance.node.iter().map(make_hall_mission_node).collect(),
+        objective: vec![],
+    }
+}
+
+pub(crate) fn output_missions_for_hall(missions: &[DbMission]) -> Result<(), Error> {
+    let hall_missions = missions.iter().map(make_hall_mission).collect::<Vec<_>>();
+    save_data_single(hall_missions, "output/hall_missions.ron")
 }

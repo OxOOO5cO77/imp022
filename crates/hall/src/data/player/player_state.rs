@@ -3,8 +3,8 @@ use std::collections::{HashMap, VecDeque};
 use crate::data::hall::HallCard;
 use crate::data::player::PlayerCard;
 use rand::{seq::SliceRandom, Rng};
-use shared_data::game::card::ErgType;
-use shared_data::player::attribute::{AttributeKind, AttributeValueType, Attributes};
+use shared_data::attribute::{AttributeKind, AttributeValueType, Attributes};
+use shared_data::card::ErgType;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
 
@@ -137,7 +137,7 @@ impl Bufferable for PlayerStatePlayerView {
 mod tests {
     use crate::data::player::player_card::PlayerCard;
     use crate::data::player::player_state::PlayerStatePlayerView;
-    use shared_data::game::card::Rarity;
+    use shared_data::card::Rarity;
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
 

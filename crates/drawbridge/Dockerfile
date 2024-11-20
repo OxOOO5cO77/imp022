@@ -1,6 +1,5 @@
 FROM rust:1 AS builder
 COPY shared-net /shared-net
-COPY shared-data /shared-data
 COPY drawbridge /drawbridge
 WORKDIR /drawbridge
 RUN cargo build --release --bin drawbridge

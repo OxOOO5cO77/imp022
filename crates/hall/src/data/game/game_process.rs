@@ -1,8 +1,8 @@
 use crate::data::game::game_machine::GameMachineContext;
-use crate::data::game::GameCode;
 use crate::data::hall::hall_card::HallCard;
 use crate::data::player::PlayerCard;
-use shared_data::game::card::{DelayType, PriorityType};
+use shared_data::card::{DelayType, PriorityType};
+use shared_data::instruction::Instruction;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 use std::cmp::Ordering;
@@ -12,8 +12,8 @@ type TTLType = u8;
 pub struct GameProcess {
     player_card: PlayerCard,
     delay: DelayType,
-    launch_code: Vec<GameCode>,
-    run_code: Vec<GameCode>,
+    launch_code: Vec<Instruction>,
+    run_code: Vec<Instruction>,
     priority: PriorityType,
     ttl: TTLType,
     local: bool,
@@ -23,8 +23,8 @@ impl GameProcess {
     pub(crate) fn new_from_card(card: HallCard, local: bool) -> Self {
         Self {
             player_card: (&card).into(),
-            launch_code: card.launch_code.iter().map(|&op| GameCode(op)).collect(),
-            run_code: card.run_code.iter().map(|&op| GameCode(op)).collect(),
+            launch_code: card.launch_code,
+            run_code: card.run_code,
             delay: card.delay,
             priority: card.priority,
             ttl: 0,
@@ -34,7 +34,7 @@ impl GameProcess {
 
     pub(crate) fn launch(&mut self, context: &mut GameMachineContext) {
         for code in &self.launch_code {
-            if !code.execute(context) {
+            if !context.execute(*code) {
                 break;
             }
         }
@@ -45,7 +45,7 @@ impl GameProcess {
         }
         self.ttl -= 1;
         for code in &self.run_code {
-            if !code.execute(context) {
+            if !context.execute(*code) {
                 break;
             }
         }
@@ -129,7 +129,7 @@ impl GameProcessPlayerView {
     pub fn test_default() -> Self {
         Self {
             player_card: PlayerCard {
-                rarity: shared_data::game::card::Rarity::Legendary,
+                rarity: shared_data::card::Rarity::Legendary,
                 number: 123,
                 set: 2,
             },

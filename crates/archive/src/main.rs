@@ -6,7 +6,7 @@ use sqlx::types::Uuid;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use gate::message::gate_header::GateHeader;
-use shared_data::types::NodeType;
+use shared_net::types::NodeType;
 
 use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 

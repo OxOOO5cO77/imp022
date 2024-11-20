@@ -5,7 +5,7 @@ use sqlx::postgres::{PgPool, PgPoolOptions};
 use sqlx::types::Uuid;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
-use shared_data::types::{PasswordType, NodeType, UserIdType};
+use shared_net::types::{PasswordType, NodeType, UserIdType};
 
 use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
-use shared_data::types::AuthType;
+use shared_net::types::AuthType;
 use std::env;
 use std::mem::discriminant;
 use tokio::sync::mpsc;

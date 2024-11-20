@@ -1,6 +1,5 @@
 FROM rust:1 AS builder
 COPY shared-net /shared-net
-COPY shared-data /shared-data
 COPY gate /gate
 COPY archive /archive
 WORKDIR /archive

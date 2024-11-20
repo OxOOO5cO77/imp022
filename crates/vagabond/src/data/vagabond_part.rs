@@ -1,6 +1,6 @@
-use shared_data::player::attribute;
-use shared_data::types::SeedType;
 use crate::data::{VagabondBuild, VagabondDetail};
+use shared_data::attribute;
+use shared_net::types::SeedType;
 
 #[derive(Default, Clone)]
 pub struct VagabondPart {

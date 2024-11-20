@@ -5,7 +5,7 @@ use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
 use hall::message::*;
-use shared_data::types::{AuthType, GameIdType, PartType};
+use shared_net::types::{AuthType, GameIdType, PartType};
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 

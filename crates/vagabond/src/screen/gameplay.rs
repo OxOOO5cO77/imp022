@@ -7,8 +7,8 @@ use bevy::prelude::*;
 use hall::data::game::GameMachinePlayerView;
 use hall::data::player::player_state::PlayerStatePlayerView;
 use hall::message::AttrKind;
-use shared_data::game::card::{DelayType, ErgType};
-use shared_data::player::build::BuildValueType;
+use shared_data::build::BuildValueType;
+use shared_data::card::{DelayType, ErgType};
 use std::cmp::Ordering;
 
 pub struct GameplayPlugin;
@@ -345,6 +345,7 @@ fn gameplay_enter(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     player_cache: Res<PlayerCache>,
+    dm: Res<DataManager>,
 ) {
     let font_info_black = font_size(&asset_server, 16.0);
     let font_info_gray = font_size_color(&asset_server, 48.0, bevy::color::palettes::basic::GRAY);
@@ -545,7 +546,7 @@ fn gameplay_enter(
                         parent.spawn((RemoteAttrText(i), text_centered("?", &font_info_gray)));
                     }
                 });
-                MachineBundle::spawn(parent, MachineKind::Remote, "meow meow meow", bevy::color::palettes::basic::RED, &font_info_black);
+                MachineBundle::spawn(parent, MachineKind::Remote, dm.node_name(player_cache.mission, 1), bevy::color::palettes::basic::RED, &font_info_black);
                 parent.spawn(spacer(Color::NONE));
                 parent.spawn(turn_control_layout).with_children(|parent| {
                     parent.spawn((PhaseText, text_centered("Phase", &font_info_green)));

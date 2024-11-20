@@ -1,6 +1,6 @@
 use crate::data::player::PlayerCard;
 use crate::message::CommandMessage;
-use shared_data::types::{GameIdType, PartType, SeedType};
+use shared_net::types::{GameIdType, PartType, SeedType};
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
 
@@ -71,8 +71,8 @@ impl Bufferable for GameBuildResponse {
 
 #[cfg(test)]
 mod test {
-    use shared_data::game::card;
-    use shared_data::game::card::Rarity::Legendary;
+    use shared_data::card;
+    use shared_data::card::Rarity::Legendary;
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
 

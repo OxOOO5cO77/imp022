@@ -1,5 +1,5 @@
 use crate::message::CommandMessage;
-use shared_data::types::GameIdType;
+use shared_net::types::GameIdType;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
 

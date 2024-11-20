@@ -9,7 +9,6 @@ authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 tokio = { version = "1.41.1", features = ["macros", "rt-multi-thread"] }
 sqlx = { version = "0.8.2", features = ["postgres", "macros", "uuid", "runtime-tokio-rustls"] }
 uuid = { version = "1.11.0", features = ["v4"] }
-shared-data = { path = "../shared-data" }
 shared-net = { path = "../shared-net" }
 
 [dev-dependencies]

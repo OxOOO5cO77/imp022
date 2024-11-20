@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::data::player::{PlayerBuild, PlayerDetail};
-use shared_data::player::attribute::AttributeValueType;
-use shared_data::types::SeedType;
+use shared_data::attribute::AttributeValueType;
+use shared_net::types::SeedType;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 
@@ -47,8 +47,8 @@ impl Bufferable for PlayerPart {
 
 #[cfg(test)]
 mod test {
-    use shared_data::player::build::Build;
-    use shared_data::player::detail::Detail;
+    use shared_data::build::Build;
+    use shared_data::detail::Detail;
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
 

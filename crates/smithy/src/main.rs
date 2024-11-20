@@ -5,6 +5,7 @@ use crate::save_load::hall::*;
 use crate::save_load::vagabond::*;
 use clap::Parser;
 use sqlx::postgres::PgPoolOptions;
+use crate::data::mission::process_mission;
 
 mod data;
 mod save_load;
@@ -17,6 +18,7 @@ struct Args {
     #[arg(long)] build: bool,
     #[arg(long)] card: bool,
     #[arg(long)] detail: bool,
+    #[arg(long)] mission: bool,
     #[arg(short = 'H', long)] hall: bool,
     #[arg(short = 'V', long)] vagabond: bool,
 }
@@ -76,6 +78,19 @@ async fn main() -> Result<(), sqlx::Error> {
             output_cards_for_vagabond(&cards)?;
         }
         println!("[Smithy] END card");
+    }
+
+    if args.mission {
+        println!("[Smithy] BEGIN mission");
+        let missions = process_mission(&pool).await?;
+
+        if args.hall {
+            output_missions_for_hall(&missions)?;
+        }
+        if args.vagabond {
+            output_missions_for_vagabond(&missions)?;
+        }
+        println!("[Smithy] END mission");
     }
 
     Ok(())

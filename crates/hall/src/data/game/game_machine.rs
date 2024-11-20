@@ -5,6 +5,7 @@ use crate::data::hall::HallCard;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 use std::fmt;
+use shared_data::instruction::Instruction;
 
 type MachineValueType = u16;
 
@@ -95,6 +96,18 @@ impl GameMachineContext {
             Active
         }
     }
+
+    pub(crate) fn execute(&mut self, instruction: Instruction) -> bool {
+        match instruction {
+            Instruction::NoOp => {}
+            Instruction::ChangeFreeSpace(amount) => self.free_space = self.free_space.saturating_add_signed(amount),
+            Instruction::ChangeThermalCapacity(amount) => self.thermal_capacity = self.thermal_capacity.saturating_add_signed(amount),
+            Instruction::ChangeSystemHealth(amount) => self.system_health = self.system_health.saturating_add_signed(amount),
+            Instruction::ChangeOpenPorts(amount) => self.open_ports = self.open_ports.saturating_add_signed(amount),
+        }
+        true
+    }
+
 }
 
 #[cfg_attr(test, derive(Debug, PartialEq))]

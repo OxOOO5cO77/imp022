@@ -1,7 +1,7 @@
 use crate::data::player::player_state::PlayerStatePlayerView;
 use crate::message::CommandMessage;
-use shared_data::game::card::ErgType;
-use shared_data::player::attribute::AttributeValueType;
+use shared_data::attribute::AttributeValueType;
+use shared_data::card::ErgType;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
 

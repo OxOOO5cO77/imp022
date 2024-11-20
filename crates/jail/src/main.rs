@@ -2,7 +2,7 @@ use std::env;
 
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
-use shared_data::types::{NodeType, TimestampType, UserIdType};
+use shared_net::types::{NodeType, TimestampType, UserIdType};
 
 use shared_net::{VClientMode, RoutedMessage, VSizedBuffer};
 use shared_net::op;

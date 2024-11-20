@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use shared_data::game::card::*;
-use shared_data::player::attribute::AttributeKind;
+use shared_data::attribute::AttributeKind;
+use shared_data::card::*;
 
 type SetType = u8;
 type NumberType = u8;
@@ -14,7 +14,7 @@ pub struct VagabondCard {
     pub set: SetType,
     pub kind: AttributeKind,
     pub cost: CostType,
-    pub queue: DelayType,
+    pub delay: DelayType,
     pub priority: PriorityType,
     pub launch_rules: String,
     pub run_rules: String,

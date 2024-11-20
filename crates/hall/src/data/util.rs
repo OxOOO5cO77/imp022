@@ -1,5 +1,5 @@
 use rand::Rng;
-use shared_data::player::attribute::AttributeValueType;
+use shared_data::attribute::AttributeValueType;
 
 pub fn pick_values(rng: &mut impl Rng) -> [AttributeValueType; 4] {
     let v1 = rng.gen_range(1..=9);

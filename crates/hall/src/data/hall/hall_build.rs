@@ -2,9 +2,9 @@ use std::mem::discriminant;
 
 use serde::{Deserialize, Serialize};
 
-use shared_data::game::card::CardSlot;
-use shared_data::player::build::{Build, CompanyType, MarketType, BuildNumberType};
 use crate::data::player::PlayerBuild;
+use shared_data::build::{Build, BuildNumberType, CompanyType, MarketType};
+use shared_data::card::CardSlot;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HallBuild {

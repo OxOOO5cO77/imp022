@@ -1,4 +1,4 @@
-use shared_data::types::{AuthType, NodeType, UserIdType};
+use shared_net::types::{AuthType, NodeType, UserIdType};
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 

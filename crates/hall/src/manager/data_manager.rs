@@ -4,9 +4,9 @@ use std::path::Path;
 use hall::data::hall::{HallBuild, HallCard, HallDetail};
 use hall::data::player::PlayerCard;
 use rand::prelude::*;
-use shared_data::game::card::CardSlot;
-use shared_data::player::build::Build;
-use shared_data::player::detail::Detail;
+use shared_data::build::Build;
+use shared_data::card::CardSlot;
+use shared_data::detail::Detail;
 
 pub(crate) struct DataManager {
     build: Vec<HallBuild>,

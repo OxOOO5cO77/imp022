@@ -11,6 +11,7 @@ mod server;
 pub mod op;
 pub mod util;
 pub mod sizedbuffers;
+pub mod types;
 
 #[derive(Clone)]
 pub struct RoutedMessage {

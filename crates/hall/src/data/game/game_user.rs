@@ -3,7 +3,7 @@ use crate::data::game::GameMachine;
 use crate::data::player::player_state::PlayerState;
 use crate::data::player::Player;
 use rand::{thread_rng, Rng};
-use shared_data::types::{AuthType, PartType};
+use shared_net::types::{AuthType, PartType};
 
 pub struct GameUser {
     pub(crate) auth: AuthType,

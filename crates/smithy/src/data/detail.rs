@@ -1,7 +1,7 @@
-use crate::data::common::extract_cards;
-use shared_data::game::card::CardSlot;
-use shared_data::player::build::BuildNumberType;
-use shared_data::player::detail::*;
+use crate::data::shared::extract_cards;
+use shared_data::card::CardSlot;
+use shared_data::build::BuildNumberType;
+use shared_data::detail::*;
 use sqlx::postgres::PgRow;
 use sqlx::{FromRow, Pool, Postgres, Row};
 use std::collections::HashMap;
@@ -37,7 +37,7 @@ fn row_to_detail(row: &PgRow) -> DbDetail {
         number: row.get::<i32, _>("number") as BuildNumberType,
         detail: compose_detail(row.get("kind"), row.get::<i32, _>("general") as GeneralType, row.get::<i32, _>("specific") as SpecificType),
         title: row.get("title"),
-        cards: extract_cards(row),
+        cards: extract_cards(row, 15),
     }
 }
 

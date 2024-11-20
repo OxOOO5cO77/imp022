@@ -1,14 +1,15 @@
-use bevy::prelude::*;
-use pyri_tooltip::TooltipContent;
-use shared_data::player::attribute::AttributeValueType;
-use vagabond::data::VagabondPart;
-use warehouse::data::player_bio::PlayerBio;
 use crate::manager::{DataManager, WarehouseManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::compose::StatRowKind::{Build, Detail};
 use crate::system::app_state::AppState;
 use crate::system::dragdrop::{DragDrag, DragDrop, DragTarget, Dragging, DropTarget};
 use crate::system::ui::{filled_rect, font_size, screen_exit, text_centered, FontInfo, Screen, ScreenBundle, HUNDRED};
+use bevy::prelude::*;
+use pyri_tooltip::TooltipContent;
+use shared_data::attribute::AttributeValueType;
+use shared_data::mission::MissionIdType;
+use vagabond::data::VagabondPart;
+use warehouse::data::player_bio::PlayerBio;
 
 pub struct ComposePlugin;
 
@@ -98,8 +99,9 @@ enum InfoKind {
 
 #[derive(Resource, Default)]
 pub(crate) struct PlayerCache {
+    pub(crate) mission: MissionIdType,
     pub(crate) bio: PlayerBio,
-    pub(crate) attr: [[AttributeValueType;4];4],
+    pub(crate) attr: [[AttributeValueType; 4]; 4],
 }
 
 const ATTRIB_SIZE: f32 = 48.0;
@@ -620,7 +622,7 @@ fn seed_from_holder(holder: &PlayerPartHolder) -> u64 {
     holder.0.as_ref().map(|o| o.seed).unwrap_or_default()
 }
 
-fn values_from_holder(holder: &PlayerPartHolder) -> [AttributeValueType;4] {
+fn values_from_holder(holder: &PlayerPartHolder) -> [AttributeValueType; 4] {
     holder.0.as_ref().map(|o| o.values).unwrap_or_default()
 }
 
@@ -641,19 +643,19 @@ fn finish_player(
                     StatRowKind::Analyze => {
                         parts[0] = seed_from_holder(holder);
                         player_cache.attr[0] = values_from_holder(holder);
-                    },
+                    }
                     StatRowKind::Breach => {
                         parts[1] = seed_from_holder(holder);
                         player_cache.attr[1] = values_from_holder(holder);
-                    },
+                    }
                     StatRowKind::Compute => {
                         parts[2] = seed_from_holder(holder);
                         player_cache.attr[2] = values_from_holder(holder);
-                    },
+                    }
                     StatRowKind::Disrupt => {
                         parts[3] = seed_from_holder(holder);
                         player_cache.attr[3] = values_from_holder(holder);
-                    },
+                    }
                     Build => parts[5] = seed_from_holder(holder),
                     Detail => parts[7] = seed_from_holder(holder),
                 },
@@ -683,32 +685,31 @@ fn compose_update(
     mut app_state: ResMut<NextState<AppState>>,
 ) {
     match gate.grx.try_recv() {
-        Ok(GateCommand::GameBuild(gate_response)) => {
-            match wm.fetch_player(gate_response.seed) {
-                Ok(warehouse_response) => {
-                    if let Some(player_bio) = warehouse_response.player_bio {
-                        for (mut info, info_kind) in info_q.iter_mut() {
-                            match info_kind {
-                                InfoKind::Name => info.sections[0].value.clone_from(&player_bio.name),
-                                InfoKind::ID => info.sections[0].value.clone_from(&player_bio.id),
-                                InfoKind::Birthplace => info.sections[0].value = player_bio.birthplace(),
-                                InfoKind::DoB => info.sections[0].value = player_bio.age().to_string(),
-                            }
+        Ok(GateCommand::GameBuild(gate_response)) => match wm.fetch_player(gate_response.seed) {
+            Ok(warehouse_response) => {
+                if let Some(player_bio) = warehouse_response.player_bio {
+                    for (mut info, info_kind) in info_q.iter_mut() {
+                        match info_kind {
+                            InfoKind::Name => info.sections[0].value.clone_from(&player_bio.name),
+                            InfoKind::ID => info.sections[0].value.clone_from(&player_bio.id),
+                            InfoKind::Birthplace => info.sections[0].value = player_bio.birthplace(),
+                            InfoKind::DoB => info.sections[0].value = player_bio.age().to_string(),
                         }
-
-                        let deck = dm.convert_deck(gate_response.deck);
-
-                        for (idx, card) in deck.iter().enumerate() {
-                            if let Some((mut card_text, _)) = deck_q.iter_mut().find(|o| o.1 .0 == idx) {
-                                card_text.sections[0].value.clone_from(&card.title);
-                            }
-                        }
-                        player_cache.bio = player_bio;
                     }
+
+                    let deck = dm.convert_deck(gate_response.deck);
+
+                    for (idx, card) in deck.iter().enumerate() {
+                        if let Some((mut card_text, _)) = deck_q.iter_mut().find(|o| o.1 .0 == idx) {
+                            card_text.sections[0].value.clone_from(&card.title);
+                        }
+                    }
+                    player_cache.bio = player_bio;
+                    player_cache.mission = 1;   //TODO
                 }
-                Err(err) => println!("Error: {err}"),
             }
-        }
+            Err(err) => println!("Error: {err}"),
+        },
         Ok(GateCommand::GameStartGame(gate_response)) => {
             if gate_response.success {
                 app_state.set(AppState::Gameplay);
