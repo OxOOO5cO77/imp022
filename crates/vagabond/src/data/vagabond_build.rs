@@ -1,12 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-use shared_data::build::Build;
-
-type NumberType = u8;
+use shared_data::build::{Build, BuildNumberType};
 
 #[derive(Default, Clone, Serialize, Deserialize)]
 pub struct VagabondBuild {
     pub build: Build,
-    pub number: NumberType,
+    pub number: BuildNumberType,
     pub title: String,
 }
