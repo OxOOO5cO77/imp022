@@ -359,9 +359,9 @@ mod test {
 
         #[test]
         fn test_vec() {
-            let mut buf = VSizedBuffer::new(64);
             let orig = vec![0u32, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
+            let mut buf = VSizedBuffer::new(orig.size_in_buffer());
             buf.push(&orig);
             let result = Vec::<u32>::pull_from(&mut buf);
 
@@ -372,9 +372,22 @@ mod test {
         #[test]
         fn test_array() {
             type TestArray = [u32; 10];
-            let mut buf = VSizedBuffer::new(64);
             let orig: TestArray = [0u32, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
+            let mut buf = VSizedBuffer::new(orig.size_in_buffer());
+            buf.push(&orig);
+            let result = TestArray::pull_from(&mut buf);
+
+            assert_eq!(orig.len(), result.len());
+            assert_eq!(orig, result);
+        }
+
+        #[test]
+        fn test_empty_array() {
+            type TestArray = [u32; 0];
+            let orig: TestArray = [];
+
+            let mut buf = VSizedBuffer::new(orig.size_in_buffer());
             buf.push(&orig);
             let result = TestArray::pull_from(&mut buf);
 
@@ -400,11 +413,11 @@ mod test {
         #[test]
         fn test_tuple() {
             type TestTuple = (u128, u8);
-            let mut buf = VSizedBuffer::new(256);
             let orig: TestTuple = (128, 8);
 
+            let mut buf = VSizedBuffer::new(orig.size_in_buffer());
             buf.push(&orig);
-            let result = <TestTuple>::pull_from(&mut buf);
+            let result = TestTuple::pull_from(&mut buf);
 
             assert_eq!(orig, result);
         }
@@ -412,11 +425,11 @@ mod test {
         #[test]
         fn test_tuple_arrays() {
             type TestTuple = ([u128; 4], Vec<bool>);
-            let mut buf = VSizedBuffer::new(256);
             let orig: TestTuple = ([128, 8, 0, 8172637813], vec![true, false, true, true, false, true]);
 
+            let mut buf = VSizedBuffer::new(orig.size_in_buffer());
             buf.push(&orig);
-            let result = <TestTuple>::pull_from(&mut buf);
+            let result = TestTuple::pull_from(&mut buf);
 
             assert_eq!(orig.0.len(), result.0.len());
             assert_eq!(orig.1.len(), result.1.len());
