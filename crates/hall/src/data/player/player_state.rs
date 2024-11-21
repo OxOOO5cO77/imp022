@@ -7,6 +7,7 @@ use shared_data::attribute::{AttributeKind, AttributeValueType, Attributes};
 use shared_data::card::ErgType;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
+use crate::message::{CardIdxType, CardTarget};
 
 #[derive(Default)]
 pub struct PlayerState {
@@ -15,7 +16,7 @@ pub struct PlayerState {
     heap: Vec<HallCard>,
     hand: Vec<HallCard>,
     erg: HashMap<AttributeKind, ErgType>,
-    play: Vec<HallCard>,
+    play: Vec<(HallCard,CardTarget)>,
     pub last_command: Option<op::Command>,
     pub resolve_kind: Option<AttributeKind>,
 }
@@ -34,12 +35,10 @@ impl PlayerState {
     }
 
     fn fill_hand(&mut self) {
+        const HAND_SIZE: usize = 5;
+        
         let mut kinds = vec![AttributeKind::Analyze, AttributeKind::Breach, AttributeKind::Compute, AttributeKind::Disrupt];
-        for card in &self.hand {
-            if let Some(index) = kinds.iter().position(|kind| card.kind == *kind) {
-                kinds.remove(index);
-            }
-        }
+        kinds.retain(|&kind| !self.hand.iter().any(|card| card.kind == kind));
         for kind in kinds {
             if let Some(index) = self.deck.iter().position(|card| card.kind == kind) {
                 if let Some(card) = self.deck.remove(index) {
@@ -47,18 +46,19 @@ impl PlayerState {
                 }
             }
         }
-        while self.hand.len() < 6 {
+        while self.hand.len() < HAND_SIZE {
             if let Some(card) = self.deck.pop_front() {
                 self.hand.push(card);
             }
         }
     }
 
-    pub fn play_card(&mut self, index: usize) -> bool {
+    pub fn play_card(&mut self, index: CardIdxType, target: CardTarget) -> bool {
+        let index = index as usize;
         if let Some(card) = self.hand.get(index) {
             if card.cost <= *self.erg.get(&card.kind).unwrap_or(&0) {
                 let card = self.hand.remove(index);
-                self.play.push(card);
+                self.play.push((card, target));
                 return true;
             }
         }

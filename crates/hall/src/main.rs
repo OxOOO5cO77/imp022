@@ -5,8 +5,8 @@ use hall::data::game::{GameMachinePlayerView, GamePhase, GameStage, GameState, G
 use hall::data::player::player_state::PlayerStatePlayerView;
 use hall::message::*;
 use rand::prelude::*;
-use shared_net::types::{AuthType, GameIdType, NodeType, UserIdType};
 use shared_net::sizedbuffers::Bufferable;
+use shared_net::types::{AuthType, GameIdType, NodeType, UserIdType};
 use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 use std::collections::HashMap;
 use std::env;
@@ -246,14 +246,14 @@ fn recv_game_end(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, 
     let _ = send_routed_message(response, gate, header.vagabond, &tx);
 }
 
-fn update_user(context: &mut Hall, game_id: GameIdType, user: UserIdType, auth: AuthType, command: op::Command, update: impl Fn(&mut GameUser) -> bool) -> bool {
+fn update_user<T: Default>(context: &mut Hall, game_id: GameIdType, user: UserIdType, auth: AuthType, command: op::Command, update: impl Fn(&mut GameUser) -> T) -> T {
     if let Some(game) = context.games.get_mut(&game_id) {
         if let Some(user) = GameState::split_get_user_auth_mut(&mut game.users, user, auth) {
             user.state.last_command = Some(command);
             return update(user);
         }
     }
-    false
+    T::default()
 }
 
 fn recv_game_start_turn(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
@@ -343,7 +343,7 @@ fn recv_game_play_card(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMess
     let header = buf.pull::<GateHeader>();
     let request = buf.pull::<GamePlayCardRequest>();
 
-    let success = update_user(&mut context, request.game_id, header.user, header.auth, op::Command::GamePlayCard, |user| user.state.play_card(request.card_idx as usize));
+    let success = update_user(&mut context, request.game_id, header.user, header.auth, op::Command::GamePlayCard, |user| request.picks.iter().map(|(idx, target)| user.state.play_card(*idx, *target)).collect::<Vec<_>>());
 
     let response = GamePlayCardResponse {
         success,

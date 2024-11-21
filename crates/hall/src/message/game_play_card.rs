@@ -1,43 +1,76 @@
 use crate::message::CommandMessage;
-use shared_net::types::GameIdType;
+use shared_data::mission::MissionNodeIdType;
 use shared_net::sizedbuffers::Bufferable;
+use shared_net::types::GameIdType;
 use shared_net::{op, VSizedBuffer};
 
 pub type CardIdxType = u8;
 
+#[derive(Copy, Clone, Default)]
+#[repr(u8)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
+pub enum CardTarget {
+    #[default]
+    Local,
+    Remote(MissionNodeIdType),
+}
+
+type PicksType = Vec<(CardIdxType, CardTarget)>;
+
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GamePlayCardRequest {
     pub game_id: GameIdType,
-    pub card_idx: CardIdxType,
+    pub picks: PicksType,
 }
 
 impl CommandMessage for GamePlayCardRequest {
     const COMMAND: op::Command = op::Command::GamePlayCard;
 }
 
-impl Bufferable for GamePlayCardRequest {
+impl Bufferable for CardTarget {
     fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.game_id.push_into(buf);
-        self.card_idx.push_into(buf);
+        match self {
+            CardTarget::Local => 0,
+            CardTarget::Remote(node) => *node,
+        }
+        .push_into(buf);
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let game_id = GameIdType::pull_from(buf);
-        let card_idx = CardIdxType::pull_from(buf);
-        Self {
-            game_id,
-            card_idx,
+        match MissionNodeIdType::pull_from(buf) {
+            0 => CardTarget::Local,
+            node => CardTarget::Remote(node),
         }
     }
 
     fn size_in_buffer(&self) -> usize {
-        self.game_id.size_in_buffer() + self.card_idx.size_in_buffer()
+        size_of::<MissionNodeIdType>()
+    }
+}
+
+impl Bufferable for GamePlayCardRequest {
+    fn push_into(&self, buf: &mut VSizedBuffer) {
+        self.game_id.push_into(buf);
+        self.picks.push_into(buf);
+    }
+
+    fn pull_from(buf: &mut VSizedBuffer) -> Self {
+        let game_id = GameIdType::pull_from(buf);
+        let picks = PicksType::pull_from(buf);
+        Self {
+            game_id,
+            picks,
+        }
+    }
+
+    fn size_in_buffer(&self) -> usize {
+        self.game_id.size_in_buffer() + self.picks.size_in_buffer()
     }
 }
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GamePlayCardResponse {
-    pub success: bool,
+    pub success: Vec<bool>,
 }
 
 impl CommandMessage for GamePlayCardResponse {
@@ -50,7 +83,7 @@ impl Bufferable for GamePlayCardResponse {
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let success = bool::pull_from(buf);
+        let success = <Vec<bool>>::pull_from(buf);
         Self {
             success,
         }
@@ -63,16 +96,15 @@ impl Bufferable for GamePlayCardResponse {
 
 #[cfg(test)]
 mod test {
+    use crate::message::game_play_card::{CardTarget, GamePlayCardRequest, GamePlayCardResponse};
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
-
-    use crate::message::game_play_card::{GamePlayCardRequest, GamePlayCardResponse};
 
     #[test]
     fn test_request() {
         let orig = GamePlayCardRequest {
             game_id: 1234567890,
-            card_idx: 0,
+            picks: vec![(0, CardTarget::Local), (1, CardTarget::Remote(1)), (2, CardTarget::Remote(1))],
         };
 
         let mut buf = VSizedBuffer::new(orig.size_in_buffer());
@@ -86,7 +118,7 @@ mod test {
     #[test]
     fn test_response() {
         let orig = GamePlayCardResponse {
-            success: true,
+            success: vec![true,false,true,false],
         };
 
         let mut buf = VSizedBuffer::new(orig.size_in_buffer());

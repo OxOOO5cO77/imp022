@@ -6,10 +6,12 @@ use crate::system::ui::{font_size, font_size_color, screen_exit, text, text_cent
 use bevy::prelude::*;
 use hall::data::game::GameMachinePlayerView;
 use hall::data::player::player_state::PlayerStatePlayerView;
-use hall::message::AttrKind;
+use hall::message::{AttrKind, CardIdxType, CardTarget};
 use shared_data::build::BuildValueType;
 use shared_data::card::{DelayType, ErgType};
 use std::cmp::Ordering;
+use std::collections::HashMap;
+use vagabond::data::VagabondCard;
 
 pub struct GameplayPlugin;
 
@@ -44,6 +46,14 @@ enum GameplayState {
 struct GameplayContext {
     state: GameplayState,
     attr_pick: Option<AttrKind>,
+    card_picks: HashMap<CardIdxType, CardTarget>,
+}
+
+impl GameplayContext {
+    fn reset(&mut self) {
+        self.attr_pick = None;
+        self.card_picks.clear();
+    }
 }
 
 #[derive(Component)]
@@ -108,6 +118,76 @@ impl AttributeButtonBundle {
                 parent.spawn((AttributeText(row_idx, idx), text_centered(value.to_string(), font_info)));
             }
         });
+    }
+}
+
+#[derive(Component, Clone)]
+struct CardLayout {
+    slot: usize,
+    title: Entity,
+    cost: Entity,
+    launch: Entity,
+    run: Entity,
+}
+
+impl CardLayout {
+    fn new(slot: usize) -> Self {
+        Self {
+            slot,
+            title: Entity::PLACEHOLDER,
+            cost: Entity::PLACEHOLDER,
+            launch: Entity::PLACEHOLDER,
+            run: Entity::PLACEHOLDER,
+        }
+    }
+}
+
+#[derive(Component)]
+struct CardText;
+
+#[derive(Component)]
+struct CardButton(usize);
+
+#[derive(Bundle)]
+struct CardBundle {
+    node: NodeBundle,
+    marker: CardButton,
+    button: Button,
+    interaction: Interaction,
+}
+
+impl CardBundle {
+    fn new(slot: usize) -> Self {
+        Self {
+            node: NodeBundle {
+                style: Style {
+                    display: Display::Grid,
+                    width: HUNDRED,
+                    height: HUNDRED,
+                    grid_template_columns: GridTrack::flex(1.0),
+                    grid_template_rows: RepeatedGridTrack::flex(5, 1.0),
+                    row_gap: Val::Px(10.0),
+                    ..default()
+                },
+                ..default()
+            },
+
+            marker: CardButton(slot),
+            button: Default::default(),
+            interaction: Default::default(),
+        }
+    }
+    fn spawn(parent: &mut ChildBuilder, slot: usize, card: Option<VagabondCard>, font_info: &FontInfo) {
+        let mut layout = CardLayout::new(slot);
+        parent
+            .spawn(Self::new(slot))
+            .with_children(|parent| {
+                layout.title = parent.spawn((CardText, text_centered(card.as_ref().map_or("", |o| o.title.as_str()), font_info))).id();
+                layout.cost = parent.spawn((CardText, text_centered(card.as_ref().map_or("-".to_string(), |o| o.cost.to_string()), font_info))).id();
+                layout.launch = parent.spawn((CardText, text_centered(card.as_ref().map_or("", |o| o.launch_rules.as_str()), font_info))).id();
+                layout.run = parent.spawn((CardText, text_centered(card.as_ref().map_or("", |o| o.run_rules.as_str()), font_info))).id();
+            })
+            .insert(layout);
     }
 }
 
@@ -350,6 +430,7 @@ fn gameplay_enter(
     let font_info_black = font_size(&asset_server, 16.0);
     let font_info_gray = font_size_color(&asset_server, 48.0, bevy::color::palettes::basic::GRAY);
     let font_info_green = font_size_color(&asset_server, 16.0, bevy::color::palettes::basic::GREEN);
+    let font_info_card = font_size_color(&asset_server, 16.0, bevy::color::palettes::basic::GRAY);
 
     let main_layout = NodeBundle {
         style: Style {
@@ -535,8 +616,8 @@ fn gameplay_enter(
                     parent.spawn(spacer(Color::NONE));
 
                     //cards
-                    for _i in 0..5 {
-                        parent.spawn(spacer(Color::NONE));
+                    for i in 0..5 {
+                        CardBundle::spawn(parent, i, None, &font_info_card);
                     }
                 });
             });
@@ -575,7 +656,7 @@ fn button_next_update(
                         continue;
                     }
                 }
-                GameplayState::Play => gate.send_game_play_card(0),
+                GameplayState::Play => gate.send_game_play_cards(&context.card_picks),
                 GameplayState::Draw => gate.send_game_end_turn(),
                 GameplayState::Wait(_) => {}
             };
@@ -659,7 +740,7 @@ fn roll_ui_update(
                         Ordering::Equal => bevy::color::palettes::basic::YELLOW,
                         Ordering::Greater => bevy::color::palettes::basic::GREEN,
                     }
-                    .into();
+                        .into();
                 }
             }
             _ => {}
@@ -669,11 +750,14 @@ fn roll_ui_update(
 
 type ErgTextQuery<'a> = Query<'a, 'a, (&'a mut Text, &'a ErgText)>;
 type AttributeTextQuery<'a> = Query<'a, 'a, (&'a mut Text, &'a AttributeText)>;
+type CardLayoutQuery<'a> = Query<'a, 'a, &'a CardLayout>;
+type CardTextQuery<'a> = Query<'a, 'a, &'a mut Text, With<CardText>>;
 
 fn local_ui_update(
     // bevy system
     mut receive: EventReader<UiEvent>,
-    mut text_q: ParamSet<(AttributeTextQuery, ErgTextQuery)>,
+    mut text_q: ParamSet<(AttributeTextQuery, ErgTextQuery, CardLayoutQuery, CardTextQuery)>,
+    dm: Res<DataManager>,
 ) {
     for ui_event in receive.read() {
         match ui_event {
@@ -684,6 +768,25 @@ fn local_ui_update(
                 for (mut erg_text, ErgText(index)) in text_q.p1().iter_mut() {
                     erg_text.sections[0].value = format!("{:02}", player_state.erg[*index])
                 }
+
+                let layouts = text_q.p2().iter().cloned().collect::<Vec<_>>();
+
+                for layout in &layouts {
+                    let card = player_state.hand.get(layout.slot).and_then(|o| dm.convert_card(o));
+
+                    if let Ok(mut title_text) = text_q.p3().get_mut(layout.title) {
+                        title_text.sections[0].value = card.as_ref().map_or("<Empty>".to_string(), |o| o.title.clone());
+                    }
+                    if let Ok(mut cost_text) = text_q.p3().get_mut(layout.cost) {
+                        cost_text.sections[0].value = card.as_ref().map_or("<Empty>".to_string(), |o| o.cost.to_string());
+                    }
+                    if let Ok(mut launch_text) = text_q.p3().get_mut(layout.launch) {
+                        launch_text.sections[0].value = card.as_ref().map_or("<Empty>".to_string(), |o| o.launch_rules.clone());
+                    }
+                    if let Ok(mut run_text) = text_q.p3().get_mut(layout.run) {
+                        run_text.sections[0].value = card.as_ref().map_or("<Empty>".to_string(), |o| o.run_rules.clone());
+                    }
+                }
             }
             UiEvent::ChooseAttr(kind) => {
                 for (mut attr_text, AttributeText(row, _)) in text_q.p0().iter_mut() {
@@ -692,7 +795,7 @@ fn local_ui_update(
                     } else {
                         bevy::color::palettes::basic::GRAY
                     }
-                    .into();
+                        .into();
                 }
             }
             _ => {}
@@ -778,7 +881,7 @@ fn machine_ui_update(
                 } else {
                     bevy::color::palettes::basic::WHITE
                 }
-                .into();
+                    .into();
             }
 
             for (machine_component, mut text, MachineProcessText(index)) in machine_q.p3().iter_mut() {
@@ -807,8 +910,8 @@ fn gameplay_update(
 ) {
     match gate.grx.try_recv() {
         Ok(GateCommand::GameStartTurn(gate_response)) => {
+            println!("[RECV] GameStartTurn {}", if gate_response.success { "OK" } else { "ERROR" });
             if gate_response.success {
-                println!("[RECV] GameStartTurn OK");
                 context.state = GameplayState::Wait(WaitKind::All);
             }
         }
@@ -819,8 +922,8 @@ fn gameplay_update(
             send.send(UiEvent::ChooseAttr(None));
         }
         Ok(GateCommand::GameChooseAttr(gate_response)) => {
+            println!("[RECV] GameChooseAttr {}", if gate_response.success { "OK" } else { "ERROR" });
             if gate_response.success {
-                println!("[RECV] GameChooseAttr OK");
                 context.state = GameplayState::Wait(WaitKind::All);
             }
         }
@@ -831,8 +934,11 @@ fn gameplay_update(
             context.state = GameplayState::Play;
         }
         Ok(GateCommand::GamePlayCard(gate_response)) => {
-            if gate_response.success {
-                println!("[RECV] GamePlayCard OK");
+            let success = gate_response.success.iter().all(|&success| success);
+            println!("[RECV] GamePlayCard {}", if success { "OK" } else { "ERROR" });
+            if success {
+                println!("[RECV]  OK");
+                context.card_picks.clear();
                 context.state = GameplayState::Wait(WaitKind::All);
             }
         }
@@ -841,20 +947,18 @@ fn gameplay_update(
             context.state = GameplayState::Draw;
         }
         Ok(GateCommand::GameEndTurn(gate_response)) => {
+            println!("[RECV] GameEndTurn {}", if gate_response.success { "OK" } else { "ERROR" });
             if gate_response.success {
-                println!("[RECV] GameEndTurn OK");
                 context.state = GameplayState::Wait(WaitKind::All);
             }
         }
         Ok(GateCommand::GameTick(_gate_response)) => {
             println!("[RECV] GameTick");
-            context.attr_pick = None;
+            context.reset();
             context.state = GameplayState::Start;
         }
         Ok(GateCommand::GameEndGame(gate_response)) => {
-            if gate_response.success {
-                println!("[RECV] GameEndGame OK");
-            }
+            println!("[RECV] GameEndGame {}", if gate_response.success { "OK" } else { "ERROR" });
         }
         Ok(GateCommand::GameUpdateState(gate_response)) => {
             println!("[RECV] GameUpdateState");

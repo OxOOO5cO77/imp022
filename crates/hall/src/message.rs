@@ -17,7 +17,7 @@ pub use game_build::{GameBuildRequest, GameBuildResponse};
 pub use game_choose_attr::{GameChooseAttrRequest, GameChooseAttrResponse, AttrKind};
 pub use game_end_game::{GameEndGameRequest, GameEndGameResponse};
 pub use game_end_turn::{GameEndTurnRequest, GameEndTurnResponse};
-pub use game_play_card::{GamePlayCardRequest, GamePlayCardResponse, CardIdxType};
+pub use game_play_card::{GamePlayCardRequest, GamePlayCardResponse, CardIdxType, CardTarget};
 pub use game_start_turn::{GameStartTurnRequest, GameStartTurnResponse};
 
 pub use game_resolve_cards::GameResolveCardsMessage;

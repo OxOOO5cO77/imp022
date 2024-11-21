@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use bevy::prelude::Resource;
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
@@ -5,8 +6,8 @@ use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
 use hall::message::*;
-use shared_net::types::{AuthType, GameIdType, PartType};
 use shared_net::sizedbuffers::Bufferable;
+use shared_net::types::{AuthType, GameIdType, PartType};
 use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 
 pub(crate) enum GateCommand {
@@ -42,7 +43,16 @@ pub(crate) struct GateClient {
 impl GateClient {
     pub(crate) fn start(iface: String, tx: UnboundedSender<GateCommand>, rx: UnboundedReceiver<RoutedMessage>, runtime: &Runtime) -> Option<JoinHandle<Result<(), ()>>> {
         let (dummy_tx, _) = mpsc::unbounded_channel();
-        Some(runtime.spawn(shared_net::async_client(GateClient { tx }, op::Flavor::Vagabond, dummy_tx, rx, iface, process_gate)))
+        Some(runtime.spawn(shared_net::async_client(
+            GateClient {
+                tx,
+            },
+            op::Flavor::Vagabond,
+            dummy_tx,
+            rx,
+            iface,
+            process_gate,
+        )))
     }
 }
 
@@ -65,7 +75,7 @@ fn process_gate(context: GateClient, _tx: UnboundedSender<RoutedMessage>, mut bu
         op::Command::GameTick => recv_response(context, &mut buf, GateCommand::GameTick),
         op::Command::GameEndGame => recv_response(context, &mut buf, GateCommand::GameEndGame),
         op::Command::GameUpdateState => recv_response(context, &mut buf, GateCommand::GameUpdateState),
-        _ => VClientMode::Continue
+        _ => VClientMode::Continue,
     }
 }
 
@@ -115,7 +125,10 @@ impl GateIFace {
         out.push(&self.auth);
         out.push(&request);
 
-        let _ = self.gtx.send(RoutedMessage { route: op::Route::Local, buf: out });
+        let _ = self.gtx.send(RoutedMessage {
+            route: op::Route::Local,
+            buf: out,
+        });
     }
 
     pub fn send_game_activate(&self) {
@@ -153,10 +166,10 @@ impl GateIFace {
         self.send_request(request);
     }
 
-    pub fn send_game_play_card(&self, card_idx: CardIdxType) {
+    pub fn send_game_play_cards(&self, picks_map: &HashMap<CardIdxType, CardTarget>) {
         let request = GamePlayCardRequest {
             game_id: self.game_id,
-            card_idx,
+            picks: picks_map.iter().map(|(&idx, &target)| (idx, target)).collect(),
         };
 
         self.send_request(request);
@@ -177,7 +190,10 @@ impl GateIFace {
         out.push(&self.auth);
         out.push(&123_u8);
 
-        let _ = self.gtx.send(RoutedMessage { route: op::Route::Local, buf: out });
+        let _ = self.gtx.send(RoutedMessage {
+            route: op::Route::Local,
+            buf: out,
+        });
     }
 
     #[allow(dead_code)]
@@ -187,7 +203,10 @@ impl GateIFace {
         out.push(&self.auth);
         out.push(&123_u8);
 
-        let _ = self.gtx.send(RoutedMessage { route: op::Route::Local, buf: out });
+        let _ = self.gtx.send(RoutedMessage {
+            route: op::Route::Local,
+            buf: out,
+        });
     }
 
     #[allow(dead_code)]
@@ -197,7 +216,10 @@ impl GateIFace {
         out.push(&self.auth);
         out.push(&msg.to_string());
 
-        let _ = self.gtx.send(RoutedMessage { route: op::Route::Local, buf: out });
+        let _ = self.gtx.send(RoutedMessage {
+            route: op::Route::Local,
+            buf: out,
+        });
     }
 
     #[allow(dead_code)]
@@ -208,7 +230,9 @@ impl GateIFace {
         out.push(&who.to_string());
         out.push(&msg.to_string());
 
-        let _ = self.gtx.send(RoutedMessage { route: op::Route::Local, buf: out });
+        let _ = self.gtx.send(RoutedMessage {
+            route: op::Route::Local,
+            buf: out,
+        });
     }
 }
-
