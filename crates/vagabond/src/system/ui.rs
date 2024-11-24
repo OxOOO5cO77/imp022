@@ -79,8 +79,3 @@ pub(crate) fn font_size(asset_server: &Res<AssetServer>, size: f32) -> FontInfo 
         color: Color::BLACK,
     }
 }
-pub(crate) fn font_size_color(asset_server: &Res<AssetServer>, size: f32, color: impl Into<Color>) -> FontInfo {
-    let mut info = font_size(asset_server, size);
-    info.color = color.into();
-    info
-}

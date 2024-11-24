@@ -1,8 +1,7 @@
-use crate::manager::DataManager;
+use crate::manager::{AtlasManager, DataManager, ScreenLayoutManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
-use crate::screen::compose::PlayerCache;
 use crate::system::app_state::AppState;
-use crate::system::ui::{font_size, font_size_color, screen_exit, text, text_centered, FontInfo, Screen, ScreenBundle, HUNDRED, ZERO};
+use crate::system::ui::{text, text_centered, FontInfo, HUNDRED};
 use bevy::prelude::*;
 use hall::data::game::GameMachinePlayerView;
 use hall::data::player::player_state::PlayerStatePlayerView;
@@ -73,53 +72,6 @@ struct AttributeText(usize, usize);
 
 #[derive(Component)]
 struct AttributeButton(AttrKind);
-
-#[derive(Bundle)]
-struct AttributeButtonBundle {
-    node: NodeBundle,
-    marker: AttributeButton,
-    button: Button,
-    interaction: Interaction,
-}
-
-impl AttributeButtonBundle {
-    fn new(kind: AttrKind) -> Self {
-        Self {
-            node: NodeBundle {
-                style: Style {
-                    display: Display::Grid,
-                    width: HUNDRED,
-                    height: HUNDRED,
-                    grid_template_columns: RepeatedGridTrack::flex(5, 1.0),
-                    column_gap: Val::Px(10.0),
-                    grid_template_rows: GridTrack::flex(1.0),
-                    ..default()
-                },
-                ..default()
-            },
-            marker: AttributeButton(kind),
-            button: Default::default(),
-            interaction: Default::default(),
-        }
-    }
-    fn map_kind(kind: AttrKind) -> (&'static str, usize) {
-        match kind {
-            AttrKind::Analyze => ("A", 0),
-            AttrKind::Breach => ("B", 1),
-            AttrKind::Compute => ("C", 2),
-            AttrKind::Disrupt => ("D", 3),
-        }
-    }
-    fn spawn(parent: &mut ChildBuilder, kind: AttrKind, values: &[[BuildValueType; 4]; 4], font_info: &FontInfo) {
-        parent.spawn(Self::new(kind)).with_children(|parent| {
-            let (header, row_idx) = Self::map_kind(kind);
-            parent.spawn(text_centered(header, font_info));
-            for (idx, value) in values[row_idx].iter().enumerate() {
-                parent.spawn((AttributeText(row_idx, idx), text_centered(value.to_string(), font_info)));
-            }
-        });
-    }
-}
 
 #[derive(Component, Clone)]
 struct CardLayout {
@@ -407,235 +359,46 @@ enum UiEvent {
 #[derive(Component)]
 struct NextButton;
 
-fn spacer(color: Color) -> NodeBundle {
-    NodeBundle {
-        style: Style {
-            display: Display::Grid,
-            width: HUNDRED,
-            height: HUNDRED,
-            ..default()
-        },
-        background_color: color.into(),
-        ..default()
-    }
-}
-
 fn gameplay_enter(
     // bevy system
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    player_cache: Res<PlayerCache>,
     dm: Res<DataManager>,
+    mut am: ResMut<AtlasManager>,
+    mut slm: ResMut<ScreenLayoutManager>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
-    let font_info_black = font_size(&asset_server, 16.0);
-    let font_info_gray = font_size_color(&asset_server, 48.0, bevy::color::palettes::basic::GRAY);
-    let font_info_green = font_size_color(&asset_server, 16.0, bevy::color::palettes::basic::GREEN);
-    let font_info_card = font_size_color(&asset_server, 16.0, bevy::color::palettes::basic::GRAY);
+    am.load_atlas("atlas/gameplay", &asset_server, &mut texture_atlas_layouts).unwrap_or_default();
 
-    let main_layout = NodeBundle {
-        style: Style {
-            display: Display::Grid,
-            width: HUNDRED,
-            height: HUNDRED,
-            grid_template_columns: vec![GridTrack::px(422.0), GridTrack::flex(1.0), GridTrack::px(422.0)],
-            grid_template_rows: GridTrack::auto(),
-            ..default()
-        },
-        ..default()
-    };
-    let attr_layout = NodeBundle {
-        style: Style {
-            display: Display::Grid,
-            width: HUNDRED,
-            height: HUNDRED,
-            grid_template_columns: GridTrack::flex(1.0),
-            grid_template_rows: vec![GridTrack::px(368.0), GridTrack::px(290.0), GridTrack::flex(1.0)],
-            ..default()
-        },
-        ..default()
-    };
-    let attr_player_layout = NodeBundle {
-        style: Style {
-            display: Display::Grid,
-            width: HUNDRED,
-            height: HUNDRED,
-            grid_template_columns: GridTrack::flex(1.0),
-            grid_template_rows: RepeatedGridTrack::flex(4, 1.0),
-            row_gap: Val::Px(10.0),
-            padding: UiRect::all(Val::Px(30.0)),
-            ..default()
-        },
-        ..default()
-    };
-    let center_layout = NodeBundle {
-        style: Style {
-            display: Display::Grid,
-            width: HUNDRED,
-            height: HUNDRED,
-            grid_template_columns: GridTrack::flex(1.0),
-            grid_template_rows: vec![GridTrack::px(128.0), GridTrack::px(572.0), GridTrack::flex(1.0)],
-            ..default()
-        },
-        ..default()
-    };
-    let roll_layout = NodeBundle {
-        style: Style {
-            display: Display::Grid,
-            width: HUNDRED,
-            height: HUNDRED,
-            grid_template_columns: vec![GridTrack::flex(1.0), GridTrack::px(290.0), GridTrack::flex(1.0)],
-            grid_template_rows: GridTrack::flex(1.0),
-            ..default()
-        },
-        ..default()
-    };
-    let roll_values_layout = NodeBundle {
-        style: Style {
-            display: Display::Grid,
-            width: HUNDRED,
-            height: HUNDRED,
-            grid_template_columns: RepeatedGridTrack::flex(4, 1.0),
-            column_gap: Val::Px(10.0),
-            grid_template_rows: GridTrack::flex(1.0),
-            ..default()
-        },
-        ..default()
-    };
-    let game_map_layout = NodeBundle {
-        style: Style {
-            display: Display::Grid,
-            width: HUNDRED,
-            height: HUNDRED,
-            grid_template_columns: GridTrack::flex(1.0),
-            grid_template_rows: GridTrack::flex(1.0),
-            ..default()
-        },
-        ..default()
-    };
-    let player_erg_card_layout = NodeBundle {
-        style: Style {
-            display: Display::Grid,
-            width: HUNDRED,
-            height: HUNDRED,
-            grid_template_columns: RepeatedGridTrack::flex(5, 1.0),
-            column_gap: Val::Px(4.0),
-            grid_template_rows: vec![GridTrack::px(86.0), GridTrack::flex(1.0)],
-            ..default()
-        },
-        ..default()
-    };
-    let remote_layout = NodeBundle {
-        style: Style {
-            display: Display::Grid,
-            width: HUNDRED,
-            height: HUNDRED,
-            grid_template_columns: GridTrack::flex(1.0),
-            grid_template_rows: vec![GridTrack::px(130.0), GridTrack::px(290.0), GridTrack::px(312.0), GridTrack::flex(1.0)],
-            ..default()
-        },
-        ..default()
-    };
-    let remote_attr_layout = NodeBundle {
-        style: Style {
-            display: Display::Grid,
-            width: HUNDRED,
-            height: HUNDRED,
-            grid_template_columns: RepeatedGridTrack::flex(4, 1.0),
-            column_gap: Val::Px(10.0),
-            grid_template_rows: GridTrack::flex(1.0),
-            padding: UiRect::new(Val::Px(66.0), Val::Px(66.0), Val::Px(32.0), Val::Px(32.0)),
-            ..default()
-        },
-        ..default()
-    };
-    let turn_control_layout = NodeBundle {
-        style: Style {
-            display: Display::Grid,
-            width: HUNDRED,
-            height: HUNDRED,
-            grid_template_columns: GridTrack::flex(1.0),
-            grid_template_rows: vec![GridTrack::flex(1.0), GridTrack::px(100.0)],
-            padding: UiRect::new(Val::Px(28.0), Val::Px(28.0), Val::Px(18.0), Val::Px(18.0)),
-            align_items: AlignItems::Center,
-            justify_items: JustifyItems::Center,
-            ..default()
-        },
-        ..default()
-    };
-    let screen = ScreenBundle {
-        screen: Screen,
-        base: ImageBundle {
-            style: Style {
-                position_type: PositionType::Absolute,
-                left: ZERO,
-                top: ZERO,
-                width: HUNDRED,
-                height: HUNDRED,
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                align_content: AlignContent::Center,
-                align_self: AlignSelf::Center,
-                ..default()
-            },
-            image: asset_server.load("image/gameplay.png").into(),
-            ..Default::default()
-        },
-    };
+    let font_handle = asset_server.load("font/RobotoMono.ttf");
+    let layout = slm.build(&mut commands, "gameplay", font_handle, am.into());
 
-    commands.spawn(screen).with_children(|parent| {
-        parent.spawn(main_layout).with_children(|parent| {
-            parent.spawn(attr_layout).with_children(|parent| {
-                parent.spawn(attr_player_layout).with_children(|parent| {
-                    AttributeButtonBundle::spawn(parent, AttrKind::Analyze, &player_cache.attr, &font_info_gray);
-                    AttributeButtonBundle::spawn(parent, AttrKind::Breach, &player_cache.attr, &font_info_gray);
-                    AttributeButtonBundle::spawn(parent, AttrKind::Compute, &player_cache.attr, &font_info_gray);
-                    AttributeButtonBundle::spawn(parent, AttrKind::Disrupt, &player_cache.attr, &font_info_gray);
-                });
-                let name = format!("{} [{}]", &player_cache.bio.name, &player_cache.bio.id);
-                MachineBundle::spawn(parent, MachineKind::Local, name, bevy::color::palettes::basic::GREEN, &font_info_black);
-                parent.spawn(spacer(Color::NONE));
-            });
-            parent.spawn(center_layout).with_children(|parent| {
-                parent.spawn(roll_layout).with_children(|parent| {
-                    parent.spawn(spacer(Color::NONE));
-                    parent.spawn(roll_values_layout).with_children(|parent| {
-                        for i in 0..4 {
-                            parent.spawn((RollText(i), text_centered("-", &font_info_gray)));
-                        }
-                    });
-                    parent.spawn(spacer(Color::NONE));
-                });
-                parent.spawn(game_map_layout).with_children(|parent| {
-                    parent.spawn(spacer(Color::NONE));
-                });
-                parent.spawn(player_erg_card_layout).with_children(|parent| {
-                    //erg
-                    for i in 0..4 {
-                        parent.spawn((ErgText(i), text_centered("00", &font_info_gray)));
-                    }
-                    parent.spawn(spacer(Color::NONE));
+    const LOCAL_ATTR: [[&str; 4]; 4] = [["aa", "ab", "ac", "ad"], ["ba", "bb", "bc", "bd"], ["ca", "cb", "cc", "cd"], ["da", "db", "dc", "dd"]];
 
-                    //cards
-                    for i in 0..5 {
-                        CardBundle::spawn(parent, i, None, &font_info_card);
-                    }
-                });
-            });
-            parent.spawn(remote_layout).with_children(|parent| {
-                parent.spawn(remote_attr_layout).with_children(|parent| {
-                    for i in 0..4 {
-                        parent.spawn((RemoteAttrText(i), text_centered("?", &font_info_gray)));
-                    }
-                });
-                MachineBundle::spawn(parent, MachineKind::Remote, dm.node_name(player_cache.mission, 1), bevy::color::palettes::basic::RED, &font_info_black);
-                parent.spawn(spacer(Color::NONE));
-                parent.spawn(turn_control_layout).with_children(|parent| {
-                    parent.spawn((PhaseText, text_centered("Phase", &font_info_green)));
-                    NextButtonBundle::spawn(parent, &font_info_black);
-                });
-            });
-        });
-    });
+    for (row_idx, row) in LOCAL_ATTR.iter().enumerate() {
+        for (col_idx, name) in row.iter().enumerate() {
+            layout.decorate_text(&mut commands, name, AttributeText(row_idx, col_idx));
+        }
+    }
+
+    const ROLL: [&str; 4] = ["ea", "eb", "ec", "ed"];
+
+    for (roll_idx, roll) in ROLL.iter().enumerate() {
+        layout.decorate_text(&mut commands, roll, RollText(roll_idx));
+    }
+
+    const REMOTE_ATTR: [&str; 4] = ["ra", "rb", "rc", "rd"];
+
+    for (remote_idx, remote) in REMOTE_ATTR.iter().enumerate() {
+        layout.decorate_text(&mut commands, remote, RemoteAttrText(remote_idx));
+    }
+
+    const ERG: [&str; 4] = ["la", "lb", "lc", "ld"];
+
+    for (erg_idx, erg) in ERG.iter().enumerate() {
+        layout.decorate_text(&mut commands, erg, ErgText(erg_idx));
+    }
+
     commands.insert_resource(GameplayContext::default());
 }
 
@@ -740,7 +503,7 @@ fn roll_ui_update(
                         Ordering::Equal => bevy::color::palettes::basic::YELLOW,
                         Ordering::Greater => bevy::color::palettes::basic::GREEN,
                     }
-                        .into();
+                    .into();
                 }
             }
             _ => {}
@@ -795,7 +558,7 @@ fn local_ui_update(
                     } else {
                         bevy::color::palettes::basic::GRAY
                     }
-                        .into();
+                    .into();
                 }
             }
             _ => {}
@@ -881,7 +644,7 @@ fn machine_ui_update(
                 } else {
                     bevy::color::palettes::basic::WHITE
                 }
-                    .into();
+                .into();
             }
 
             for (machine_component, mut text, MachineProcessText(index)) in machine_q.p3().iter_mut() {
@@ -910,7 +673,14 @@ fn gameplay_update(
 ) {
     match gate.grx.try_recv() {
         Ok(GateCommand::GameStartTurn(gate_response)) => {
-            println!("[RECV] GameStartTurn {}", if gate_response.success { "OK" } else { "ERROR" });
+            println!(
+                "[RECV] GameStartTurn {}",
+                if gate_response.success {
+                    "OK"
+                } else {
+                    "ERROR"
+                }
+            );
             if gate_response.success {
                 context.state = GameplayState::Wait(WaitKind::All);
             }
@@ -922,7 +692,14 @@ fn gameplay_update(
             send.send(UiEvent::ChooseAttr(None));
         }
         Ok(GateCommand::GameChooseAttr(gate_response)) => {
-            println!("[RECV] GameChooseAttr {}", if gate_response.success { "OK" } else { "ERROR" });
+            println!(
+                "[RECV] GameChooseAttr {}",
+                if gate_response.success {
+                    "OK"
+                } else {
+                    "ERROR"
+                }
+            );
             if gate_response.success {
                 context.state = GameplayState::Wait(WaitKind::All);
             }
@@ -935,7 +712,14 @@ fn gameplay_update(
         }
         Ok(GateCommand::GamePlayCard(gate_response)) => {
             let success = gate_response.success.iter().all(|&success| success);
-            println!("[RECV] GamePlayCard {}", if success { "OK" } else { "ERROR" });
+            println!(
+                "[RECV] GamePlayCard {}",
+                if success {
+                    "OK"
+                } else {
+                    "ERROR"
+                }
+            );
             if success {
                 println!("[RECV]  OK");
                 context.card_picks.clear();
@@ -947,7 +731,14 @@ fn gameplay_update(
             context.state = GameplayState::Draw;
         }
         Ok(GateCommand::GameEndTurn(gate_response)) => {
-            println!("[RECV] GameEndTurn {}", if gate_response.success { "OK" } else { "ERROR" });
+            println!(
+                "[RECV] GameEndTurn {}",
+                if gate_response.success {
+                    "OK"
+                } else {
+                    "ERROR"
+                }
+            );
             if gate_response.success {
                 context.state = GameplayState::Wait(WaitKind::All);
             }
@@ -958,7 +749,14 @@ fn gameplay_update(
             context.state = GameplayState::Start;
         }
         Ok(GateCommand::GameEndGame(gate_response)) => {
-            println!("[RECV] GameEndGame {}", if gate_response.success { "OK" } else { "ERROR" });
+            println!(
+                "[RECV] GameEndGame {}",
+                if gate_response.success {
+                    "OK"
+                } else {
+                    "ERROR"
+                }
+            );
         }
         Ok(GateCommand::GameUpdateState(gate_response)) => {
             println!("[RECV] GameUpdateState");
@@ -973,9 +771,8 @@ fn gameplay_update(
 pub fn gameplay_exit(
     // bevy system
     mut commands: Commands,
-    screen_q: Query<Entity, With<Screen>>,
+    mut slm: ResMut<ScreenLayoutManager>,
 ) {
     commands.remove_resource::<GameplayContext>();
-    commands.remove_resource::<PlayerCache>();
-    screen_exit(commands, screen_q);
+    slm.destroy(commands, "gameplay");
 }

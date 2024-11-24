@@ -4,13 +4,13 @@ use bevy::window::WindowResolution;
 use system::app_state::AppState;
 
 mod manager;
+mod network;
 mod screen;
 mod system;
-mod network;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set( WindowPlugin {
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 resolution: WindowResolution::new(1920.0, 1080.0).with_scale_factor_override(1.0),
                 title: "Vagabond".to_string(),
@@ -22,26 +22,15 @@ fn main() {
         .add_plugins(pyri_tooltip::TooltipPlugin::default())
         .add_plugins(system::SystemPlugin)
         .add_plugins(manager::ManagerPlugin)
-        .add_plugins(screen::ScreenPlugins)
+        .add_plugins(screen::ScreenPlugin)
+        .insert_resource(ClearColor(Color::srgb(0.0, 0.0, 0.0)))
         .init_state::<AppState>()
         .add_systems(Startup, setup)
-        .run()
-    ;
+        .run();
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(
-        Camera3dBundle {
-            projection: OrthographicProjection { ..default() }.into(),
-            transform: Transform::from_xyz(0.0, 10.0, 0.1).looking_at(Vec3::ZERO, Vec3::Y),
-            ..default()
-        }
-    );
-    commands.spawn(
-        PointLightBundle {
-            point_light: PointLight { intensity: 9000.0, range: 100., shadows_enabled: true, ..default() },
-            transform: Transform::from_xyz(8.0, 16.0, 8.0),
-            ..default()
-        }
-    );
+    let mut camera = Camera2dBundle::default();
+    camera.transform.translation = Vec3::new(960.0, -540.0, 0.0);
+    commands.spawn(camera);
 }

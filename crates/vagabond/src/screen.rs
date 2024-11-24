@@ -5,9 +5,9 @@ mod splash;
 mod gameplay;
 mod login;
 
-pub(crate) struct ScreenPlugins;
+pub(crate) struct ScreenPlugin;
 
-impl PluginGroup for ScreenPlugins {
+impl PluginGroup for ScreenPlugin {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
             .add(splash::SplashPlugin)

@@ -6,10 +6,7 @@ use crate::system::dragdrop::{DragDrag, DragDrop, DragTarget, Dragging, DropTarg
 use crate::system::ui::{filled_rect, font_size, screen_exit, text_centered, FontInfo, Screen, ScreenBundle, HUNDRED};
 use bevy::prelude::*;
 use pyri_tooltip::TooltipContent;
-use shared_data::attribute::AttributeValueType;
-use shared_data::mission::MissionIdType;
 use vagabond::data::VagabondPart;
-use warehouse::data::player_bio::PlayerBio;
 
 pub struct ComposePlugin;
 
@@ -95,13 +92,6 @@ enum InfoKind {
     ID,
     Birthplace,
     DoB,
-}
-
-#[derive(Resource, Default)]
-pub(crate) struct PlayerCache {
-    pub(crate) mission: MissionIdType,
-    pub(crate) bio: PlayerBio,
-    pub(crate) attr: [[AttributeValueType; 4]; 4],
 }
 
 const ATTRIB_SIZE: f32 = 48.0;
@@ -340,7 +330,6 @@ fn compose_enter(
     let parts = init_handoff.parts.clone();
     commands.remove_resource::<ComposeInitHandoff>();
     commands.insert_resource(ComposeState::default());
-    commands.insert_resource(PlayerCache::default());
     build_ui_compose(commands, parts, asset_server);
 }
 
@@ -622,17 +611,12 @@ fn seed_from_holder(holder: &PlayerPartHolder) -> u64 {
     holder.0.as_ref().map(|o| o.seed).unwrap_or_default()
 }
 
-fn values_from_holder(holder: &PlayerPartHolder) -> [AttributeValueType; 4] {
-    holder.0.as_ref().map(|o| o.values).unwrap_or_default()
-}
-
 fn finish_player(
     // bevy system
     receive: EventReader<FinishPlayer>,
     holder_q: Query<(&PlayerPartHolder, &PlayerPartHolderKind)>,
     gate: Res<GateIFace>,
     mut state: ResMut<ComposeState>,
-    mut player_cache: ResMut<PlayerCache>,
 ) {
     if !receive.is_empty() {
         let mut parts = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -642,19 +626,15 @@ fn finish_player(
                 PlayerPartHolderKind::StatRow(row) => match row {
                     StatRowKind::Analyze => {
                         parts[0] = seed_from_holder(holder);
-                        player_cache.attr[0] = values_from_holder(holder);
                     }
                     StatRowKind::Breach => {
                         parts[1] = seed_from_holder(holder);
-                        player_cache.attr[1] = values_from_holder(holder);
                     }
                     StatRowKind::Compute => {
                         parts[2] = seed_from_holder(holder);
-                        player_cache.attr[2] = values_from_holder(holder);
                     }
                     StatRowKind::Disrupt => {
                         parts[3] = seed_from_holder(holder);
-                        player_cache.attr[3] = values_from_holder(holder);
                     }
                     Build => parts[5] = seed_from_holder(holder),
                     Detail => parts[7] = seed_from_holder(holder),
@@ -681,7 +661,6 @@ fn compose_update(
     mut info_q: Query<(&mut Text, &InfoKind), Without<CardHolder>>,
     wm: Res<WarehouseManager>,
     dm: Res<DataManager>,
-    mut player_cache: ResMut<PlayerCache>,
     mut app_state: ResMut<NextState<AppState>>,
 ) {
     match gate.grx.try_recv() {
@@ -704,8 +683,6 @@ fn compose_update(
                             card_text.sections[0].value.clone_from(&card.title);
                         }
                     }
-                    player_cache.bio = player_bio;
-                    player_cache.mission = 1;   //TODO
                 }
             }
             Err(err) => println!("Error: {err}"),
