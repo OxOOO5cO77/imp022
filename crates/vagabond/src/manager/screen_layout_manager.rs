@@ -126,7 +126,7 @@ impl ScreenLayout {
         }
     }
 
-    fn sprite(&self, commands: &mut Commands, name: &str, decorator: impl Bundle) {
+    pub(crate) fn decorate_sprite(&self, commands: &mut Commands, name: &str, decorator: impl Bundle) {
         self.decorate(commands, EntityKind::Sprite, name, decorator);
     }
     pub(crate) fn decorate_text(&self, commands: &mut Commands, name: &str, decorator: impl Bundle) {

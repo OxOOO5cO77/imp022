@@ -3,6 +3,7 @@ use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::system::app_state::AppState;
 use crate::system::ui::{text, text_centered, FontInfo, HUNDRED};
 use bevy::prelude::*;
+use bevy_mod_picking::prelude::*;
 use hall::data::game::GameMachinePlayerView;
 use hall::data::player::player_state::PlayerStatePlayerView;
 use hall::message::{AttrKind, CardIdxType, CardTarget};
@@ -399,17 +400,24 @@ fn gameplay_enter(
         layout.decorate_text(&mut commands, erg, ErgText(erg_idx));
     }
 
+    layout.decorate_sprite(&mut commands, "next", (NextButton, PickableBundle::default()));
+
+    layout.decorate_sprite(&mut commands, "row_a", (AttributeButton(AttrKind::Analyze), PickableBundle::default()));
+    layout.decorate_sprite(&mut commands, "row_b", (AttributeButton(AttrKind::Breach), PickableBundle::default()));
+    layout.decorate_sprite(&mut commands, "row_c", (AttributeButton(AttrKind::Compute), PickableBundle::default()));
+    layout.decorate_sprite(&mut commands, "row_d", (AttributeButton(AttrKind::Disrupt), PickableBundle::default()));
+    
     commands.insert_resource(GameplayContext::default());
 }
 
 fn button_next_update(
     // bevy system
-    interaction_q: Query<&Interaction, (Changed<Interaction>, With<NextButton>)>,
+    interaction_q: Query<&PickingInteraction, (Changed<PickingInteraction>, With<NextButton>)>,
     mut context: ResMut<GameplayContext>,
     gate: Res<GateIFace>,
 ) {
     for &interaction in &interaction_q {
-        if interaction == Interaction::Pressed {
+        if interaction == PickingInteraction::Pressed {
             match context.state {
                 GameplayState::Start => gate.send_game_start_turn(),
                 GameplayState::Pick => {
@@ -430,7 +438,7 @@ fn button_next_update(
 
 fn button_attribute_update(
     // bevy system
-    interaction_q: Query<(&AttributeButton, &Interaction), Changed<Interaction>>,
+    interaction_q: Query<(&AttributeButton, &PickingInteraction), Changed<PickingInteraction>>,
     mut context: ResMut<GameplayContext>,
     mut send: EventWriter<UiEvent>,
 ) {
@@ -438,7 +446,7 @@ fn button_attribute_update(
         return;
     }
     for (AttributeButton(kind), &interaction) in &interaction_q {
-        if interaction == Interaction::Pressed {
+        if interaction == PickingInteraction::Pressed {
             context.attr_pick = Some(*kind);
             send.send(UiEvent::ChooseAttr(Some(map_kind_to_row(*kind))));
         }
@@ -454,30 +462,28 @@ fn map_kind_to_row(kind: AttrKind) -> usize {
     }
 }
 
-type ButtonQueryParams<'a> = (&'a Interaction, &'a mut BackgroundColor, &'a mut BorderColor);
-type ButtonQueryConditions = (Changed<Interaction>, With<NextButton>);
+type ButtonUiQueryParams<'a> = (&'a PickingInteraction, &'a mut Sprite);
+type NextUiQueryConditions = (Changed<PickingInteraction>, With<NextButton>);
+
 fn button_next_ui_update(
     // bevy system
-    mut interaction_query: Query<ButtonQueryParams, ButtonQueryConditions>,
+    mut interaction_query: Query<ButtonUiQueryParams, NextUiQueryConditions>,
     context: Res<GameplayContext>,
 ) {
-    for (interaction, mut background_color, mut border_color) in &mut interaction_query {
+    for (interaction, mut sprite) in &mut interaction_query {
         match *interaction {
-            Interaction::Pressed => {
-                *background_color = match context.state {
+            PickingInteraction::Pressed => {
+                sprite.color = match context.state {
                     GameplayState::Wait(WaitKind::One) => bevy::color::palettes::basic::RED.into(),
                     GameplayState::Wait(WaitKind::All) => bevy::color::palettes::basic::YELLOW.into(),
                     _ => bevy::color::palettes::basic::GREEN.into(),
                 };
-                *border_color = bevy::color::palettes::basic::RED.into();
             }
-            Interaction::Hovered => {
-                *background_color = bevy::color::palettes::basic::SILVER.into();
-                *border_color = bevy::color::palettes::basic::WHITE.into();
+            PickingInteraction::Hovered => {
+                sprite.color = bevy::color::palettes::basic::SILVER.into();
             }
-            Interaction::None => {
-                *background_color = bevy::color::palettes::basic::GRAY.into();
-                *border_color = bevy::color::palettes::basic::BLACK.into();
+            PickingInteraction::None => {
+                sprite.color = bevy::color::palettes::basic::GRAY.into();
             }
         }
     }

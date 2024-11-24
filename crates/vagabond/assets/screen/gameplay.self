@@ -62,7 +62,7 @@
 &lc:00@29,906,64,64!green,48
 *ld:gameplay.064x064@29,986!green
 &ld:00@29,986,64,64!green,48
-*next:gameplay.064x064@1823,986!white
+*next:gameplay.064x064@1823,986!grey
 *local:gameplay.372x300@29,390!green
 +local:machine@29,390
 *remote:gameplay.372x300@1519,390!red

@@ -1,6 +1,7 @@
 use bevy::app::App;
 use bevy::prelude::*;
 use bevy::window::WindowResolution;
+use bevy_mod_picking::DefaultPickingPlugins;
 use system::app_state::AppState;
 
 mod manager;
@@ -20,9 +21,8 @@ fn main() {
         }))
         .add_plugins(bevy_egui::EguiPlugin)
         .add_plugins(pyri_tooltip::TooltipPlugin::default())
-        .add_plugins(system::SystemPlugin)
-        .add_plugins(manager::ManagerPlugin)
-        .add_plugins(screen::ScreenPlugin)
+        .add_plugins(DefaultPickingPlugins)
+        .add_plugins((system::SystemPlugin, manager::ManagerPlugin, screen::ScreenPlugin))
         .insert_resource(ClearColor(Color::srgb(0.0, 0.0, 0.0)))
         .init_state::<AppState>()
         .add_systems(Startup, setup)
