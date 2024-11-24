@@ -141,7 +141,7 @@ impl GameProcessPlayerView {
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
     use crate::data::game::game_process::GameProcessPlayerView;
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;

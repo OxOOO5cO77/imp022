@@ -36,7 +36,7 @@ impl PlayerState {
 
     fn fill_hand(&mut self) {
         const HAND_SIZE: usize = 5;
-        
+
         let mut kinds = vec![AttributeKind::Analyze, AttributeKind::Breach, AttributeKind::Compute, AttributeKind::Disrupt];
         kinds.retain(|&kind| !self.hand.iter().any(|card| card.kind == kind));
         for kind in kinds {
@@ -134,7 +134,7 @@ impl Bufferable for PlayerStatePlayerView {
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
     use crate::data::player::player_card::PlayerCard;
     use crate::data::player::player_state::PlayerStatePlayerView;
     use shared_data::card::Rarity;

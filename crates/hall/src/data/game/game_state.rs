@@ -163,7 +163,7 @@ impl GameState {
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
     use crate::data::game::GameState;
     use shared_data::card::ErgType;
 

@@ -165,7 +165,7 @@ impl GameMachinePlayerView {
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
     use shared_net::sizedbuffers::Bufferable;
     use crate::data::game::game_machine::GameMachinePlayerView;
     use shared_net::VSizedBuffer;
