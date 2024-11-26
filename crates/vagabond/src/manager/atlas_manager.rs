@@ -37,7 +37,7 @@ impl AtlasManager {
         Ok(())
     }
 
-    pub(crate) fn sprite(&self, atlas_name: &str, texture_name: &str, location: Vec2, color: Srgba) -> Option<(SpriteBundle, TextureAtlas)> {
+    pub(crate) fn make_sprite_bundle(&self, atlas_name: &str, texture_name: &str, translation: Vec3, color: Srgba) -> Option<(SpriteBundle, TextureAtlas)> {
         let atlas = self.map.get(atlas_name)?;
         let entry = atlas.map.get(texture_name)?;
         let texture = atlas.image.clone();
@@ -50,7 +50,7 @@ impl AtlasManager {
                 ..default()
             },
             texture,
-            transform: Transform::from_xyz(location.x, -location.y, 0.0),
+            transform: Transform::from_translation(translation),
             ..default()
         };
         let atlas = TextureAtlas {
@@ -130,7 +130,7 @@ impl Atlas {
         let image_path = path.as_ref().with_extension("png");
         let image_handle = asset_server.load(image_path);
 
-        let layout_path = Path::new("assets").join(path.as_ref().with_extension("layout"));
+        let layout_path = Path::new("assets").join(path.as_ref().with_extension("atlas"));
         let layout_file = std::fs::read_to_string(layout_path).map_err(AtlasManagerError::Io)?;
 
         let (atlas_name, map, layout) = parse_file(&layout_file)?;

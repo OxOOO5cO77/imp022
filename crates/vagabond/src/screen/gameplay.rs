@@ -1,7 +1,7 @@
 use crate::manager::{AtlasManager, DataManager, ScreenLayoutManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::system::app_state::AppState;
-use crate::system::ui::{text, text_centered, FontInfo, HUNDRED};
+use crate::system::ui::{text_centered, FontInfo, HUNDRED};
 use bevy::prelude::*;
 use bevy_mod_picking::prelude::*;
 use hall::data::game::GameMachinePlayerView;
@@ -144,37 +144,11 @@ impl CardBundle {
     }
 }
 
-#[derive(Bundle)]
-struct NextButtonBundle {
-    marker: NextButton,
-    button: ButtonBundle,
-}
-
-impl NextButtonBundle {
-    fn new() -> Self {
-        Self {
-            marker: NextButton,
-            button: ButtonBundle {
-                background_color: bevy::color::palettes::css::DARK_GRAY.into(),
-                style: Style {
-                    width: Val::Percent(90.0),
-                    height: Val::Percent(90.0),
-                    padding: UiRect::all(Val::Px(10.0)),
-                    ..default()
-                },
-                ..default()
-            },
-        }
-    }
-    fn spawn(parent: &mut ChildBuilder, font_info: &FontInfo) {
-        parent.spawn(Self::new()).with_children(|parent| {
-            parent.spawn(text_centered("Next", font_info));
-        });
-    }
-}
-
 #[derive(Component)]
 struct MachineNameText;
+
+#[derive(Component)]
+struct MachineIdText;
 
 #[derive(Component)]
 struct MachineStatText(usize);
@@ -187,160 +161,6 @@ struct MachineQueueItem(DelayType);
 
 #[derive(Component)]
 struct MachineProcessText(usize);
-
-#[derive(Bundle)]
-struct MachineBundle {
-    node: NodeBundle,
-    machine_kind: MachineKind,
-}
-
-impl MachineBundle {
-    fn new(machine_kind: MachineKind, border_color: Srgba) -> Self {
-        Self {
-            node: NodeBundle {
-                style: Style {
-                    display: Display::Grid,
-                    width: HUNDRED,
-                    height: HUNDRED,
-                    grid_template_columns: GridTrack::flex(1.0),
-                    grid_template_rows: vec![GridTrack::flex(1.0), GridTrack::flex(4.0), GridTrack::flex(2.0), GridTrack::flex(6.0)],
-                    border: UiRect::all(Val::Px(2.0)),
-                    ..default()
-                },
-                background_color: bevy::color::palettes::basic::SILVER.into(),
-                border_color: border_color.into(),
-                ..default()
-            },
-            machine_kind,
-        }
-    }
-    fn spawn(parent: &mut ChildBuilder, machine_kind: MachineKind, name: impl Into<String>, border_color: Srgba, font_info: &FontInfo) {
-        let machine_layout = NodeBundle {
-            style: Style {
-                padding: UiRect::new(Val::Px(40.0), Val::Px(40.0), Val::Px(10.0), Val::Px(10.0)),
-                ..default()
-            },
-            ..default()
-        };
-
-        let stats_layout = NodeBundle {
-            style: Style {
-                display: Display::Grid,
-                width: HUNDRED,
-                height: HUNDRED,
-                grid_template_columns: vec![GridTrack::flex(2.0), GridTrack::flex(1.0), GridTrack::flex(1.0)],
-                grid_template_rows: RepeatedGridTrack::flex(2, 1.0),
-                ..default()
-            },
-            ..default()
-        };
-
-        let stats_graphic = NodeBundle {
-            style: Style {
-                width: Val::Percent(90.0),
-                height: Val::Percent(90.0),
-                grid_row: GridPlacement::span(2),
-                align_self: AlignSelf::Center,
-                justify_self: JustifySelf::Center,
-                ..default()
-            },
-            background_color: border_color.into(),
-            ..default()
-        };
-
-        let current_layout = NodeBundle {
-            style: Style {
-                display: Display::Grid,
-                width: HUNDRED,
-                height: HUNDRED,
-                grid_template_columns: GridTrack::flex(1.0),
-                grid_template_rows: RepeatedGridTrack::flex(2, 1.0),
-                ..default()
-            },
-            ..default()
-        };
-
-        let queue_layout = NodeBundle {
-            style: Style {
-                display: Display::Grid,
-                width: Val::Percent(80.0),
-                height: HUNDRED,
-                grid_template_columns: RepeatedGridTrack::flex(10, 1.0),
-                column_gap: Val::Px(10.0),
-                grid_template_rows: GridTrack::flex(1.0),
-                ..default()
-            },
-            ..default()
-        };
-
-        let queue_item = NodeBundle {
-            style: Style {
-                display: Display::Grid,
-                width: HUNDRED,
-                height: HUNDRED,
-                border: UiRect::all(Val::Px(2.0)),
-                ..default()
-            },
-            background_color: Color::WHITE.into(),
-            border_color: Color::BLACK.into(),
-            ..default()
-        };
-
-        let process_layout = NodeBundle {
-            style: Style {
-                display: Display::Grid,
-                width: HUNDRED,
-                height: Val::Percent(80.0),
-                grid_template_columns: GridTrack::flex(1.0),
-                grid_template_rows: vec![GridTrack::flex(1.5), GridTrack::flex(1.0), GridTrack::flex(1.0), GridTrack::flex(1.0), GridTrack::flex(1.0)],
-                align_items: AlignItems::End,
-                ..default()
-            },
-            ..default()
-        };
-
-        parent.spawn(machine_layout).with_children(|parent| {
-            parent.spawn(Self::new(machine_kind, border_color)).with_children(|parent| {
-                parent.spawn(NodeBundle::default()).with_children(|parent| {
-                    parent.spawn((machine_kind, MachineNameText, text(name, AlignSelf::Center, JustifySelf::Start, font_info)));
-                });
-
-                parent.spawn(stats_layout).with_children(|parent| {
-                    parent.spawn(stats_graphic);
-                    parent.spawn((machine_kind, MachineStatText(0), text_centered("[1] meow", font_info)));
-                    parent.spawn((machine_kind, MachineStatText(1), text_centered("[2] meow", font_info)));
-                    parent.spawn((machine_kind, MachineStatText(2), text_centered("[3] meow", font_info)));
-                    parent.spawn((machine_kind, MachineStatText(3), text_centered("[4] meow", font_info)));
-                });
-                parent.spawn(current_layout).with_children(|parent| {
-                    parent.spawn(NodeBundle::default()).with_children(|parent| {
-                        parent.spawn((machine_kind, MachineCurrentProgramText, text(" v- <idle>", AlignSelf::Start, JustifySelf::Center, font_info)));
-                    });
-                    parent.spawn(queue_layout).with_children(|parent| {
-                        for i in 0..10 {
-                            parent.spawn((machine_kind, MachineQueueItem(i), queue_item.clone()));
-                        }
-                    });
-                });
-                parent.spawn(process_layout).with_children(|parent| {
-                    parent.spawn(text_centered("--Running Processes--", font_info));
-                    parent.spawn(NodeBundle::default()).with_children(|parent| {
-                        parent.spawn((machine_kind, MachineProcessText(0), text("?", AlignSelf::Start, JustifySelf::Center, font_info)));
-                    });
-                    parent.spawn(NodeBundle::default()).with_children(|parent| {
-                        parent.spawn((machine_kind, MachineProcessText(1), text("?", AlignSelf::Start, JustifySelf::Center, font_info)));
-                    });
-                    parent.spawn(NodeBundle::default()).with_children(|parent| {
-                        parent.spawn((machine_kind, MachineProcessText(2), text("?", AlignSelf::Start, JustifySelf::Center, font_info)));
-                    });
-                    parent.spawn(NodeBundle::default()).with_children(|parent| {
-                        parent.spawn((machine_kind, MachineProcessText(3), text("?", AlignSelf::Start, JustifySelf::Center, font_info)));
-                    });
-                });
-            });
-        });
-    }
-}
 
 #[derive(Component, Copy, Clone, PartialEq)]
 enum MachineKind {
@@ -364,49 +184,68 @@ fn gameplay_enter(
     // bevy system
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    dm: Res<DataManager>,
     mut am: ResMut<AtlasManager>,
     mut slm: ResMut<ScreenLayoutManager>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+    (mut meshes, mut materials): (ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>),
 ) {
     am.load_atlas("atlas/gameplay", &asset_server, &mut texture_atlas_layouts).unwrap_or_default();
 
     let font_handle = asset_server.load("font/RobotoMono.ttf");
-    let layout = slm.build(&mut commands, "gameplay", font_handle, am.into());
+    let layout = slm.build(&mut commands, "gameplay", font_handle, &am, &mut meshes, &mut materials);
 
     const LOCAL_ATTR: [[&str; 4]; 4] = [["aa", "ab", "ac", "ad"], ["ba", "bb", "bc", "bd"], ["ca", "cb", "cc", "cd"], ["da", "db", "dc", "dd"]];
 
     for (row_idx, row) in LOCAL_ATTR.iter().enumerate() {
         for (col_idx, name) in row.iter().enumerate() {
-            layout.decorate_text(&mut commands, name, AttributeText(row_idx, col_idx));
+            layout.decorate(&mut commands, name, AttributeText(row_idx, col_idx));
         }
     }
 
     const ROLL: [&str; 4] = ["ea", "eb", "ec", "ed"];
 
     for (roll_idx, roll) in ROLL.iter().enumerate() {
-        layout.decorate_text(&mut commands, roll, RollText(roll_idx));
+        layout.decorate(&mut commands, roll, RollText(roll_idx));
     }
 
     const REMOTE_ATTR: [&str; 4] = ["ra", "rb", "rc", "rd"];
 
     for (remote_idx, remote) in REMOTE_ATTR.iter().enumerate() {
-        layout.decorate_text(&mut commands, remote, RemoteAttrText(remote_idx));
+        layout.decorate(&mut commands, remote, RemoteAttrText(remote_idx));
     }
 
     const ERG: [&str; 4] = ["la", "lb", "lc", "ld"];
 
     for (erg_idx, erg) in ERG.iter().enumerate() {
-        layout.decorate_text(&mut commands, erg, ErgText(erg_idx));
+        layout.decorate(&mut commands, erg, ErgText(erg_idx));
     }
 
-    layout.decorate_sprite(&mut commands, "next", (NextButton, PickableBundle::default()));
+    layout.decorate(&mut commands, "next", (NextButton, PickableBundle::default()));
 
-    layout.decorate_sprite(&mut commands, "row_a", (AttributeButton(AttrKind::Analyze), PickableBundle::default()));
-    layout.decorate_sprite(&mut commands, "row_b", (AttributeButton(AttrKind::Breach), PickableBundle::default()));
-    layout.decorate_sprite(&mut commands, "row_c", (AttributeButton(AttrKind::Compute), PickableBundle::default()));
-    layout.decorate_sprite(&mut commands, "row_d", (AttributeButton(AttrKind::Disrupt), PickableBundle::default()));
-    
+    layout.decorate(&mut commands, "row_a", (AttributeButton(AttrKind::Analyze), PickableBundle::default()));
+    layout.decorate(&mut commands, "row_b", (AttributeButton(AttrKind::Breach), PickableBundle::default()));
+    layout.decorate(&mut commands, "row_c", (AttributeButton(AttrKind::Compute), PickableBundle::default()));
+    layout.decorate(&mut commands, "row_d", (AttributeButton(AttrKind::Disrupt), PickableBundle::default()));
+
+    const MACHINES: [(MachineKind, &str); 2] = [(MachineKind::Local, "local"), (MachineKind::Remote, "remote")];
+
+    for machine in &MACHINES {
+        layout.decorate(&mut commands, format!("{}/title", machine.1).as_str(), (machine.0, MachineNameText));
+        layout.decorate(&mut commands, format!("{}/id", machine.1).as_str(), (machine.0, MachineIdText));
+
+        layout.decorate(&mut commands, format!("{}/free_space", machine.1).as_str(), (machine.0, MachineStatText(0)));
+        layout.decorate(&mut commands, format!("{}/thermal_capacity", machine.1).as_str(), (machine.0, MachineStatText(1)));
+        layout.decorate(&mut commands, format!("{}/system_health", machine.1).as_str(), (machine.0, MachineStatText(2)));
+        layout.decorate(&mut commands, format!("{}/open_ports", machine.1).as_str(), (machine.0, MachineStatText(3)));
+
+        layout.decorate(&mut commands, format!("{}/current_program", machine.1).as_str(), (machine.0, MachineCurrentProgramText));
+
+        layout.decorate(&mut commands, format!("{}/running1", machine.1).as_str(), (machine.0, MachineProcessText(0)));
+        layout.decorate(&mut commands, format!("{}/running2", machine.1).as_str(), (machine.0, MachineProcessText(1)));
+        layout.decorate(&mut commands, format!("{}/running3", machine.1).as_str(), (machine.0, MachineProcessText(2)));
+        layout.decorate(&mut commands, format!("{}/running4", machine.1).as_str(), (machine.0, MachineProcessText(3)));
+    }
+
     commands.insert_resource(GameplayContext::default());
 }
 
