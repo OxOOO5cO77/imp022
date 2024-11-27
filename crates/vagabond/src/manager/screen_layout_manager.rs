@@ -78,21 +78,19 @@ impl ScreenLayout {
     fn parse_position_size(rect: &str, z: f32) -> (Vec3, Vec2) {
         let [x_str, y_str, w_str, h_str] = rect.split(",").collect::<Vec<&str>>().try_into().unwrap();
 
-        let x = x_str.parse::<u32>().unwrap_or_default() as f32;
-        let y = y_str.parse::<u32>().unwrap_or_default() as f32;
-        let w = w_str.parse::<u32>().unwrap_or_default() as f32;
-        let h = h_str.parse::<u32>().unwrap_or_default() as f32;
+        let x = x_str.parse().unwrap_or_default();
+        let y = y_str.parse::<f32>().unwrap_or_default();
+        let w = w_str.parse().unwrap_or_default();
+        let h = h_str.parse().unwrap_or_default();
 
-        (Vec3::new(x, y, z), Vec2::new(w, h))
+        (Vec3::new(x, -y, z), Vec2::new(w, h))
     }
 
     fn parse_position(position: &str, z: f32) -> Vec3 {
-        let (x, y) = position.split_once(",").unwrap();
-        Vec3 {
-            x: x.parse().unwrap_or_default(),
-            y: y.parse().unwrap_or_default(),
-            z,
-        }
+        let (x_str, y_str) = position.split_once(",").unwrap();
+        let x = x_str.parse().unwrap_or_default();
+        let y = y_str.parse::<f32>().unwrap_or_default();
+        Vec3::new(x, -y, z)
     }
 
     fn parse_shape_kind(shape_kind: &str) -> ShapeKind {
@@ -105,7 +103,8 @@ impl ScreenLayout {
     fn parse_shape(&mut self, name: &str, remain: &str, z: f32) {
         let (shape_kind, remain) = remain.split_once("@").unwrap();
         let (position_size, color) = remain.split_once("!").unwrap();
-        let (position, size) = Self::parse_position_size(position_size, z);
+        let (raw_position, size) = Self::parse_position_size(position_size, z);
+        let position = Vec3::new(raw_position.x + (size.x/2.0), raw_position.y - (size.y/2.0), raw_position.z);
 
         let element = ShapeElement {
             kind: Self::parse_shape_kind(shape_kind),
@@ -195,6 +194,15 @@ struct ScreenLayoutContainer {
     inherited_visibility: InheritedVisibility,
 }
 
+impl ScreenLayoutContainer {
+    fn new_at(translation: Vec3) -> Self {
+        Self {
+            transform: Transform::from_translation(translation),
+            ..default()
+        }
+    }
+}
+
 fn fail<T>(_: T) -> std::io::Error {
     std::io::ErrorKind::Other.into()
 }
@@ -218,7 +226,7 @@ impl ScreenLayoutManager {
         })
     }
     fn load(path: impl AsRef<Path>) -> Result<ScreenLayout, std::io::Error> {
-        const Z_OFFSET: f32 = 1.0;
+        const Z_OFFSET: f32 = 0.01;
         let mut z = 0.0;
 
         let layout_file = std::fs::read_to_string(path)?;
@@ -242,13 +250,12 @@ impl ScreenLayoutManager {
         Ok(screen_layout)
     }
 
-    fn make_shape_bundle(element: &ShapeElement, offset: Vec3, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> impl Bundle {
+    fn make_shape_bundle(element: &ShapeElement, offset_z: f32, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> impl Bundle {
         let mesh = match element.kind {
             ShapeKind::Rect => Mesh2dHandle(meshes.add(Rectangle::new(element.size.x, element.size.y))),
         };
         let material = materials.add(Color::Srgba(element.color));
-        let position = element.position + (element.size.extend(0.0) / 2.0);
-        let translation = Vec3::new(position.x + offset.x, -(position.y + offset.y), position.z + offset.z);
+        let translation = Vec3::new(element.position.x, element.position.y, element.position.z + offset_z);
 
         MaterialMesh2dBundle {
             mesh,
@@ -273,9 +280,9 @@ impl ScreenLayoutManager {
         Some((sprite, atlas))
     }
 
-    fn make_text_bundle(element: &TextElement, offset: Vec3, asset_server: &AssetServer) -> impl Bundle {
+    fn make_text_bundle(element: &TextElement, offset_z: f32, asset_server: &AssetServer) -> impl Bundle {
         let font = asset_server.load(element.font_name);
-        let translation = Vec3::new(element.position.x + offset.x, -(element.position.y + offset.y), element.position.z + offset.z);
+        let translation = Vec3::new(element.position.x, element.position.y, element.position.z + offset_z);
 
         Text2dBundle {
             text: Text::from_section(
@@ -304,7 +311,7 @@ impl ScreenLayoutManager {
         }
     }
 
-    fn build_layout(&self, layout_name: &str, parent: &mut ChildBuilder, offset: &mut Vec3, base_name: &str, am: &AtlasManager, (asset_server, meshes, materials): BevyAssetsForBuildLayout) -> Vec<(String, Entity)> {
+    fn build_layout(&self, layout_name: &str, parent: &mut ChildBuilder, offset_z: &mut f32, base_name: &str, am: &AtlasManager, (asset_server, meshes, materials): BevyAssetsForBuildLayout) -> Vec<(String, Entity)> {
         let mut entities = Vec::new();
         let layout = self.layout_map.get(layout_name).unwrap();
 
@@ -312,39 +319,37 @@ impl ScreenLayoutManager {
             let full_name = Self::make_name(base_name, name);
             let id = match element {
                 Element::Shape(e) => {
-                    let shape = Self::make_shape_bundle(e, *offset, meshes, materials);
-                    let id = parent.spawn(shape).id();
-                    Some(id)
+                    let shape = Self::make_shape_bundle(e, *offset_z, meshes, materials);
+                    parent.spawn(shape).id()
                 }
                 Element::Sprite(e) => {
-                    let translation = Vec3::new(e.position.x + offset.x, -(e.position.y + offset.y), e.position.z + offset.z);
+                    let translation = Vec3::new(e.position.x, e.position.y, e.position.z + *offset_z);
                     if let Some(sprite) = Self::make_sprite_bundle(am, e.atlas.as_str(), e.item.as_str(), translation, e.color) {
-                        let id = if e.pickable {
+                        if e.pickable {
                             parent.spawn((sprite, PickableBundle::default())).id()
                         } else {
                             parent.spawn((sprite, Pickable::IGNORE)).id()
-                        };
-                        Some(id)
+                        }
                     } else {
-                        None
+                        continue;
                     }
                 }
                 Element::Text(e) => {
-                    let text = Self::make_text_bundle(e, *offset, asset_server);
-                    let id = parent.spawn(text).id();
-                    Some(id)
+                    let text = Self::make_text_bundle(e, *offset_z, asset_server);
+                    parent.spawn(text).id()
                 }
                 Element::Layout(e) => {
-                    let mut new_offset = e.position + *offset;
-                    let mut nested_entities = self.build_layout(&e.layout, parent, &mut new_offset, &full_name, am, (asset_server, meshes, materials));
-                    entities.append(&mut nested_entities);
-                    offset.z = new_offset.z;
-                    None
+                    let translation = Vec3::new(e.position.x, e.position.y, e.position.z + *offset_z);
+                    parent
+                        .spawn(ScreenLayoutContainer::new_at(translation))
+                        .with_children(|parent| {
+                            let mut nested_entities = self.build_layout(&e.layout, parent, offset_z, &full_name, am, (asset_server, meshes, materials));
+                            entities.append(&mut nested_entities);
+                        })
+                        .id()
                 }
             };
-            if let Some(id) = id {
-                entities.push((full_name, id));
-            }
+            entities.push((full_name, id));
         }
 
         entities
@@ -354,7 +359,7 @@ impl ScreenLayoutManager {
         let id = commands
             .spawn((ScreenLayoutContainer::default(), Screen))
             .with_children(|parent| {
-                let mut offset = Vec3::default();
+                let mut offset = 0.0;
                 let entities = self.build_layout(layout_name, parent, &mut offset, "", am, (asset_server, meshes, materials));
                 let layout = self.layout_map.get_mut(layout_name).unwrap();
                 layout.entity_map = entities.into_iter().collect();
