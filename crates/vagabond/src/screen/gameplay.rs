@@ -187,12 +187,12 @@ fn gameplay_enter(
     mut am: ResMut<AtlasManager>,
     mut slm: ResMut<ScreenLayoutManager>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
-    (mut meshes, mut materials): (ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>),
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     am.load_atlas("atlas/gameplay", &asset_server, &mut texture_atlas_layouts).unwrap_or_default();
 
-    let font_handle = asset_server.load("font/RobotoMono.ttf");
-    let layout = slm.build(&mut commands, "gameplay", font_handle, &am, &mut meshes, &mut materials);
+    let layout = slm.build(&mut commands, "gameplay", &am, &asset_server, &mut meshes, &mut materials);
 
     const LOCAL_ATTR: [[&str; 4]; 4] = [["aa", "ab", "ac", "ad"], ["ba", "bb", "bc", "bd"], ["ca", "cb", "cc", "cd"], ["da", "db", "dc", "dd"]];
 

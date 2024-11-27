@@ -47,6 +47,7 @@ struct SpriteElement {
 struct TextElement {
     default_text: String,
     color: Srgba,
+    font_name: &'static str,
     font_size: f32,
     position: Vec3,
     size: Vec2,
@@ -129,17 +130,39 @@ impl ScreenLayout {
 
         self.element_map.insert(name.to_string(), Element::Sprite(element));
     }
-    fn parse_text(&mut self, name: &str, remain: &str, justify: JustifyText, z: f32) {
-        let (default_text, remain) = remain.split_once('@').unwrap();
+
+    fn parse_font_info(font_info: &str) -> (&'static str, f32, JustifyText) {
+        let mut parts = font_info.split(".");
+        let name_str = parts.next().unwrap_or("main");
+        let font_size = parts.next().unwrap_or("12").parse::<f32>().unwrap_or(12.0);
+        let justify_str = parts.next().unwrap_or("center");
+
+        let font_name = match name_str {
+            "main" => "font/RobotoMono.ttf",
+            _ => "font/RobotoMono.ttf",
+        };
+        let justify = match justify_str {
+            "left" => JustifyText::Left,
+            "center" => JustifyText::Center,
+            "right" => JustifyText::Right,
+            _ => JustifyText::Center,
+        };
+        (font_name, font_size, justify)
+    }
+
+    fn parse_text(&mut self, name: &str, remain: &str, z: f32) {
+        let (font_info, remain) = remain.split_once('@').unwrap();
         let (position_size, remain) = remain.split_once('!').unwrap();
-        let (color, font_size) = remain.split_once(',').unwrap();
+        let (color, default_text) = remain.split_once('|').unwrap();
 
         let (position, size) = Self::parse_position_size(position_size, z);
+        let (font_name, font_size, justify) = Self::parse_font_info(font_info);
 
         let element = TextElement {
             default_text: default_text.to_string(),
             color: Self::parse_color(color),
-            font_size: font_size.parse().unwrap(),
+            font_name,
+            font_size,
             position,
             size,
             justify,
@@ -174,6 +197,8 @@ fn fail<T>(_: T) -> std::io::Error {
     std::io::ErrorKind::Other.into()
 }
 
+type BevyAssetsForBuildLayout<'a> = (&'a AssetServer, &'a mut Assets<Mesh>, &'a mut Assets<ColorMaterial>);
+
 impl ScreenLayoutManager {
     pub(crate) fn new(path: impl AsRef<Path>) -> Result<Self, std::io::Error> {
         let mut layout_map = HashMap::new();
@@ -204,9 +229,7 @@ impl ScreenLayoutManager {
             match kind {
                 '*' => screen_layout.parse_sprite(name, remain, z),
                 '+' => screen_layout.parse_layout(name, remain, z),
-                '^' => screen_layout.parse_text(name, remain, JustifyText::Left, z),
-                '&' => screen_layout.parse_text(name, remain, JustifyText::Center, z),
-                '$' => screen_layout.parse_text(name, remain, JustifyText::Right, z),
+                '&' => screen_layout.parse_text(name, remain, z),
                 '#' => screen_layout.parse_shape(name, remain, z),
                 _ => continue,
             }
@@ -232,7 +255,8 @@ impl ScreenLayoutManager {
         }
     }
 
-    fn make_text_bundle(element: &TextElement, offset: Vec3, font: Handle<Font>) -> impl Bundle {
+    fn make_text_bundle(element: &TextElement, offset: Vec3, asset_server: &AssetServer) -> impl Bundle {
+        let font = asset_server.load(element.font_name);
         let translation = Vec3::new(element.position.x + offset.x, -(element.position.y + offset.y), element.position.z + offset.z);
 
         Text2dBundle {
@@ -262,7 +286,7 @@ impl ScreenLayoutManager {
         }
     }
 
-    fn build_layout(&self, layout_name: &str, parent: &mut ChildBuilder, offset: &mut Vec3, base_name: &str, font_handle: Handle<Font>, am: &AtlasManager, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> Vec<(String, Entity)> {
+    fn build_layout(&self, layout_name: &str, parent: &mut ChildBuilder, offset: &mut Vec3, base_name: &str, am: &AtlasManager, (asset_server, meshes, materials): BevyAssetsForBuildLayout) -> Vec<(String, Entity)> {
         let mut entities = Vec::new();
         let layout = self.layout_map.get(layout_name).unwrap();
 
@@ -281,13 +305,13 @@ impl ScreenLayoutManager {
                     Some(id)
                 }
                 Element::Text(e) => {
-                    let text = Self::make_text_bundle(e, *offset, font_handle.clone());
+                    let text = Self::make_text_bundle(e, *offset, asset_server);
                     let id = parent.spawn(text).id();
                     Some(id)
                 }
                 Element::Layout(e) => {
                     let mut new_offset = e.position + *offset;
-                    let mut nested_entities = self.build_layout(&e.layout, parent, &mut new_offset, &full_name, font_handle.clone(), am, meshes, materials);
+                    let mut nested_entities = self.build_layout(&e.layout, parent, &mut new_offset, &full_name, am, (asset_server, meshes, materials));
                     entities.append(&mut nested_entities);
                     offset.z = new_offset.z;
                     None
@@ -301,12 +325,12 @@ impl ScreenLayoutManager {
         entities
     }
 
-    pub(crate) fn build(&mut self, commands: &mut Commands, layout_name: &str, font_handle: Handle<Font>, am: &AtlasManager, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> &ScreenLayout {
+    pub(crate) fn build(&mut self, commands: &mut Commands, layout_name: &str, am: &AtlasManager, asset_server: &AssetServer, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> &ScreenLayout {
         let id = commands
             .spawn((ScreenLayoutContainer::default(), Screen))
             .with_children(|parent| {
                 let mut offset = Vec3::default();
-                let entities = self.build_layout(layout_name, parent, &mut offset, "", font_handle, am, meshes, materials);
+                let entities = self.build_layout(layout_name, parent, &mut offset, "", am, (asset_server, meshes, materials));
                 let layout = self.layout_map.get_mut(layout_name).unwrap();
                 layout.entity_map = entities.into_iter().collect();
             })
