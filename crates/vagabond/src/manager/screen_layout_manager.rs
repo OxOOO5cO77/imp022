@@ -3,8 +3,8 @@ use crate::system::ui::Screen;
 use bevy::prelude::*;
 use bevy::sprite::{Anchor, MaterialMesh2dBundle, Mesh2dHandle};
 use bevy::text::Text2dBounds;
+use bevy_mod_picking::prelude::*;
 use std::collections::HashMap;
-use std::fs;
 use std::path::Path;
 
 #[derive(Resource)]
@@ -42,6 +42,7 @@ struct SpriteElement {
     item: String,
     position: Vec3,
     color: Srgba,
+    pickable: bool,
 }
 
 struct TextElement {
@@ -116,7 +117,7 @@ impl ScreenLayout {
         self.element_map.insert(name.to_string(), Element::Shape(element));
     }
 
-    fn parse_sprite(&mut self, name: &str, remain: &str, z: f32) {
+    fn parse_sprite(&mut self, name: &str, remain: &str, pickable: bool, z: f32) {
         let (atlas_item, remain) = remain.split_once('@').unwrap();
         let (atlas, item) = atlas_item.split_once('.').unwrap();
         let (position, color) = remain.split_once("!").unwrap();
@@ -126,6 +127,7 @@ impl ScreenLayout {
             item: item.to_string(),
             position: Self::parse_position(position, z),
             color: Self::parse_color(color),
+            pickable,
         };
 
         self.element_map.insert(name.to_string(), Element::Sprite(element));
@@ -203,7 +205,7 @@ impl ScreenLayoutManager {
     pub(crate) fn new(path: impl AsRef<Path>) -> Result<Self, std::io::Error> {
         let mut layout_map = HashMap::new();
 
-        for entry in fs::read_dir(path)? {
+        for entry in std::fs::read_dir(path)? {
             let entry = entry.map_err(fail)?.path();
             let name = entry.file_stem().ok_or(std::io::ErrorKind::Other).map_err(fail)?.to_string_lossy().to_string();
             let layout = Self::load(entry)?;
@@ -216,10 +218,10 @@ impl ScreenLayoutManager {
         })
     }
     fn load(path: impl AsRef<Path>) -> Result<ScreenLayout, std::io::Error> {
-        const Z_OFFSET: f32 = 0.001;
+        const Z_OFFSET: f32 = 1.0;
         let mut z = 0.0;
 
-        let layout_file = fs::read_to_string(path)?;
+        let layout_file = std::fs::read_to_string(path)?;
 
         let mut screen_layout = ScreenLayout::default();
         for line in layout_file.lines() {
@@ -227,7 +229,8 @@ impl ScreenLayoutManager {
             let (kind, remain) = (chars.next().unwrap(), chars.collect::<String>());
             let (name, remain) = remain.split_once(':').unwrap();
             match kind {
-                '*' => screen_layout.parse_sprite(name, remain, z),
+                '*' => screen_layout.parse_sprite(name, remain, false, z),
+                '?' => screen_layout.parse_sprite(name, remain, true, z),
                 '+' => screen_layout.parse_layout(name, remain, z),
                 '&' => screen_layout.parse_text(name, remain, z),
                 '#' => screen_layout.parse_shape(name, remain, z),
@@ -253,6 +256,21 @@ impl ScreenLayoutManager {
             transform: Transform::from_translation(translation),
             ..default()
         }
+    }
+    pub(crate) fn make_sprite_bundle(am: &AtlasManager, atlas_name: &str, texture_name: &str, translation: Vec3, color: Srgba) -> Option<(SpriteBundle, TextureAtlas)> {
+        let (atlas, texture) = am.get_atlas_texture(atlas_name, texture_name)?;
+
+        let sprite = SpriteBundle {
+            sprite: Sprite {
+                color: Color::Srgba(color),
+                anchor: Anchor::TopLeft,
+                ..default()
+            },
+            texture,
+            transform: Transform::from_translation(translation),
+            ..default()
+        };
+        Some((sprite, atlas))
     }
 
     fn make_text_bundle(element: &TextElement, offset: Vec3, asset_server: &AssetServer) -> impl Bundle {
@@ -300,9 +318,16 @@ impl ScreenLayoutManager {
                 }
                 Element::Sprite(e) => {
                     let translation = Vec3::new(e.position.x + offset.x, -(e.position.y + offset.y), e.position.z + offset.z);
-                    let sprite = am.make_sprite_bundle(e.atlas.as_str(), e.item.as_str(), translation, e.color).unwrap();
-                    let id = parent.spawn(sprite).id();
-                    Some(id)
+                    if let Some(sprite) = Self::make_sprite_bundle(am, e.atlas.as_str(), e.item.as_str(), translation, e.color) {
+                        let id = if e.pickable {
+                            parent.spawn((sprite, PickableBundle::default())).id()
+                        } else {
+                            parent.spawn((sprite, Pickable::IGNORE)).id()
+                        };
+                        Some(id)
+                    } else {
+                        None
+                    }
                 }
                 Element::Text(e) => {
                     let text = Self::make_text_bundle(e, *offset, asset_server);

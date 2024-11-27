@@ -220,12 +220,12 @@ fn gameplay_enter(
         layout.decorate(&mut commands, erg, ErgText(erg_idx));
     }
 
-    layout.decorate(&mut commands, "next", (NextButton, PickableBundle::default()));
+    layout.decorate(&mut commands, "next", NextButton);
 
-    layout.decorate(&mut commands, "row_a", (AttributeButton(AttrKind::Analyze), PickableBundle::default()));
-    layout.decorate(&mut commands, "row_b", (AttributeButton(AttrKind::Breach), PickableBundle::default()));
-    layout.decorate(&mut commands, "row_c", (AttributeButton(AttrKind::Compute), PickableBundle::default()));
-    layout.decorate(&mut commands, "row_d", (AttributeButton(AttrKind::Disrupt), PickableBundle::default()));
+    layout.decorate(&mut commands, "row_a", AttributeButton(AttrKind::Analyze));
+    layout.decorate(&mut commands, "row_b", AttributeButton(AttrKind::Breach));
+    layout.decorate(&mut commands, "row_c", AttributeButton(AttrKind::Compute));
+    layout.decorate(&mut commands, "row_d", AttributeButton(AttrKind::Disrupt));
 
     const MACHINES: [(MachineKind, &str); 2] = [(MachineKind::Local, "local"), (MachineKind::Remote, "remote")];
 

@@ -1,3 +1,4 @@
+?row_a:gameplay.372x080@29,26!grey
 &a:main.48.center@29,34,64,64!grey|A
 *aabg:gameplay.064x064@104,34!grey
 &aa:main.48.center@104,34,64,64!grey|-
@@ -7,7 +8,7 @@
 &ac:main.48.center@254,34,64,64!grey|-
 *adbg:gameplay.064x064@329,34!grey
 &ad:main.48.center@329,34,64,64!grey|-
-*row_a:gameplay.372x080@29,26!grey
+?row_b:gameplay.372x080@29,102!grey
 &b:main.48.center@29,110,64,64!grey|B
 *babg:gameplay.064x064@104,110!grey
 &ba:main.48.center@104,110,64,64!grey|-
@@ -17,7 +18,7 @@
 &bc:main.48.center@254,110,64,64!grey|-
 *bdbg:gameplay.064x064@329,110!grey
 &bd:main.48.center@329,110,64,64!grey|-
-*row_b:gameplay.372x080@29,102!grey
+?row_c:gameplay.372x080@29,178!grey
 &c:main.48.center@29,186,64,64!grey|C
 *cabg:gameplay.064x064@104,186!grey
 &ca:main.48.center@104,186,64,64!grey|-
@@ -27,7 +28,7 @@
 &cc:main.48.center@254,186,64,64!grey|-
 *cdbg:gameplay.064x064@329,186!grey
 &cd:main.48.center@329,186,64,64!grey|-
-*row_c:gameplay.372x080@29,178!grey
+?row_d:gameplay.372x080@29,254!grey
 &d:main.48.center@29,262,64,64!grey|D
 *dabg:gameplay.064x064@104,262!grey
 &da:main.48.center@104,262,64,64!grey|-
@@ -37,7 +38,6 @@
 &dc:main.48.center@254,262,64,64!grey|-
 *ddbg:gameplay.064x064@329,262!grey
 &dd:main.48.center@329,262,64,64!grey|-
-*row_d:gameplay.372x080@29,254!grey
 *eabg:gameplay.064x064@817,34!yellow
 &ea:main.48.center@817,34,64,64!yellow|-
 *ebbg:gameplay.064x064@892,34!yellow
@@ -62,7 +62,7 @@
 &lc:main.48.center@29,906,64,64!green|00
 *ldbg:gameplay.064x064@29,986!green
 &ld:main.48.center@29,986,64,64!green|00
-*next:gameplay.064x064@1823,986!grey
+?next:gameplay.064x064@1823,986!grey
 *localbg:gameplay.372x300@29,390!green
 +local:machine@29,390
 *remotebg:gameplay.372x300@1519,390!red

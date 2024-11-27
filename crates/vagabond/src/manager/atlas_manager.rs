@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy::sprite::Anchor;
 use std::collections::HashMap;
 use std::fmt::Formatter;
 use std::num::ParseIntError;
@@ -37,27 +36,18 @@ impl AtlasManager {
         Ok(())
     }
 
-    pub(crate) fn make_sprite_bundle(&self, atlas_name: &str, texture_name: &str, translation: Vec3, color: Srgba) -> Option<(SpriteBundle, TextureAtlas)> {
+    pub(crate) fn get_atlas_texture(&self, atlas_name: &str, texture_name: &str) -> Option<(TextureAtlas, Handle<Image>)> {
         let atlas = self.map.get(atlas_name)?;
         let entry = atlas.map.get(texture_name)?;
         let texture = atlas.image.clone();
         let layout = atlas.layout.clone();
 
-        let sprite = SpriteBundle {
-            sprite: Sprite {
-                color: Color::Srgba(color),
-                anchor: Anchor::TopLeft,
-                ..default()
-            },
-            texture,
-            transform: Transform::from_translation(translation),
-            ..default()
-        };
-        let atlas = TextureAtlas {
+        let texture_atlas = TextureAtlas {
             layout,
             index: entry.index,
         };
-        Some((sprite, atlas))
+
+        Some((texture_atlas, texture))
     }
 }
 
