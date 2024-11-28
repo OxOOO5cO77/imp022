@@ -1,7 +1,6 @@
 use crate::manager::{AtlasManager, DataManager, ScreenLayoutManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::system::app_state::AppState;
-use crate::system::ui::{text_centered, FontInfo, HUNDRED};
 use bevy::prelude::*;
 use bevy_mod_picking::prelude::*;
 use hall::data::game::GameMachinePlayerView;
@@ -11,7 +10,6 @@ use shared_data::build::BuildValueType;
 use shared_data::card::{DelayType, ErgType};
 use std::cmp::Ordering;
 use std::collections::HashMap;
-use vagabond::data::VagabondCard;
 
 pub struct GameplayPlugin;
 
@@ -20,8 +18,7 @@ impl Plugin for GameplayPlugin {
         app //
             .add_event::<UiEvent>()
             .add_systems(OnEnter(AppState::Gameplay), gameplay_enter)
-            .add_systems(Update, (gameplay_update, button_next_ui_update, local_ui_update, roll_ui_update, remote_ui_update, machine_ui_update).run_if(in_state(AppState::Gameplay)))
-            .add_systems(Update, (button_next_update, button_attribute_update).after(button_next_ui_update).run_if(in_state(AppState::Gameplay)))
+            .add_systems(Update, (gameplay_update, card_ui_update, erg_ui_update, phase_ui_update, local_ui_update, roll_ui_update, remote_ui_update, machine_ui_update).run_if(in_state(AppState::Gameplay)))
             .add_systems(OnExit(AppState::Gameplay), gameplay_exit);
     }
 }
@@ -71,14 +68,12 @@ struct RollText(usize);
 #[derive(Component)]
 struct AttributeText(usize, usize);
 
-#[derive(Component)]
-struct AttributeButton(AttrKind);
-
 #[derive(Component, Clone)]
 struct CardLayout {
     slot: usize,
     title: Entity,
     cost: Entity,
+    delay: Entity,
     launch: Entity,
     run: Entity,
 }
@@ -89,6 +84,7 @@ impl CardLayout {
             slot,
             title: Entity::PLACEHOLDER,
             cost: Entity::PLACEHOLDER,
+            delay: Entity::PLACEHOLDER,
             launch: Entity::PLACEHOLDER,
             run: Entity::PLACEHOLDER,
         }
@@ -99,68 +95,19 @@ impl CardLayout {
 struct CardText;
 
 #[derive(Component)]
-struct CardButton(usize);
-
-#[derive(Bundle)]
-struct CardBundle {
-    node: NodeBundle,
-    marker: CardButton,
-    button: Button,
-    interaction: Interaction,
-}
-
-impl CardBundle {
-    fn new(slot: usize) -> Self {
-        Self {
-            node: NodeBundle {
-                style: Style {
-                    display: Display::Grid,
-                    width: HUNDRED,
-                    height: HUNDRED,
-                    grid_template_columns: GridTrack::flex(1.0),
-                    grid_template_rows: RepeatedGridTrack::flex(5, 1.0),
-                    row_gap: Val::Px(10.0),
-                    ..default()
-                },
-                ..default()
-            },
-
-            marker: CardButton(slot),
-            button: Default::default(),
-            interaction: Default::default(),
-        }
-    }
-    fn spawn(parent: &mut ChildBuilder, slot: usize, card: Option<VagabondCard>, font_info: &FontInfo) {
-        let mut layout = CardLayout::new(slot);
-        parent
-            .spawn(Self::new(slot))
-            .with_children(|parent| {
-                layout.title = parent.spawn((CardText, text_centered(card.as_ref().map_or("", |o| o.title.as_str()), font_info))).id();
-                layout.cost = parent.spawn((CardText, text_centered(card.as_ref().map_or("-".to_string(), |o| o.cost.to_string()), font_info))).id();
-                layout.launch = parent.spawn((CardText, text_centered(card.as_ref().map_or("", |o| o.launch_rules.as_str()), font_info))).id();
-                layout.run = parent.spawn((CardText, text_centered(card.as_ref().map_or("", |o| o.run_rules.as_str()), font_info))).id();
-            })
-            .insert(layout);
-    }
-}
-
-#[derive(Component)]
-struct MachineNameText;
-
-#[derive(Component)]
-struct MachineIdText;
-
-#[derive(Component)]
-struct MachineStatText(usize);
-
-#[derive(Component)]
-struct MachineCurrentProgramText;
-
-#[derive(Component)]
 struct MachineQueueItem(DelayType);
 
 #[derive(Component)]
-struct MachineProcessText(usize);
+enum MachineTextKind {
+    Title,
+    Id,
+    Stat(usize),
+    CurrentProgram,
+    Process(usize),
+}
+
+#[derive(Component)]
+struct MachineText(MachineTextKind);
 
 #[derive(Component, Copy, Clone, PartialEq)]
 enum MachineKind {
@@ -170,15 +117,25 @@ enum MachineKind {
 
 #[derive(Event)]
 enum UiEvent {
+    GamePhase(GameplayState),
     PlayerState(PlayerStatePlayerView),
-    ChooseAttr(Option<usize>),
+    ChooseAttr(Option<AttrKind>),
     Roll([ErgType; 4]),
     Resources([ErgType; 4], [ErgType; 4], [BuildValueType; 4]),
     MachineUpdate(GameMachinePlayerView, GameMachinePlayerView),
 }
 
 #[derive(Component)]
-struct NextButton;
+struct AttributeRow(AttrKind);
+
+fn button_events<A, B, C>(click: impl IntoSystem<(), (), A>, over: impl IntoSystem<(), (), B>, out: impl IntoSystem<(), (), C>) -> impl Bundle {
+    (
+        //
+        On::<Pointer<Click>>::run(click),
+        On::<Pointer<Over>>::run(over),
+        On::<Pointer<Out>>::run(out),
+    )
+}
 
 fn gameplay_enter(
     // bevy system
@@ -220,75 +177,114 @@ fn gameplay_enter(
         layout.decorate(&mut commands, erg, ErgText(erg_idx));
     }
 
-    layout.decorate(&mut commands, "next", NextButton);
+    layout.decorate(&mut commands, "phase", PhaseText);
 
-    layout.decorate(&mut commands, "row_a", AttributeButton(AttrKind::Analyze));
-    layout.decorate(&mut commands, "row_b", AttributeButton(AttrKind::Breach));
-    layout.decorate(&mut commands, "row_c", AttributeButton(AttrKind::Compute));
-    layout.decorate(&mut commands, "row_d", AttributeButton(AttrKind::Disrupt));
+    layout.decorate(&mut commands, "next", button_events(on_click_next, on_over_next, on_out_next));
+
+    layout.decorate(&mut commands, "row_a", (AttributeRow(AttrKind::Analyze), button_events(on_click_attr, on_over_attr, on_out_attr)));
+    layout.decorate(&mut commands, "row_b", (AttributeRow(AttrKind::Breach), button_events(on_click_attr, on_over_attr, on_out_attr)));
+    layout.decorate(&mut commands, "row_c", (AttributeRow(AttrKind::Compute), button_events(on_click_attr, on_over_attr, on_out_attr)));
+    layout.decorate(&mut commands, "row_d", (AttributeRow(AttrKind::Disrupt), button_events(on_click_attr, on_over_attr, on_out_attr)));
 
     const MACHINES: [(MachineKind, &str); 2] = [(MachineKind::Local, "local"), (MachineKind::Remote, "remote")];
 
     for machine in &MACHINES {
-        layout.decorate(&mut commands, format!("{}/title", machine.1).as_str(), (machine.0, MachineNameText));
-        layout.decorate(&mut commands, format!("{}/id", machine.1).as_str(), (machine.0, MachineIdText));
+        layout.decorate(&mut commands, &format!("{}/title", machine.1), (machine.0, MachineText(MachineTextKind::Title)));
+        layout.decorate(&mut commands, &format!("{}/id", machine.1), (machine.0, MachineText(MachineTextKind::Id)));
 
-        layout.decorate(&mut commands, format!("{}/free_space", machine.1).as_str(), (machine.0, MachineStatText(0)));
-        layout.decorate(&mut commands, format!("{}/thermal_capacity", machine.1).as_str(), (machine.0, MachineStatText(1)));
-        layout.decorate(&mut commands, format!("{}/system_health", machine.1).as_str(), (machine.0, MachineStatText(2)));
-        layout.decorate(&mut commands, format!("{}/open_ports", machine.1).as_str(), (machine.0, MachineStatText(3)));
+        layout.decorate(&mut commands, &format!("{}/free_space", machine.1), (machine.0, MachineText(MachineTextKind::Stat(0))));
+        layout.decorate(&mut commands, &format!("{}/thermal_capacity", machine.1), (machine.0, MachineText(MachineTextKind::Stat(1))));
+        layout.decorate(&mut commands, &format!("{}/system_health", machine.1), (machine.0, MachineText(MachineTextKind::Stat(2))));
+        layout.decorate(&mut commands, &format!("{}/open_ports", machine.1), (machine.0, MachineText(MachineTextKind::Stat(3))));
 
-        layout.decorate(&mut commands, format!("{}/current_program", machine.1).as_str(), (machine.0, MachineCurrentProgramText));
+        layout.decorate(&mut commands, &format!("{}/current_program", machine.1), (machine.0, MachineText(MachineTextKind::CurrentProgram)));
 
-        layout.decorate(&mut commands, format!("{}/running1", machine.1).as_str(), (machine.0, MachineProcessText(0)));
-        layout.decorate(&mut commands, format!("{}/running2", machine.1).as_str(), (machine.0, MachineProcessText(1)));
-        layout.decorate(&mut commands, format!("{}/running3", machine.1).as_str(), (machine.0, MachineProcessText(2)));
-        layout.decorate(&mut commands, format!("{}/running4", machine.1).as_str(), (machine.0, MachineProcessText(3)));
+        layout.decorate(&mut commands, &format!("{}/running1", machine.1), (machine.0, MachineText(MachineTextKind::Process(0))));
+        layout.decorate(&mut commands, &format!("{}/running2", machine.1), (machine.0, MachineText(MachineTextKind::Process(1))));
+        layout.decorate(&mut commands, &format!("{}/running3", machine.1), (machine.0, MachineText(MachineTextKind::Process(2))));
+        layout.decorate(&mut commands, &format!("{}/running4", machine.1), (machine.0, MachineText(MachineTextKind::Process(3))));
+    }
+
+    for card_index in 1..=5 {
+        let mut card_layout = CardLayout::new(card_index);
+        card_layout.title = layout.decorate(&mut commands, &format!("card{}/title", card_index), CardText);
+        card_layout.cost = layout.decorate(&mut commands, &format!("card{}/cost", card_index), CardText);
+        card_layout.delay = layout.decorate(&mut commands, &format!("card{}/delay", card_index), CardText);
+        card_layout.launch = layout.decorate(&mut commands, &format!("card{}/launch", card_index), CardText);
+        card_layout.run = layout.decorate(&mut commands, &format!("card{}/run", card_index), CardText);
+        layout.decorate(&mut commands, &format!("card{}", card_index), card_layout);
     }
 
     commands.insert_resource(GameplayContext::default());
 }
 
-fn button_next_update(
-    // bevy system
-    interaction_q: Query<&PickingInteraction, (Changed<PickingInteraction>, With<NextButton>)>,
-    mut context: ResMut<GameplayContext>,
-    gate: Res<GateIFace>,
-) {
-    for &interaction in &interaction_q {
-        if interaction == PickingInteraction::Pressed {
-            match context.state {
-                GameplayState::Start => gate.send_game_start_turn(),
-                GameplayState::Pick => {
-                    if let Some(kind) = context.attr_pick {
-                        gate.send_game_choose_attr(kind);
-                    } else {
-                        continue;
-                    }
-                }
-                GameplayState::Play => gate.send_game_play_cards(&context.card_picks),
-                GameplayState::Draw => gate.send_game_end_turn(),
-                GameplayState::Wait(_) => {}
-            };
-            context.state = GameplayState::Wait(WaitKind::One);
+fn on_click_next(mut context: ResMut<GameplayContext>, gate: Res<GateIFace>) {
+    match context.state {
+        GameplayState::Start => gate.send_game_start_turn(),
+        GameplayState::Pick => {
+            if let Some(kind) = context.attr_pick {
+                gate.send_game_choose_attr(kind);
+            } else {
+                return;
+            }
         }
+        GameplayState::Play => gate.send_game_play_cards(&context.card_picks),
+        GameplayState::Draw => gate.send_game_end_turn(),
+        GameplayState::Wait(_) => return,
+    };
+    context.state = GameplayState::Wait(WaitKind::One);
+}
+
+fn on_over_next(event: Res<ListenerInput<Pointer<Over>>>, context: Res<GameplayContext>, mut sprite_q: Query<&mut Sprite>) {
+    if let Ok(mut sprite) = sprite_q.get_mut(event.target()) {
+        sprite.color = match context.state {
+            GameplayState::Pick => {
+                if context.attr_pick.is_some() {
+                    bevy::color::palettes::basic::GREEN
+                } else {
+                    bevy::color::palettes::basic::RED
+                }
+            }
+            GameplayState::Wait(WaitKind::One) => bevy::color::palettes::basic::RED,
+            GameplayState::Wait(WaitKind::All) => bevy::color::palettes::basic::YELLOW,
+            _ => bevy::color::palettes::basic::GREEN,
+        }
+        .into();
     }
 }
 
-fn button_attribute_update(
-    // bevy system
-    interaction_q: Query<(&AttributeButton, &PickingInteraction), Changed<PickingInteraction>>,
-    mut context: ResMut<GameplayContext>,
-    mut send: EventWriter<UiEvent>,
-) {
-    if context.state != GameplayState::Pick {
-        return;
+fn on_out_next(event: Res<ListenerInput<Pointer<Out>>>, mut sprite_q: Query<&mut Sprite>) {
+    if let Ok(mut sprite) = sprite_q.get_mut(event.target()) {
+        sprite.color = bevy::color::palettes::css::DARK_GRAY.into();
     }
-    for (AttributeButton(kind), &interaction) in &interaction_q {
-        if interaction == PickingInteraction::Pressed {
-            context.attr_pick = Some(*kind);
-            send.send(UiEvent::ChooseAttr(Some(map_kind_to_row(*kind))));
+}
+
+fn on_click_attr(event: Res<ListenerInput<Pointer<Click>>>, mut send: EventWriter<UiEvent>, attr_q: Query<&AttributeRow>) {
+    if let Ok(attr) = attr_q.get(event.target()) {
+        send.send(UiEvent::ChooseAttr(Some(attr.0)));
+    }
+}
+
+fn on_over_attr(event: Res<ListenerInput<Pointer<Over>>>, context: Res<GameplayContext>, mut sprite_q: Query<(&mut Sprite, &mut Transform)>) {
+    if let Ok((mut sprite, mut transform)) = sprite_q.get_mut(event.target()) {
+        if transform.translation.z < 100.0 {
+            transform.translation.z += 100.0;
         }
+        sprite.color = if GameplayState::Pick == context.state {
+            bevy::color::palettes::basic::GREEN
+        } else {
+            bevy::color::palettes::css::SILVER
+        }
+        .into();
+    }
+}
+
+fn on_out_attr(event: Res<ListenerInput<Pointer<Out>>>, mut sprite_q: Query<(&mut Sprite, &mut Transform)>) {
+    if let Ok((mut sprite, mut transform)) = sprite_q.get_mut(event.target()) {
+        if transform.translation.z > 100.0 {
+            transform.translation.z -= 100.0;
+        }
+        sprite.color = bevy::color::palettes::css::DARK_GRAY.into();
     }
 }
 
@@ -298,33 +294,6 @@ fn map_kind_to_row(kind: AttrKind) -> usize {
         AttrKind::Breach => 1,
         AttrKind::Compute => 2,
         AttrKind::Disrupt => 3,
-    }
-}
-
-type ButtonUiQueryParams<'a> = (&'a PickingInteraction, &'a mut Sprite);
-type NextUiQueryConditions = (Changed<PickingInteraction>, With<NextButton>);
-
-fn button_next_ui_update(
-    // bevy system
-    mut interaction_query: Query<ButtonUiQueryParams, NextUiQueryConditions>,
-    context: Res<GameplayContext>,
-) {
-    for (interaction, mut sprite) in &mut interaction_query {
-        match *interaction {
-            PickingInteraction::Pressed => {
-                sprite.color = match context.state {
-                    GameplayState::Wait(WaitKind::One) => bevy::color::palettes::basic::RED.into(),
-                    GameplayState::Wait(WaitKind::All) => bevy::color::palettes::basic::YELLOW.into(),
-                    _ => bevy::color::palettes::basic::GREEN.into(),
-                };
-            }
-            PickingInteraction::Hovered => {
-                sprite.color = bevy::color::palettes::basic::SILVER.into();
-            }
-            PickingInteraction::None => {
-                sprite.color = bevy::color::palettes::basic::GRAY.into();
-            }
-        }
     }
 }
 
@@ -356,54 +325,95 @@ fn roll_ui_update(
     }
 }
 
-type ErgTextQuery<'a> = Query<'a, 'a, (&'a mut Text, &'a ErgText)>;
-type AttributeTextQuery<'a> = Query<'a, 'a, (&'a mut Text, &'a AttributeText)>;
-type CardLayoutQuery<'a> = Query<'a, 'a, &'a CardLayout>;
-type CardTextQuery<'a> = Query<'a, 'a, &'a mut Text, With<CardText>>;
+fn card_ui_update(
+    // bevy system
+    mut receive: EventReader<UiEvent>,
+    layout_q: Query<&CardLayout>,
+    mut text_q: Query<&mut Text, With<CardText>>,
+    dm: Res<DataManager>,
+) {
+    for ui_event in receive.read() {
+        if let UiEvent::PlayerState(player_state) = ui_event {
+            for layout in &layout_q {
+                let card = player_state.hand.get(layout.slot).and_then(|o| dm.convert_card(o));
+
+                if let Ok(mut title_text) = text_q.get_mut(layout.title) {
+                    title_text.sections[0].value = card.as_ref().map_or("<Empty>".to_string(), |o| o.title.clone());
+                }
+                if let Ok(mut cost_text) = text_q.get_mut(layout.cost) {
+                    cost_text.sections[0].value = card.as_ref().map_or("<Empty>".to_string(), |o| o.cost.to_string());
+                }
+                if let Ok(mut launch_text) = text_q.get_mut(layout.launch) {
+                    launch_text.sections[0].value = card.as_ref().map_or("<Empty>".to_string(), |o| o.launch_rules.clone());
+                }
+                if let Ok(mut run_text) = text_q.get_mut(layout.run) {
+                    run_text.sections[0].value = card.as_ref().map_or("<Empty>".to_string(), |o| o.run_rules.clone());
+                }
+            }
+        }
+    }
+}
+
+fn erg_ui_update(mut receive: EventReader<UiEvent>, mut erg_q: Query<(&mut Text, &ErgText)>) {
+    for ui_event in receive.read() {
+        if let UiEvent::PlayerState(player_state) = ui_event {
+            for (mut erg_text, ErgText(index)) in erg_q.iter_mut() {
+                erg_text.sections[0].value = format!("{:02}", player_state.erg[*index])
+            }
+        }
+    }
+}
+
+fn phase_ui_update(
+    // bevy system
+    mut receive: EventReader<UiEvent>,
+    mut text_q: Query<&mut Text, With<PhaseText>>,
+) {
+    for ui_event in receive.read() {
+        if let UiEvent::GamePhase(phase) = ui_event {
+            let mut text = text_q.single_mut();
+            text.sections[0].value = match phase {
+                GameplayState::Start => "Start Turn".to_string(),
+                GameplayState::Pick => "Pick Attribute".to_string(),
+                GameplayState::Play => "Play Card".to_string(),
+                GameplayState::Draw => "Draw Cards".to_string(),
+                GameplayState::Wait(WaitKind::One) => "...".to_string(),
+                GameplayState::Wait(WaitKind::All) => "(Waiting)".to_string(),
+            };
+        }
+    }
+}
 
 fn local_ui_update(
     // bevy system
     mut receive: EventReader<UiEvent>,
-    mut text_q: ParamSet<(AttributeTextQuery, ErgTextQuery, CardLayoutQuery, CardTextQuery)>,
-    dm: Res<DataManager>,
+    mut text_q: Query<(&mut Text, &AttributeText)>,
+    mut context: ResMut<GameplayContext>,
 ) {
     for ui_event in receive.read() {
         match ui_event {
             UiEvent::PlayerState(player_state) => {
-                for (mut attr_text, AttributeText(row, col)) in text_q.p0().iter_mut() {
+                for (mut attr_text, AttributeText(row, col)) in text_q.iter_mut() {
                     attr_text.sections[0].value = format!("{}", player_state.attr[*row][*col]);
-                }
-                for (mut erg_text, ErgText(index)) in text_q.p1().iter_mut() {
-                    erg_text.sections[0].value = format!("{:02}", player_state.erg[*index])
-                }
-
-                let layouts = text_q.p2().iter().cloned().collect::<Vec<_>>();
-
-                for layout in &layouts {
-                    let card = player_state.hand.get(layout.slot).and_then(|o| dm.convert_card(o));
-
-                    if let Ok(mut title_text) = text_q.p3().get_mut(layout.title) {
-                        title_text.sections[0].value = card.as_ref().map_or("<Empty>".to_string(), |o| o.title.clone());
-                    }
-                    if let Ok(mut cost_text) = text_q.p3().get_mut(layout.cost) {
-                        cost_text.sections[0].value = card.as_ref().map_or("<Empty>".to_string(), |o| o.cost.to_string());
-                    }
-                    if let Ok(mut launch_text) = text_q.p3().get_mut(layout.launch) {
-                        launch_text.sections[0].value = card.as_ref().map_or("<Empty>".to_string(), |o| o.launch_rules.clone());
-                    }
-                    if let Ok(mut run_text) = text_q.p3().get_mut(layout.run) {
-                        run_text.sections[0].value = card.as_ref().map_or("<Empty>".to_string(), |o| o.run_rules.clone());
-                    }
                 }
             }
             UiEvent::ChooseAttr(kind) => {
-                for (mut attr_text, AttributeText(row, _)) in text_q.p0().iter_mut() {
-                    attr_text.sections[0].style.color = if Some(row) == kind.into() {
-                        bevy::color::palettes::basic::GREEN
+                if context.state != GameplayState::Pick {
+                    continue;
+                }
+
+                for (mut attr_text, AttributeText(row, _)) in text_q.iter_mut() {
+                    attr_text.sections[0].style.color = if let Some(kind) = kind {
+                        if *row == map_kind_to_row(*kind) {
+                            context.attr_pick = Some(*kind);
+                            bevy::color::palettes::basic::GREEN
+                        } else {
+                            bevy::color::palettes::basic::GRAY
+                        }
                     } else {
                         bevy::color::palettes::basic::GRAY
                     }
-                    .into();
+                    .into()
                 }
             }
             _ => {}
@@ -411,12 +421,10 @@ fn local_ui_update(
     }
 }
 
-type RemoteAttrTextParams<'a> = (&'a mut Text, &'a RemoteAttrText);
-
 fn remote_ui_update(
     // bevy system
     mut receive: EventReader<UiEvent>,
-    mut text_q: Query<RemoteAttrTextParams>,
+    mut text_q: Query<(&mut Text, &RemoteAttrText)>,
 ) {
     for ui_event in receive.read() {
         match ui_event {
@@ -437,50 +445,50 @@ fn remote_ui_update(
     }
 }
 
-type MachineStatTextQuery<'a> = Query<'a, 'a, (&'a MachineKind, &'a mut Text, &'a MachineStatText)>;
-type MachineCurrentProgramTextQuery<'a> = Query<'a, 'a, (&'a MachineKind, &'a mut Text, &'a MachineCurrentProgramText)>;
-type MachineQueueItemQuery<'a> = Query<'a, 'a, (&'a MachineKind, &'a mut BackgroundColor, &'a MachineQueueItem)>;
-type MachineProcessTextQuery<'a> = Query<'a, 'a, (&'a MachineKind, &'a mut Text, &'a MachineProcessText)>;
-
 fn machine_ui_update(
     // bevy system
     mut receive: EventReader<UiEvent>,
-    mut machine_q: ParamSet<(MachineStatTextQuery, MachineCurrentProgramTextQuery, MachineQueueItemQuery, MachineProcessTextQuery)>,
+    mut text_q: Query<(&MachineKind, &mut Text, &MachineText)>,
+    mut sprite_q: Query<(&MachineKind, &mut Sprite, &MachineQueueItem)>,
     dm: Res<DataManager>,
 ) {
     for ui_event in receive.read() {
         if let UiEvent::MachineUpdate(local, remote) = ui_event {
-            for (machine_component, mut text, MachineStatText(index)) in machine_q.p0().iter_mut() {
-                let machine = if *machine_component == MachineKind::Local {
-                    local
-                } else {
-                    remote
-                };
-                text.sections[0].value = machine.stats[*index].to_string();
-            }
-
-            for (machine_component, mut text, MachineCurrentProgramText) in machine_q.p1().iter_mut() {
-                let machine = if *machine_component == MachineKind::Local {
-                    local
-                } else {
-                    remote
-                };
-                let mut result = " v- <idle>".to_string();
-                if let Some(current) = machine.queue.iter().find(|item| item.delay == 0) {
-                    if let Some(card) = dm.convert_card(&current.player_card) {
-                        result = format!(" v- {}", card.title);
-                    }
+            for (machine_component, mut text, MachineText(kind)) in text_q.iter_mut() {
+                if let MachineTextKind::Stat(index) = kind {
+                    let machine = if *machine_component == MachineKind::Local {
+                        local
+                    } else {
+                        remote
+                    };
+                    text.sections[0].value = machine.stats[*index].to_string();
                 }
-                text.sections[0].value = result;
             }
 
-            for (machine_component, mut color, MachineQueueItem(index)) in machine_q.p2().iter_mut() {
+            for (machine_component, mut text, MachineText(kind)) in text_q.iter_mut() {
+                if let MachineTextKind::CurrentProgram = kind {
+                    let machine = if *machine_component == MachineKind::Local {
+                        local
+                    } else {
+                        remote
+                    };
+                    let mut result = " v- <idle>".to_string();
+                    if let Some(current) = machine.queue.iter().find(|item| item.delay == 0) {
+                        if let Some(card) = dm.convert_card(&current.player_card) {
+                            result = format!(" v- {}", card.title);
+                        }
+                    }
+                    text.sections[0].value = result;
+                }
+            }
+
+            for (machine_component, mut sprite, MachineQueueItem(index)) in sprite_q.iter_mut() {
                 let machine = if *machine_component == MachineKind::Local {
                     local
                 } else {
                     remote
                 };
-                *color = if let Some(process) = machine.queue.iter().find(|item| item.delay == *index) {
+                sprite.color = if let Some(process) = machine.queue.iter().find(|item| item.delay == *index) {
                     if process.local {
                         bevy::color::palettes::basic::GREEN
                     } else {
@@ -492,19 +500,21 @@ fn machine_ui_update(
                 .into();
             }
 
-            for (machine_component, mut text, MachineProcessText(index)) in machine_q.p3().iter_mut() {
-                let machine = if *machine_component == MachineKind::Local {
-                    local
-                } else {
-                    remote
-                };
-                let mut result = "?".to_string();
-                if let Some(process) = machine.running.get(*index) {
-                    if let Some(card) = dm.convert_card(&process.player_card) {
-                        result = format!("v- {}", card.title);
+            for (machine_component, mut text, MachineText(kind)) in text_q.iter_mut() {
+                if let MachineTextKind::Process(index) = kind {
+                    let machine = if *machine_component == MachineKind::Local {
+                        local
+                    } else {
+                        remote
+                    };
+                    let mut result = "?".to_string();
+                    if let Some(process) = machine.running.get(*index) {
+                        if let Some(card) = dm.convert_card(&process.player_card) {
+                            result = card.title.clone();
+                        }
                     }
+                    text.sections[0].value = result;
                 }
-                text.sections[0].value = result;
             }
         }
     }
@@ -566,7 +576,6 @@ fn gameplay_update(
                 }
             );
             if success {
-                println!("[RECV]  OK");
                 context.card_picks.clear();
                 context.state = GameplayState::Wait(WaitKind::All);
             }
@@ -608,9 +617,10 @@ fn gameplay_update(
             send.send(UiEvent::PlayerState(gate_response.player_state));
             send.send(UiEvent::MachineUpdate(gate_response.local_machine, gate_response.remote_machine));
         }
-        Ok(_) => {}
-        Err(_) => {}
+        Ok(_) => return,
+        Err(_) => return,
     }
+    send.send(UiEvent::GamePhase(context.state.clone()));
 }
 
 pub fn gameplay_exit(

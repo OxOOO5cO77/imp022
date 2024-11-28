@@ -104,7 +104,7 @@ impl ScreenLayout {
         let (shape_kind, remain) = remain.split_once("@").unwrap();
         let (position_size, color) = remain.split_once("!").unwrap();
         let (raw_position, size) = Self::parse_position_size(position_size, z);
-        let position = Vec3::new(raw_position.x + (size.x/2.0), raw_position.y - (size.y/2.0), raw_position.z);
+        let position = Vec3::new(raw_position.x + (size.x / 2.0), raw_position.y - (size.y / 2.0), raw_position.z);
 
         let element = ShapeElement {
             kind: Self::parse_shape_kind(shape_kind),
@@ -179,9 +179,12 @@ impl ScreenLayout {
         self.element_map.insert(name.to_string(), Element::Layout(element));
     }
 
-    pub(crate) fn decorate(&self, commands: &mut Commands, name: &str, decorator: impl Bundle) {
+    pub(crate) fn decorate(&self, commands: &mut Commands, name: &str, decorator: impl Bundle) -> Entity {
         if let Some(entity) = self.entity_map.get(name) {
             commands.entity(*entity).insert(decorator);
+            *entity
+        } else {
+            Entity::PLACEHOLDER
         }
     }
 }
