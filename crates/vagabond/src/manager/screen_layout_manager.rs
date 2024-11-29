@@ -58,85 +58,81 @@ struct TextElement {
 struct LayoutElement {
     layout: String,
     position: Vec3,
+    size: Vec2,
 }
 
+type ColorMap = HashMap<String, Srgba>;
+
 impl ScreenLayout {
-    fn parse_color(color: &str) -> Srgba {
-        match color {
-            "black" => bevy::color::palettes::css::BLACK,
-            "grey" => bevy::color::palettes::css::DARK_GRAY,
-            "yellow" => bevy::color::palettes::css::DARK_GOLDENROD,
-            "red" => bevy::color::palettes::css::DARK_RED,
-            "green" => bevy::color::palettes::css::DARK_GREEN,
-            "purple" => bevy::color::palettes::css::DARK_BLUE,
-            "white" => bevy::color::palettes::css::WHITE,
-            "silver" => bevy::color::palettes::css::SILVER,
-            _ => Srgba::new(0.0, 0.0, 0.0, 0.0),
-        }
+    fn parse_position_size(rect: &str, z: f32) -> Option<(Vec3, Vec2)> {
+        let mut components = rect.split(",");
+
+        let x = components.next()?.parse().ok()?;
+        let y = components.next()?.parse::<f32>().ok()?;
+        let w = components.next()?.parse().ok()?;
+        let h = components.next()?.parse().ok()?;
+
+        Some((Vec3::new(x, -y, z), Vec2::new(w, h)))
     }
 
-    fn parse_position_size(rect: &str, z: f32) -> (Vec3, Vec2) {
-        let [x_str, y_str, w_str, h_str] = rect.split(",").collect::<Vec<&str>>().try_into().unwrap();
-
-        let x = x_str.parse().unwrap_or_default();
-        let y = y_str.parse::<f32>().unwrap_or_default();
-        let w = w_str.parse().unwrap_or_default();
-        let h = h_str.parse().unwrap_or_default();
-
-        (Vec3::new(x, -y, z), Vec2::new(w, h))
+    fn parse_position(position: &str, z: f32) -> Option<Vec3> {
+        let (x_str, y_str) = position.split_once(",")?;
+        let x = x_str.parse().ok()?;
+        let y = y_str.parse::<f32>().ok()?;
+        Some(Vec3::new(x, -y, z))
     }
 
-    fn parse_position(position: &str, z: f32) -> Vec3 {
-        let (x_str, y_str) = position.split_once(",").unwrap();
-        let x = x_str.parse().unwrap_or_default();
-        let y = y_str.parse::<f32>().unwrap_or_default();
-        Vec3::new(x, -y, z)
-    }
-
-    fn parse_shape_kind(shape_kind: &str) -> ShapeKind {
+    fn parse_shape_kind(shape_kind: &str) -> Option<ShapeKind> {
         match shape_kind {
-            "rect" => ShapeKind::Rect,
-            _ => ShapeKind::Rect,
+            "rect" => Some(ShapeKind::Rect),
+            _ => None,
         }
     }
 
-    fn parse_shape(&mut self, name: &str, remain: &str, z: f32) {
-        let (shape_kind, remain) = remain.split_once("@").unwrap();
-        let (position_size, color) = remain.split_once("!").unwrap();
-        let (raw_position, size) = Self::parse_position_size(position_size, z);
+    fn parse_shape(&mut self, name: &str, remain: &str, z: f32, colors: &mut ColorMap) -> Option<bool> {
+        let (shape_kind, remain) = remain.split_once("@")?;
+        let (position_size, color) = remain.split_once("!")?;
+        let (raw_position, size) = Self::parse_position_size(position_size, z)?;
         let position = Vec3::new(raw_position.x + (size.x / 2.0), raw_position.y - (size.y / 2.0), raw_position.z);
 
         let element = ShapeElement {
-            kind: Self::parse_shape_kind(shape_kind),
+            kind: Self::parse_shape_kind(shape_kind)?,
             position,
             size,
-            color: Self::parse_color(color),
+            color: *colors.get(color)?,
         };
 
-        self.element_map.insert(name.to_string(), Element::Shape(element));
+        if self.element_map.insert(name.to_string(), Element::Shape(element)).is_some() {
+            return None;
+        }
+        Some(true)
     }
 
-    fn parse_sprite(&mut self, name: &str, remain: &str, pickable: bool, z: f32) {
-        let (atlas_item, remain) = remain.split_once('@').unwrap();
-        let (atlas, item) = atlas_item.split_once('.').unwrap();
-        let (position, color) = remain.split_once("!").unwrap();
+    fn parse_sprite(&mut self, name: &str, remain: &str, pickable: bool, z: f32, colors: &mut ColorMap) -> Option<bool> {
+        let (atlas_item, remain) = remain.split_once('@')?;
+        let (atlas, item) = atlas_item.split_once('.')?;
+        let (position, color) = remain.split_once("!")?;
 
         let element = SpriteElement {
             atlas: atlas.to_string(),
             item: item.to_string(),
-            position: Self::parse_position(position, z),
-            color: Self::parse_color(color),
+            position: Self::parse_position(position, z)?,
+            color: *colors.get(color)?,
             pickable,
         };
 
-        self.element_map.insert(name.to_string(), Element::Sprite(element));
+        if self.element_map.insert(name.to_string(), Element::Sprite(element)).is_some() {
+            return None;
+        }
+
+        Some(true)
     }
 
-    fn parse_font_info(font_info: &str) -> (&'static str, f32, JustifyText) {
+    fn parse_font_info(font_info: &str) -> Option<(&'static str, f32, JustifyText)> {
         let mut parts = font_info.split(".");
-        let name_str = parts.next().unwrap_or("main");
-        let font_size = parts.next().unwrap_or("12").parse::<f32>().unwrap_or(12.0);
-        let justify_str = parts.next().unwrap_or("center");
+        let name_str = parts.next()?;
+        let font_size = parts.next()?.parse::<f32>().ok()?;
+        let justify_str = parts.next()?;
 
         let font_name = match name_str {
             "main" => "font/RobotoMono.ttf",
@@ -148,35 +144,44 @@ impl ScreenLayout {
             "right" => JustifyText::Right,
             _ => JustifyText::Center,
         };
-        (font_name, font_size, justify)
+        Some((font_name, font_size, justify))
     }
 
-    fn parse_text(&mut self, name: &str, remain: &str, z: f32) {
-        let (font_info, remain) = remain.split_once('@').unwrap();
-        let (position_size, remain) = remain.split_once('!').unwrap();
-        let (color, default_text) = remain.split_once('|').unwrap();
+    fn parse_text(&mut self, name: &str, remain: &str, z: f32, colors: &mut ColorMap) -> Option<bool> {
+        let (font_info, remain) = remain.split_once('@')?;
+        let (position_size, remain) = remain.split_once('!')?;
+        let (color, default_text) = remain.split_once('|')?;
 
-        let (position, size) = Self::parse_position_size(position_size, z);
-        let (font_name, font_size, justify) = Self::parse_font_info(font_info);
+        let (position, size) = Self::parse_position_size(position_size, z)?;
+        let (font_name, font_size, justify) = Self::parse_font_info(font_info)?;
 
         let element = TextElement {
             default_text: default_text.to_string(),
-            color: Self::parse_color(color),
+            color: *colors.get(color)?,
             font_name,
             font_size,
             position,
             size,
             justify,
         };
-        self.element_map.insert(name.to_string(), Element::Text(element));
+        if self.element_map.insert(name.to_string(), Element::Text(element)).is_some() {
+            return None;
+        }
+        Some(true)
     }
-    fn parse_layout(&mut self, name: &str, remain: &str, z: f32) {
-        let (layout, remain) = remain.split_once('@').unwrap();
+    fn parse_layout(&mut self, name: &str, remain: &str, z: f32) -> Option<bool> {
+        let (layout, position_size) = remain.split_once('@')?;
+        let (position, size) = Self::parse_position_size(position_size, z)?;
+
         let element = LayoutElement {
             layout: layout.to_string(),
-            position: Self::parse_position(remain, z),
+            position,
+            size,
         };
-        self.element_map.insert(name.to_string(), Element::Layout(element));
+        if self.element_map.insert(name.to_string(), Element::Layout(element)).is_some() {
+            return None;
+        }
+        Some(true)
     }
 
     pub(crate) fn decorate(&self, commands: &mut Commands, name: &str, decorator: impl Bundle) -> Entity {
@@ -189,25 +194,16 @@ impl ScreenLayout {
     }
 }
 
+fn fail<T>(_: T) -> std::io::Error {
+    std::io::ErrorKind::Other.into()
+}
+
 #[derive(Bundle, Default)]
 struct ScreenLayoutContainer {
     transform: Transform,
     global_transform: GlobalTransform,
     visibility: Visibility,
     inherited_visibility: InheritedVisibility,
-}
-
-impl ScreenLayoutContainer {
-    fn new_at(translation: Vec3) -> Self {
-        Self {
-            transform: Transform::from_translation(translation),
-            ..default()
-        }
-    }
-}
-
-fn fail<T>(_: T) -> std::io::Error {
-    std::io::ErrorKind::Other.into()
 }
 
 type BevyAssetsForBuildLayout<'a> = (&'a AssetServer, &'a mut Assets<Mesh>, &'a mut Assets<ColorMaterial>);
@@ -219,7 +215,7 @@ impl ScreenLayoutManager {
         for entry in std::fs::read_dir(path)? {
             let entry = entry.map_err(fail)?.path();
             let name = entry.file_stem().ok_or(std::io::ErrorKind::Other).map_err(fail)?.to_string_lossy().to_string();
-            let layout = Self::load(entry)?;
+            let layout = Self::load(&name, entry)?;
             layout_map.insert(name, layout);
         }
 
@@ -228,29 +224,64 @@ impl ScreenLayoutManager {
             entity_map: HashMap::new(),
         })
     }
-    fn load(path: impl AsRef<Path>) -> Result<ScreenLayout, std::io::Error> {
+
+    fn load(layout_name: &str, path: impl AsRef<Path>) -> Result<ScreenLayout, std::io::Error> {
         const Z_OFFSET: f32 = 0.01;
         let mut z = 0.0;
 
         let layout_file = std::fs::read_to_string(path)?;
 
+        let mut colors = HashMap::new();
         let mut screen_layout = ScreenLayout::default();
-        for line in layout_file.lines() {
-            let mut chars = line.chars();
-            let (kind, remain) = (chars.next().unwrap(), chars.collect::<String>());
-            let (name, remain) = remain.split_once(':').unwrap();
-            match kind {
-                '*' => screen_layout.parse_sprite(name, remain, false, z),
-                '?' => screen_layout.parse_sprite(name, remain, true, z),
-                '+' => screen_layout.parse_layout(name, remain, z),
-                '&' => screen_layout.parse_text(name, remain, z),
-                '#' => screen_layout.parse_shape(name, remain, z),
-                _ => continue,
+        for (line_number, line) in layout_file.lines().enumerate() {
+            let parsed = Self::parse_kind(line) //
+                .and_then(|(kind, remain)| Some((kind, Self::parse_name(remain)?)))
+                .and_then(|(kind, (name, remain))| match kind {
+                    '$' => match name {
+                        "color" => Self::parse_color(remain, &mut colors),
+                        _ => None,
+                    },
+                    '*' => screen_layout.parse_sprite(name, remain, false, z, &mut colors),
+                    '?' => screen_layout.parse_sprite(name, remain, true, z, &mut colors),
+                    '&' => screen_layout.parse_text(name, remain, z, &mut colors),
+                    '#' => screen_layout.parse_shape(name, remain, z, &mut colors),
+                    '/' => screen_layout.parse_layout(name, remain, z),
+                    _ => None,
+                });
+
+            if let Some(increment_z) = parsed {
+                if increment_z {
+                    z += Z_OFFSET;
+                }
+            } else {
+                println!("[{layout_name}.self], Parse error at line {}", line_number + 1);
             }
-            z += Z_OFFSET;
         }
 
         Ok(screen_layout)
+    }
+
+    fn parse_name(remain: &str) -> Option<(&str, &str)> {
+        remain.split_once(':')
+    }
+
+    fn parse_kind(line: &str) -> Option<(char, &str)> {
+        let mut chars = line.chars();
+        let (kind, remain) = (chars.next()?, chars.as_str());
+        Some((kind, remain))
+    }
+
+    fn parse_color(remain: &str, colors: &mut HashMap<String, Srgba>) -> Option<bool> {
+        let (name, remain) = remain.split_once('=')?;
+        let mut components = remain.split(',');
+        let r = components.next()?.parse::<f32>().ok()?;
+        let g = components.next()?.parse::<f32>().ok()?;
+        let b = components.next()?.parse::<f32>().ok()?;
+        let a = components.next()?.parse::<f32>().ok()?;
+
+        colors.insert(name.to_string(), Srgba::new(r, g, b, a));
+
+        Some(false)
     }
 
     fn make_shape_bundle(element: &ShapeElement, offset_z: f32, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> impl Bundle {
@@ -267,7 +298,8 @@ impl ScreenLayoutManager {
             ..default()
         }
     }
-    pub(crate) fn make_sprite_bundle(am: &AtlasManager, atlas_name: &str, texture_name: &str, translation: Vec3, color: Srgba) -> Option<(SpriteBundle, TextureAtlas)> {
+
+    fn make_sprite_bundle(am: &AtlasManager, atlas_name: &str, texture_name: &str, translation: Vec3, color: Srgba) -> Option<(SpriteBundle, TextureAtlas)> {
         let (atlas, texture) = am.get_atlas_texture(atlas_name, texture_name)?;
 
         let sprite = SpriteBundle {
@@ -306,6 +338,23 @@ impl ScreenLayoutManager {
         }
     }
 
+    fn make_container_bundle(element: &LayoutElement, offset_z: f32) -> impl Bundle {
+        let translation = Vec3::new(element.position.x, element.position.y, element.position.z + offset_z);
+        (
+            SpriteBundle {
+                sprite: Sprite {
+                    color: Color::NONE,
+                    custom_size: Some(element.size),
+                    anchor: Anchor::TopLeft,
+                    ..default()
+                },
+                transform: Transform::from_translation(translation),
+                ..default()
+            },
+            Pickable::IGNORE,
+        )
+    }
+
     fn make_name(base_name: &str, name: &str) -> String {
         if base_name.is_empty() {
             name.to_string()
@@ -342,9 +391,9 @@ impl ScreenLayoutManager {
                     parent.spawn(text).id()
                 }
                 Element::Layout(e) => {
-                    let translation = Vec3::new(e.position.x, e.position.y, e.position.z + *offset_z);
+                    let container = Self::make_container_bundle(e, *offset_z);
                     parent
-                        .spawn(ScreenLayoutContainer::new_at(translation))
+                        .spawn(container)
                         .with_children(|parent| {
                             let mut nested_entities = self.build_layout(&e.layout, parent, offset_z, &full_name, am, (asset_server, meshes, materials));
                             entities.append(&mut nested_entities);

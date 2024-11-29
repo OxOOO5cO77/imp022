@@ -1,3 +1,6 @@
+$color:silver=0.7529412,0.7529412,0.7529412,1.0
+$color:black=0.0,0.0,0.0,1.0
+$color:white=1.0,1.0,1.0,1.0
 #bg:rect@0,0,361,286!silver
 &title:main.16.left@6,3,200,22!black|MACHINE
 &id:main.16.right@208,3,148,22!black|0123-4567-89AB-CDEF
