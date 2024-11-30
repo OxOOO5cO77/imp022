@@ -61,15 +61,16 @@ fn process_vagabond(context: Arc<Mutex<Gate>>, tx: UnboundedSender<RoutedMessage
     match command {
         op::Command::Hello => v_hello(context, id, &mut buf),
         op::Command::Chat |
-        op::Command::DM => v_marshall_username(context, op::Flavor::Forum, command, &tx, &mut buf),
+        op::Command::DM => v_marshal_username(context, op::Flavor::Forum, command, &tx, &mut buf),
         op::Command::InvGen |
-        op::Command::InvList => v_marshall(context, op::Flavor::Archive, command, &tx, id, &mut buf),
+        op::Command::InvList => v_marshal(context, op::Flavor::Archive, command, &tx, id, &mut buf),
         op::Command::GameActivate |
         op::Command::GameBuild |
         op::Command::GameStartTurn |
         op::Command::GameChooseAttr |
         op::Command::GamePlayCard |
-        op::Command::GameEndTurn => v_marshall(context, op::Flavor::Hall, command, &tx, id, &mut buf),
+        op::Command::GameUpdateState |
+        op::Command::GameEndTurn => v_marshal(context, op::Flavor::Hall, command, &tx, id, &mut buf),
         op::Command::NoOp |
         op::Command::Register |
         op::Command::Authorize |
@@ -79,7 +80,6 @@ fn process_vagabond(context: Arc<Mutex<Gate>>, tx: UnboundedSender<RoutedMessage
         op::Command::GameResolveCards |
         op::Command::GameEndGame |
         op::Command::GameTick |
-        op::Command::GameUpdateState |
         op::Command::UserAttr => false,
     }
 }
@@ -94,7 +94,7 @@ fn v_hello(context: Arc<Mutex<Gate>>, id: u8, buf: &mut VSizedBuffer) -> bool {
     }
 }
 
-fn v_marshall_username(context: Arc<Mutex<Gate>>, flavor: op::Flavor, command: op::Command, tx: &UnboundedSender<RoutedMessage>, buf: &mut VSizedBuffer) -> bool {
+fn v_marshal_username(context: Arc<Mutex<Gate>>, flavor: op::Flavor, command: op::Command, tx: &UnboundedSender<RoutedMessage>, buf: &mut VSizedBuffer) -> bool {
     if let Some(user) = context.lock().unwrap().map.get(&buf.pull::<u128>()) {
         let mut out = VSizedBuffer::new(256);
         out.push(&op::Route::Any(flavor));
@@ -108,7 +108,7 @@ fn v_marshall_username(context: Arc<Mutex<Gate>>, flavor: op::Flavor, command: o
     }
 }
 
-fn v_marshall(context: Arc<Mutex<Gate>>, flavor: op::Flavor, command: op::Command, tx: &UnboundedSender<RoutedMessage>, id: u8, buf: &mut VSizedBuffer) -> bool {
+fn v_marshal(context: Arc<Mutex<Gate>>, flavor: op::Flavor, command: op::Command, tx: &UnboundedSender<RoutedMessage>, id: u8, buf: &mut VSizedBuffer) -> bool {
     let auth = buf.pull::<AuthType>();
     if let Some(user) = context.lock().unwrap().map.get(&auth) {
         let mut out = VSizedBuffer::new(256);
@@ -128,8 +128,8 @@ fn process_courtyard(context: Arc<Mutex<Gate>>, tx: UnboundedSender<RoutedMessag
 
     match command {
         op::Command::Authorize => c_authorize(context, &mut buf),
-        op::Command::DM => c_marshall_name(command, context, &tx, &mut buf),
-        op::Command::Chat => c_marshall_all(command, &tx, &mut buf),
+        op::Command::DM => c_marshal_name(command, context, &tx, &mut buf),
+        op::Command::Chat => c_marshal_all(command, &tx, &mut buf),
         op::Command::InvList |
         op::Command::GameActivate |
         op::Command::GameBuild |
@@ -143,7 +143,7 @@ fn process_courtyard(context: Arc<Mutex<Gate>>, tx: UnboundedSender<RoutedMessag
         op::Command::GameEndTurn |
         op::Command::GameTick |
         op::Command::GameUpdateState |
-        op::Command::GameEndGame => c_marshall_one(command, &tx, &mut buf),
+        op::Command::GameEndGame => c_marshal_one(command, &tx, &mut buf),
         op::Command::NoOp |
         op::Command::Register |
         op::Command::Hello |
@@ -203,7 +203,7 @@ fn c_authorize(context: Arc<Mutex<Gate>>, buf: &mut VSizedBuffer) -> VClientMode
     }
 }
 
-fn c_marshall_name(command: op::Command, context: Arc<Mutex<Gate>>, tx: &UnboundedSender<RoutedMessage>, buf: &mut VSizedBuffer) -> VClientMode {
+fn c_marshal_name(command: op::Command, context: Arc<Mutex<Gate>>, tx: &UnboundedSender<RoutedMessage>, buf: &mut VSizedBuffer) -> VClientMode {
     let _ = buf.pull::<NodeType>(); // forum (discard)
 
     let sendee = buf.pull::<String>();
@@ -217,14 +217,14 @@ fn c_marshall_name(command: op::Command, context: Arc<Mutex<Gate>>, tx: &Unbound
     VClientMode::Continue
 }
 
-fn c_marshall_one(command: op::Command, tx: &UnboundedSender<RoutedMessage>, buf: &mut VSizedBuffer) -> VClientMode {
+fn c_marshal_one(command: op::Command, tx: &UnboundedSender<RoutedMessage>, buf: &mut VSizedBuffer) -> VClientMode {
     let _ = buf.pull::<NodeType>(); // sender (discard)
     let vagabond = buf.pull::<NodeType>();
 
     send_to_client(op::Route::One(vagabond), command, tx, buf)
 }
 
-fn c_marshall_all(command: op::Command, tx: &UnboundedSender<RoutedMessage>, buf: &mut VSizedBuffer) -> VClientMode {
+fn c_marshal_all(command: op::Command, tx: &UnboundedSender<RoutedMessage>, buf: &mut VSizedBuffer) -> VClientMode {
     let _ = buf.pull::<NodeType>(); // sender (discard)
 
     send_to_client(op::Route::All(op::Flavor::Vagabond), command, tx, buf)

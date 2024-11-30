@@ -83,6 +83,14 @@ impl GameState {
         self.users.get_mut(&user_id_type)
     }
 
+    pub fn get_user_auth(&self, user_id_type: UserIdType, user_auth: AuthType) -> Option<&GameUser> {
+        if let Some(user) = self.users.get(&user_id_type) {
+            if user.auth == user_auth {
+                return Some(user);
+            }
+        }
+        None
+    }
     pub fn split_get_user_auth_mut(users: &mut UserMapType, user_id_type: UserIdType, user_auth: AuthType) -> Option<&mut GameUser> {
         if let Some(user) = users.get_mut(&user_id_type) {
             if user.auth == user_auth {
@@ -113,6 +121,10 @@ impl GameState {
 
     pub fn pick_remote(&mut self) -> Option<RemoteIdType> {
         self.remotes.keys().next().cloned()
+    }
+
+    pub fn get_remote(&self, remote: RemoteIdType) -> Option<&GameRemote> {
+        self.remotes.get(&remote)
     }
 
     pub fn split_get_remote(remotes: &mut RemoteMapType, remote: RemoteIdType) -> Option<&GameRemote> {

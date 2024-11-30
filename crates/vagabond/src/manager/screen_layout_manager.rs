@@ -1,9 +1,7 @@
 use crate::manager::AtlasManager;
-use crate::system::ui::Screen;
 use bevy::prelude::*;
-use bevy::sprite::{Anchor, MaterialMesh2dBundle, Mesh2dHandle};
-use bevy::text::Text2dBounds;
-use bevy_mod_picking::prelude::*;
+use bevy::sprite::{Anchor, MeshMaterial2d};
+use bevy::text::TextBounds;
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -184,13 +182,8 @@ impl ScreenLayout {
         Some(true)
     }
 
-    pub(crate) fn decorate(&self, commands: &mut Commands, name: &str, decorator: impl Bundle) -> Entity {
-        if let Some(entity) = self.entity_map.get(name) {
-            commands.entity(*entity).insert(decorator);
-            *entity
-        } else {
-            Entity::PLACEHOLDER
-        }
+    pub(crate) fn entity(&self, name: &str) -> Entity {
+        *self.entity_map.get(name).unwrap_or(&Entity::PLACEHOLDER)
     }
 }
 
@@ -286,72 +279,57 @@ impl ScreenLayoutManager {
 
     fn make_shape_bundle(element: &ShapeElement, offset_z: f32, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> impl Bundle {
         let mesh = match element.kind {
-            ShapeKind::Rect => Mesh2dHandle(meshes.add(Rectangle::new(element.size.x, element.size.y))),
+            ShapeKind::Rect => Mesh2d(meshes.add(Rectangle::new(element.size.x, element.size.y))),
         };
-        let material = materials.add(Color::Srgba(element.color));
+        let material = MeshMaterial2d(materials.add(Color::Srgba(element.color)));
         let translation = Vec3::new(element.position.x, element.position.y, element.position.z + offset_z);
 
-        MaterialMesh2dBundle {
-            mesh,
-            material,
-            transform: Transform::from_translation(translation),
-            ..default()
-        }
+        (mesh, material, Transform::from_translation(translation))
     }
 
-    fn make_sprite_bundle(am: &AtlasManager, atlas_name: &str, texture_name: &str, translation: Vec3, color: Srgba) -> Option<(SpriteBundle, TextureAtlas)> {
-        let (atlas, texture) = am.get_atlas_texture(atlas_name, texture_name)?;
+    fn make_sprite_bundle(am: &AtlasManager, atlas_name: &str, texture_name: &str, translation: Vec3, color: Srgba) -> Option<impl Bundle> {
+        let (atlas, image) = am.get_atlas_texture(atlas_name, texture_name)?;
 
-        let sprite = SpriteBundle {
-            sprite: Sprite {
+        let sprite = (
+            Sprite {
                 color: Color::Srgba(color),
                 anchor: Anchor::TopLeft,
+                image,
+                texture_atlas: Some(atlas),
                 ..default()
             },
-            texture,
-            transform: Transform::from_translation(translation),
-            ..default()
-        };
-        Some((sprite, atlas))
+            Transform::from_translation(translation),
+        );
+        Some(sprite)
     }
 
     fn make_text_bundle(element: &TextElement, offset_z: f32, asset_server: &AssetServer) -> impl Bundle {
         let font = asset_server.load(element.font_name);
-        let translation = Vec3::new(element.position.x, element.position.y, element.position.z + offset_z);
+        let translation = Vec3::new(element.position.x, element.position.y - (element.size.y/2.0), element.position.z + offset_z);
 
-        Text2dBundle {
-            text: Text::from_section(
-                element.default_text.clone(),
-                TextStyle {
-                    font,
-                    font_size: element.font_size,
-                    color: Color::Srgba(element.color),
-                },
-            )
-            .with_justify(element.justify),
-            text_anchor: Anchor::TopLeft,
-            text_2d_bounds: Text2dBounds {
-                size: element.size,
-            },
-            transform: Transform::from_translation(translation),
-            ..default()
-        }
+        (
+            //
+            Text2d::new(&element.default_text),
+            TextBounds::from(element.size),
+            TextColor::from(element.color),
+            TextFont::from_font(font).with_font_size(element.font_size),
+            TextLayout::new_with_justify(element.justify),
+            Transform::from_translation(translation),
+            Anchor::CenterLeft,
+        )
     }
 
     fn make_container_bundle(element: &LayoutElement, offset_z: f32) -> impl Bundle {
         let translation = Vec3::new(element.position.x, element.position.y, element.position.z + offset_z);
         (
-            SpriteBundle {
-                sprite: Sprite {
-                    color: Color::NONE,
-                    custom_size: Some(element.size),
-                    anchor: Anchor::TopLeft,
-                    ..default()
-                },
-                transform: Transform::from_translation(translation),
+            Sprite {
+                color: Color::NONE,
+                anchor: Anchor::TopLeft,
+                custom_size: Some(element.size),
                 ..default()
             },
-            Pickable::IGNORE,
+            Transform::from_translation(translation),
+            PickingBehavior::IGNORE,
         )
     }
 
@@ -378,9 +356,9 @@ impl ScreenLayoutManager {
                     let translation = Vec3::new(e.position.x, e.position.y, e.position.z + *offset_z);
                     if let Some(sprite) = Self::make_sprite_bundle(am, e.atlas.as_str(), e.item.as_str(), translation, e.color) {
                         if e.pickable {
-                            parent.spawn((sprite, PickableBundle::default())).id()
+                            parent.spawn((sprite, PickingBehavior::default())).id()
                         } else {
-                            parent.spawn((sprite, Pickable::IGNORE)).id()
+                            parent.spawn((sprite, PickingBehavior::IGNORE)).id()
                         }
                     } else {
                         continue;
@@ -409,7 +387,7 @@ impl ScreenLayoutManager {
 
     pub(crate) fn build(&mut self, commands: &mut Commands, layout_name: &str, am: &AtlasManager, asset_server: &AssetServer, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> &ScreenLayout {
         let id = commands
-            .spawn((ScreenLayoutContainer::default(), Screen))
+            .spawn(ScreenLayoutContainer::default())
             .with_children(|parent| {
                 let mut offset = 0.0;
                 let entities = self.build_layout(layout_name, parent, &mut offset, "", am, (asset_server, meshes, materials));

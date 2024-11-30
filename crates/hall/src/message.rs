@@ -19,13 +19,13 @@ pub use game_end_game::{GameEndGameRequest, GameEndGameResponse};
 pub use game_end_turn::{GameEndTurnRequest, GameEndTurnResponse};
 pub use game_play_card::{GamePlayCardRequest, GamePlayCardResponse, CardIdxType, CardTarget};
 pub use game_start_turn::{GameStartTurnRequest, GameStartTurnResponse};
+pub use game_update_state::{GameUpdateStateRequest, GameUpdateStateResponse};
 
 pub use game_resolve_cards::GameResolveCardsMessage;
 pub use game_resources::GameResourcesMessage;
 pub use game_roll::GameRollMessage;
 pub use game_start_game::GameStartGameMessage;
 pub use game_tick::GameTickMessage;
-pub use game_update_state::GameUpdateStateMessage;
 
 use shared_net::op;
 use shared_net::sizedbuffers::Bufferable;

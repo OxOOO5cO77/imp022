@@ -9,7 +9,7 @@ mod screen_layout_manager;
 pub(crate) use crate::manager::atlas_manager::AtlasManager;
 pub(crate) use crate::manager::data_manager::DataManager;
 pub(crate) use crate::manager::network_manager::NetworkManager;
-pub(crate) use crate::manager::screen_layout_manager::ScreenLayoutManager;
+pub(crate) use crate::manager::screen_layout_manager::{ScreenLayoutManager,ScreenLayout};
 pub(crate) use crate::manager::warehouse_manager::WarehouseManager;
 
 pub(crate) struct ManagerPlugin;

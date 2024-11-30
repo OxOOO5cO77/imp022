@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use bevy_egui::{egui, EguiContexts};
 use shared_net::types::AuthType;
 use std::env;
 use std::mem::discriminant;
@@ -17,13 +16,17 @@ impl Plugin for LoginPlugin {
     fn build(&self, app: &mut App) {
         app //
             .add_systems(OnEnter(AppState::LoginDrawbridge), drawbridge_enter)
+            .add_systems(OnEnter(AppState::LoginDrawbridge), login_ui_setup.after(drawbridge_enter))
             .add_systems(Update, drawbridge_update.run_if(in_state(AppState::LoginDrawbridge)))
-            .add_systems(Update, login_ui_update.run_if(in_state(AppState::LoginDrawbridge)))
-            .add_systems(OnExit(AppState::LoginGate), drawbridge_exit)
+            .add_systems(OnExit(AppState::LoginDrawbridge), drawbridge_exit)
             .add_systems(OnEnter(AppState::LoginGate), gate_enter)
-            .add_systems(Update, gate_update.run_if(in_state(AppState::LoginGate)));
+            .add_systems(Update, gate_update.run_if(in_state(AppState::LoginGate)))
+            .add_systems(OnExit(AppState::LoginGate), login_exit);
     }
 }
+
+#[derive(Component)]
+struct LoginScreen;
 
 #[derive(Resource)]
 struct DrawbridgeHandoff {
@@ -38,34 +41,6 @@ impl DrawbridgeHandoff {
             auth: auth_info.auth,
         }
     }
-}
-
-fn login_ui_update(
-    // bevy system
-    egui_context: EguiContexts,
-    mut drawbridge: ResMut<DrawbridgeIFace>,
-) {
-    egui::Window::new("Login").show(egui_context.ctx(), |ui| {
-        let focus = ui.memory(|mem| mem.focused());
-        ui.label("User");
-        let username = ui.add(egui::TextEdit::singleline(&mut drawbridge.username));
-        if focus.is_none() {
-            username.request_focus();
-        }
-        let enter_pressed = ui.input(|i| i.key_pressed(egui::Key::Enter));
-        let mut password_focus = false;
-        if username.lost_focus() && enter_pressed {
-            password_focus = true;
-        }
-        ui.label("Password");
-        let password = ui.add(egui::TextEdit::singleline(&mut drawbridge.password).password(true));
-        if password.lost_focus() && enter_pressed && !drawbridge.username.is_empty() && !drawbridge.password.is_empty() {
-            client_drawbridge::send_authorize(&drawbridge.dtx, drawbridge.username.clone(), drawbridge.password.clone());
-        }
-        if password_focus {
-            password.request_focus();
-        }
-    });
 }
 
 fn drawbridge_enter(
@@ -92,6 +67,16 @@ fn drawbridge_enter(
         task.abort();
     }
     net.current_task = DrawbridgeClient::start("[::1]:23450".to_string(), from_drawbridge_tx, to_drawbridge_rx, &net.runtime);
+}
+
+fn login_ui_setup(
+    // bevy system
+    mut commands: Commands,
+    drawbridge: Res<DrawbridgeIFace>,
+) {
+    commands.spawn(LoginScreen);
+
+    client_drawbridge::send_authorize(&drawbridge.dtx, drawbridge.username.clone(), drawbridge.password.clone());
 }
 
 fn drawbridge_update(
@@ -147,5 +132,15 @@ fn gate_update(
             GateCommand::Hello => app_state.set(AppState::ComposeInit),
             _ => println!("[Login] Unexpected command received {:?}", discriminant(&gate_command)),
         }
+    }
+}
+
+fn login_exit(
+    // bevy system
+    mut commands: Commands,
+    login_q: Query<Entity, With<LoginScreen>>,
+) {
+    for e in &login_q {
+        commands.entity(e).despawn_recursive();
     }
 }

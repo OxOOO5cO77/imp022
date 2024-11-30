@@ -60,9 +60,9 @@ impl BioManager {
     }
 
     fn dob(&self, rng: &mut impl Rng) -> NaiveDate {
-        let year = 2049 - rng.gen_range(16..50);
+        let year = 2049 - rng.random_range(16..50);
         let day_max = if is_leap_year(year) { 366 } else { 365 };
-        NaiveDate::from_yo_opt(year, rng.gen_range(1..=day_max)).unwrap_or(NaiveDate::MIN)
+        NaiveDate::from_yo_opt(year, rng.random_range(1..=day_max)).unwrap_or(NaiveDate::MIN)
     }
 
     fn name(&self, country: &String, gender: char, rng: &mut impl Rng) -> (String, String) {

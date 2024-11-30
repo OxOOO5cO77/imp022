@@ -7,5 +7,6 @@ pub(crate) enum AppState {
     LoginGate,
     ComposeInit,
     Compose,
+    GameplayInit,
     Gameplay,
 }

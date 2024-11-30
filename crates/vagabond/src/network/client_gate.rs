@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use bevy::prelude::Resource;
+use std::collections::HashMap;
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
@@ -24,7 +24,7 @@ pub(crate) enum GateCommand {
     GameEndTurn(Box<GameEndTurnResponse>),
     GameTick(Box<GameTickMessage>),
     GameEndGame(Box<GameEndGameResponse>),
-    GameUpdateState(Box<GameUpdateStateMessage>),
+    GameUpdateState(Box<GameUpdateStateResponse>),
 }
 
 #[derive(Resource)]
@@ -177,6 +177,14 @@ impl GateIFace {
 
     pub fn send_game_end_turn(&self) {
         let request = GameEndTurnRequest {
+            game_id: self.game_id,
+        };
+
+        self.send_request(request);
+    }
+
+    pub fn send_game_update_state(&self) {
+        let request = GameUpdateStateRequest {
             game_id: self.game_id,
         };
 

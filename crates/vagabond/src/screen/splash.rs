@@ -1,9 +1,8 @@
 use std::time::Duration;
 
-use bevy::prelude::*;
-
 use crate::system::app_state::AppState;
-use crate::system::ui::HUNDRED;
+use bevy::prelude::*;
+use bevy::ui::Val::Percent;
 
 pub struct SplashPlugin;
 
@@ -17,7 +16,7 @@ impl Plugin for SplashPlugin {
 }
 
 #[derive(Component)]
-struct Splash {
+struct SplashScreen {
     timer: Timer,
 }
 
@@ -28,26 +27,23 @@ fn splash_enter(
 ) {
     commands
         .spawn((
-            Splash {
+            SplashScreen {
                 timer: Timer::new(Duration::from_secs(3), TimerMode::Once),
             },
-            NodeBundle {
-                style: Style {
-                    width: HUNDRED,
-                    height: HUNDRED,
-                    position_type: PositionType::Absolute,
-                    justify_content: JustifyContent::Center,
-                    align_items: AlignItems::Center,
-                    align_content: AlignContent::Center,
-                    ..default()
-                },
-                background_color: Color::WHITE.into(),
+            Node {
+                width: Percent(100.0),
+                height: Percent(100.0),
+                position_type: PositionType::Absolute,
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                align_content: AlignContent::Center,
                 ..default()
             },
+            BackgroundColor(Color::WHITE),
         ))
         .with_children(|parent| {
-            parent.spawn(ImageBundle {
-                image: asset_server.load("image/impending.png").into(),
+            parent.spawn(ImageNode {
+                image: asset_server.load("image/impending.png"),
                 ..default()
             });
         });
@@ -55,7 +51,7 @@ fn splash_enter(
 
 fn splash_update(
     // bevy system
-    mut splash_q: Query<&mut Splash>,
+    mut splash_q: Query<&mut SplashScreen>,
     mut app_state: ResMut<NextState<AppState>>,
     time: Res<Time>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -72,8 +68,9 @@ fn splash_update(
 fn splash_exit(
     // bevy system
     mut commands: Commands,
-    splash_q: Query<Entity, With<Splash>>,
+    splash_q: Query<Entity, With<SplashScreen>>,
 ) {
-    let splash = splash_q.single();
-    commands.entity(splash).despawn_recursive();
+    for e in &splash_q {
+        commands.entity(e).despawn_recursive();
+    }
 }

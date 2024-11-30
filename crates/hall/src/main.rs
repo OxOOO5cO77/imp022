@@ -99,13 +99,14 @@ async fn main() -> Result<(), ()> {
 
 fn process_courtyard(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
     match buf.pull::<op::Command>() {
-        op::Command::GameActivate => recv_game_start(context, tx, buf),
+        op::Command::GameActivate => recv_game_activate(context, tx, buf),
         op::Command::GameBuild => recv_game_build(context, tx, buf),
         op::Command::GameStartTurn => recv_game_start_turn(context, tx, buf),
         op::Command::GameChooseAttr => recv_game_choose_attr(context, tx, buf),
         op::Command::GamePlayCard => recv_game_play_card(context, tx, buf),
         op::Command::GameEndTurn => recv_game_end_turn(context, tx, buf),
         op::Command::GameEndGame => recv_game_end(context, tx, buf),
+        op::Command::GameUpdateState => recv_game_update_state(context, tx, buf),
         _ => {}
     };
     VClientMode::Continue
@@ -128,7 +129,7 @@ fn send_routed_message<T: CommandMessage>(message: T, gate: NodeType, vagabond: 
     })
 }
 
-fn recv_game_start(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
+fn recv_game_activate(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
     let mut context = context.lock().unwrap();
 
     let gate = buf.pull::<NodeType>();
@@ -140,7 +141,7 @@ fn recv_game_start(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>
     let temp_builder = PlayerBuilder::new(&user.parts, &context.data_manager);
     user.parts.clear();
 
-    let mut rng = thread_rng();
+    let mut rng = rand::rng();
     let mut game_id = request.game_id;
     while game_id == 0 {
         let new_id = rng.random::<GameIdType>();
@@ -203,13 +204,6 @@ fn recv_game_build(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>
                 if let Some(valid_player) = user.player.as_ref() {
                     user.state.set_attr(valid_player.attributes);
                     user.state.setup_deck(valid_player.deck.iter().filter_map(|card| dm.lookup_player_card(card)).collect(), &mut rng);
-                    let remote = GameState::split_get_remote(&mut game.remotes, user.remote.unwrap_or_default()).unwrap();
-                    let message = GameUpdateStateMessage {
-                        player_state: PlayerStatePlayerView::from(&user.state),
-                        local_machine: GameMachinePlayerView::from(&user.machine),
-                        remote_machine: GameMachinePlayerView::from(&remote.machine),
-                    };
-                    let _ = send_routed_message(message, gate, header.vagabond, &tx);
                 }
             }
         }
@@ -244,6 +238,28 @@ fn recv_game_end(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, 
     };
 
     let _ = send_routed_message(response, gate, header.vagabond, &tx);
+}
+
+fn recv_game_update_state(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
+    let context = context.lock().unwrap();
+
+    let gate = buf.pull::<NodeType>();
+    let header = buf.pull::<GateHeader>();
+    let request = buf.pull::<GameUpdateStateRequest>();
+
+    if let Some(game) = context.games.get(&request.game_id) {
+        if let Some(user) = game.get_user_auth(header.user, header.auth) {
+            if let Some(remote) = game.get_remote(user.remote.unwrap_or_default()) {
+                let response = GameUpdateStateResponse {
+                    player_state: PlayerStatePlayerView::from(&user.state),
+                    local_machine: GameMachinePlayerView::from(&user.machine),
+                    remote_machine: GameMachinePlayerView::from(&remote.machine),
+                };
+
+                let _ = send_routed_message(response, gate, header.vagabond, &tx);
+            }
+        }
+    }
 }
 
 fn update_user<T: Default>(context: &mut Hall, game_id: GameIdType, user: UserIdType, auth: AuthType, command: op::Command, update: impl Fn(&mut GameUser) -> T) -> T {
@@ -308,7 +324,7 @@ fn recv_game_choose_attr(context: Arc<Mutex<Hall>>, tx: UnboundedSender<RoutedMe
 
     if let Some(game) = games.get_mut(&request.game_id) {
         if game.all_users_last_command(op::Command::GameChooseAttr) {
-            let mut rng = thread_rng();
+            let mut rng = rand::rng();
             let (erg_roll, users, remotes) = game.split_borrow_for_resolve();
             for (id, user) in users.iter_mut() {
                 if let Some(player) = &user.player {
