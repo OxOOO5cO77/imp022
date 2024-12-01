@@ -5,7 +5,7 @@ use crate::system::app_state::AppState;
 use bevy::prelude::*;
 use hall::data::game::GameMachinePlayerView;
 use hall::data::player::player_state::PlayerStatePlayerView;
-use hall::message::{AttrKind, CardIdxType, CardTarget, GameUpdateStateResponse};
+use hall::message::*;
 use shared_data::build::BuildValueType;
 use shared_data::card::{DelayType, ErgType};
 use std::cmp::{Ordering, PartialEq};
@@ -65,14 +65,14 @@ fn gameplay_init_update(
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 enum WaitKind {
     One,
     All,
 }
 
-#[derive(Default, Clone, PartialEq)]
-enum GamePhaseKind {
+#[derive(Default, Clone, Copy, PartialEq)]
+enum VagabondGamePhase {
     #[default]
     Start,
     Pick,
@@ -83,7 +83,7 @@ enum GamePhaseKind {
 
 #[derive(Resource, Default)]
 struct GameplayContext {
-    phase: GamePhaseKind,
+    phase: VagabondGamePhase,
     attr_pick: Option<AttrKind>,
     card_picks: HashMap<CardIdxType, CardTarget>,
 }
@@ -164,7 +164,7 @@ struct MachineInfo {
 
 #[derive(Event)]
 enum UiEvent {
-    GamePhase(GamePhaseKind),
+    GamePhase(VagabondGamePhase),
     PlayerState(PlayerStatePlayerView),
     ChooseAttr(Option<AttrKind>),
     Roll([ErgType; 4]),
@@ -260,8 +260,8 @@ fn gameplay_enter(
     commands.insert_resource(GameplayContext::default());
 
     let initial_response = handoff.initial_response.take().unwrap();
-    handle_game_update_state(&mut send, *initial_response);
-    send.send(UiEvent::GamePhase(GamePhaseKind::Start));
+    recv_update_state(*initial_response, &mut send);
+    send.send(UiEvent::GamePhase(VagabondGamePhase::Start));
 
     let info = MachineInfo {
         name: handoff.name.clone(),
@@ -272,33 +272,33 @@ fn gameplay_enter(
 
 fn on_click_next(_: Trigger<Pointer<Click>>, mut context: ResMut<GameplayContext>, gate: Res<GateIFace>) {
     match context.phase {
-        GamePhaseKind::Start => gate.send_game_start_turn(),
-        GamePhaseKind::Pick => {
+        VagabondGamePhase::Start => gate.send_game_start_turn(),
+        VagabondGamePhase::Pick => {
             if let Some(kind) = context.attr_pick {
                 gate.send_game_choose_attr(kind);
             } else {
                 return;
             }
         }
-        GamePhaseKind::Play => gate.send_game_play_cards(&context.card_picks),
-        GamePhaseKind::Draw => gate.send_game_end_turn(),
-        GamePhaseKind::Wait(_) => return,
+        VagabondGamePhase::Play => gate.send_game_play_cards(&context.card_picks),
+        VagabondGamePhase::Draw => gate.send_game_end_turn(),
+        VagabondGamePhase::Wait(_) => return,
     };
-    context.phase = GamePhaseKind::Wait(WaitKind::One);
+    context.phase = VagabondGamePhase::Wait(WaitKind::One);
 }
 
 fn on_over_next(event: Trigger<Pointer<Over>>, context: Res<GameplayContext>, mut sprite_q: Query<&mut Sprite>) {
     if let Ok(mut sprite) = sprite_q.get_mut(event.target) {
         sprite.color = match context.phase {
-            GamePhaseKind::Pick => {
+            VagabondGamePhase::Pick => {
                 if context.attr_pick.is_some() {
                     bevy::color::palettes::basic::GREEN
                 } else {
                     bevy::color::palettes::basic::RED
                 }
             }
-            GamePhaseKind::Wait(WaitKind::One) => bevy::color::palettes::basic::RED,
-            GamePhaseKind::Wait(WaitKind::All) => bevy::color::palettes::basic::YELLOW,
+            VagabondGamePhase::Wait(WaitKind::One) => bevy::color::palettes::basic::RED,
+            VagabondGamePhase::Wait(WaitKind::All) => bevy::color::palettes::basic::YELLOW,
             _ => bevy::color::palettes::basic::GREEN,
         }
         .into();
@@ -322,7 +322,7 @@ fn on_over_attr(event: Trigger<Pointer<Over>>, context: Res<GameplayContext>, mu
         if transform.translation.z < 100.0 {
             transform.translation.z += 100.0;
         }
-        sprite.color = if GamePhaseKind::Pick == context.phase {
+        sprite.color = if VagabondGamePhase::Pick == context.phase {
             bevy::color::palettes::basic::GREEN
         } else {
             bevy::color::palettes::css::SILVER
@@ -369,9 +369,9 @@ fn indicator_ui_update(mut commands: Commands, mut receive: EventReader<UiEvent>
     for ui_event in receive.read() {
         if let UiEvent::GamePhase(phase) = ui_event {
             match phase {
-                GamePhaseKind::Start => indicator_q.iter().for_each(|(e, i)| cleanup_indicator(&mut commands, e, i.source)),
-                GamePhaseKind::Play => {}
-                GamePhaseKind::Draw => {}
+                VagabondGamePhase::Start => indicator_q.iter().for_each(|(e, i)| cleanup_indicator(&mut commands, e, i.source)),
+                VagabondGamePhase::Play => {}
+                VagabondGamePhase::Draw => {}
                 _ => {}
             }
         }
@@ -388,7 +388,7 @@ fn on_card_drag_start(
     meshes: ResMut<Assets<Mesh>>,
     materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    if context.phase != GamePhaseKind::Play {
+    if context.phase != VagabondGamePhase::Play {
         return;
     }
 
@@ -410,7 +410,7 @@ fn on_card_drag_start(
 }
 
 fn on_card_drag(event: Trigger<Pointer<Drag>>, mut indicator_q: Query<(&mut Transform, &Indicator)>, context: Res<GameplayContext>) {
-    if context.phase != GamePhaseKind::Play {
+    if context.phase != VagabondGamePhase::Play {
         return;
     }
     let target = event.target;
@@ -547,12 +547,12 @@ fn phase_ui_update(
         if let UiEvent::GamePhase(phase) = ui_event {
             let mut text = text_q.single_mut();
             *text = match phase {
-                GamePhaseKind::Start => "Start Turn".to_string(),
-                GamePhaseKind::Pick => "Pick Attribute".to_string(),
-                GamePhaseKind::Play => "Play Card".to_string(),
-                GamePhaseKind::Draw => "Draw Cards".to_string(),
-                GamePhaseKind::Wait(WaitKind::One) => "...".to_string(),
-                GamePhaseKind::Wait(WaitKind::All) => "(Waiting)".to_string(),
+                VagabondGamePhase::Start => "Start Turn".to_string(),
+                VagabondGamePhase::Pick => "Pick Attribute".to_string(),
+                VagabondGamePhase::Play => "Play Card".to_string(),
+                VagabondGamePhase::Draw => "Draw Cards".to_string(),
+                VagabondGamePhase::Wait(WaitKind::One) => "...".to_string(),
+                VagabondGamePhase::Wait(WaitKind::All) => "(Waiting)".to_string(),
             }
             .into();
         }
@@ -573,7 +573,7 @@ fn local_ui_update(
                 }
             }
             UiEvent::ChooseAttr(kind) => {
-                if context.phase != GamePhaseKind::Pick {
+                if context.phase != VagabondGamePhase::Pick {
                     continue;
                 }
 
@@ -715,103 +715,120 @@ fn gameplay_update(
     mut context: ResMut<GameplayContext>,
     mut send: EventWriter<UiEvent>,
 ) {
-    match gate.grx.try_recv() {
-        Ok(GateCommand::GameStartTurn(gate_response)) => {
-            println!(
-                "[RECV] GameStartTurn {}",
-                if gate_response.success {
-                    "OK"
-                } else {
-                    "ERROR"
-                }
-            );
-            if gate_response.success {
-                context.phase = GamePhaseKind::Wait(WaitKind::All);
-            }
-        }
-        Ok(GateCommand::GameRoll(gate_response)) => {
-            println!("[RECV] GameRoll => Pick");
-            context.phase = GamePhaseKind::Pick;
-            send.send(UiEvent::Roll(gate_response.roll));
-            send.send(UiEvent::ChooseAttr(None));
-        }
-        Ok(GateCommand::GameChooseAttr(gate_response)) => {
-            println!(
-                "[RECV] GameChooseAttr {}",
-                if gate_response.success {
-                    "OK"
-                } else {
-                    "ERROR"
-                }
-            );
-            if gate_response.success {
-                context.phase = GamePhaseKind::Wait(WaitKind::All);
-            }
-        }
-        Ok(GateCommand::GameResources(gate_response)) => {
-            println!("[RECV] GameResources => Play");
-            send.send(UiEvent::PlayerState(gate_response.player_state_view));
-            send.send(UiEvent::Resources(gate_response.local_erg, gate_response.remote_erg, gate_response.remote_attr));
-            context.phase = GamePhaseKind::Play;
-        }
-        Ok(GateCommand::GamePlayCard(gate_response)) => {
-            let success = gate_response.success.iter().all(|&success| success);
-            println!(
-                "[RECV] GamePlayCard {}",
-                if success {
-                    "OK"
-                } else {
-                    "ERROR"
-                }
-            );
-            if success {
-                context.card_picks.clear();
-                context.phase = GamePhaseKind::Wait(WaitKind::All);
-            }
-        }
-        Ok(GateCommand::GameResolveCards(_gate_response)) => {
-            println!("[RECV] GameResolveCards => Draw");
-            context.phase = GamePhaseKind::Draw;
-        }
-        Ok(GateCommand::GameEndTurn(gate_response)) => {
-            println!(
-                "[RECV] GameEndTurn {}",
-                if gate_response.success {
-                    "OK"
-                } else {
-                    "ERROR"
-                }
-            );
-            if gate_response.success {
-                context.phase = GamePhaseKind::Wait(WaitKind::All);
-            }
-        }
-        Ok(GateCommand::GameTick(_gate_response)) => {
-            println!("[RECV] GameTick");
-            context.reset();
-            context.phase = GamePhaseKind::Start;
-        }
-        Ok(GateCommand::GameEndGame(gate_response)) => {
-            println!(
-                "[RECV] GameEndGame {}",
-                if gate_response.success {
-                    "OK"
-                } else {
-                    "ERROR"
-                }
-            );
-        }
-        Ok(GateCommand::GameUpdateState(response)) => handle_game_update_state(&mut send, *response),
-        Ok(_) => return,
-        Err(_) => return,
+    let new_phase = match gate.grx.try_recv() {
+        Ok(GateCommand::GameStartTurn(gate_response)) => recv_start_turn(*gate_response),
+        Ok(GateCommand::GameRoll(gate_response)) => recv_roll(*gate_response, &mut send),
+        Ok(GateCommand::GameChooseAttr(gate_response)) => recv_choose_attr(*gate_response),
+        Ok(GateCommand::GameResources(gate_response)) => recv_resources(*gate_response, &mut send),
+        Ok(GateCommand::GamePlayCard(gate_response)) => recv_play_card(*gate_response, &mut context),
+        Ok(GateCommand::GameResolveCards(gate_response)) => recv_resolve_cards(*gate_response),
+        Ok(GateCommand::GameEndTurn(gate_response)) => recv_end_turn(*gate_response),
+        Ok(GateCommand::GameTick(gate_response)) => recv_tick(*gate_response, &mut context),
+        Ok(GateCommand::GameEndGame(gate_response)) => recv_end_game(*gate_response),
+        Ok(GateCommand::GameUpdateState(gate_response)) => recv_update_state(*gate_response, &mut send),
+        Ok(_) => None,
+        Err(_) => None,
+    };
+    if let Some(phase) = new_phase {
+        context.phase = phase;
+        send.send(UiEvent::GamePhase(phase));
     }
-    send.send(UiEvent::GamePhase(context.phase.clone()));
 }
 
-fn handle_game_update_state(send: &mut EventWriter<UiEvent>, response: GameUpdateStateResponse) {
+fn recv_start_turn(response: GameStartTurnResponse) -> Option<VagabondGamePhase> {
+    println!(
+        "[RECV] GameStartTurn {}",
+        if response.success {
+            "OK"
+        } else {
+            "ERROR"
+        }
+    );
+    response.success.then_some(VagabondGamePhase::Wait(WaitKind::All))
+}
+
+fn recv_roll(response: GameRollMessage, send: &mut EventWriter<UiEvent>) -> Option<VagabondGamePhase> {
+    println!("[RECV] GameRoll => Pick");
+    send.send(UiEvent::Roll(response.roll));
+    send.send(UiEvent::ChooseAttr(None));
+    Some(VagabondGamePhase::Pick)
+}
+
+fn recv_choose_attr(response: GameChooseAttrResponse) -> Option<VagabondGamePhase> {
+    println!(
+        "[RECV] GameChooseAttr {}",
+        if response.success {
+            "OK"
+        } else {
+            "ERROR"
+        }
+    );
+    response.success.then_some(VagabondGamePhase::Wait(WaitKind::All))
+}
+
+fn recv_resources(response: GameResourcesMessage, send: &mut EventWriter<UiEvent>) -> Option<VagabondGamePhase> {
+    println!("[RECV] GameResources => Play");
+    send.send(UiEvent::PlayerState(response.player_state_view));
+    send.send(UiEvent::Resources(response.local_erg, response.remote_erg, response.remote_attr));
+    Some(VagabondGamePhase::Play)
+}
+
+fn recv_play_card(response: GamePlayCardResponse, context: &mut GameplayContext) -> Option<VagabondGamePhase> {
+    let success = response.success.iter().all(|&success| success);
+    println!(
+        "[RECV] GamePlayCard {}",
+        if success {
+            "OK"
+        } else {
+            "ERROR"
+        }
+    );
+    if success {
+        context.card_picks.clear();
+    }
+    success.then_some(VagabondGamePhase::Wait(WaitKind::All))
+}
+
+fn recv_resolve_cards(_response: GameResolveCardsMessage) -> Option<VagabondGamePhase> {
+    println!("[RECV] GameResolveCards => Draw");
+    Some(VagabondGamePhase::Draw)
+}
+
+fn recv_end_turn(response: GameEndTurnResponse) -> Option<VagabondGamePhase> {
+    println!(
+        "[RECV] GameEndTurn {}",
+        if response.success {
+            "OK"
+        } else {
+            "ERROR"
+        }
+    );
+    response.success.then_some(VagabondGamePhase::Wait(WaitKind::All))
+}
+
+fn recv_tick(_response: GameTickMessage, context: &mut GameplayContext) -> Option<VagabondGamePhase> {
+    println!("[RECV] GameTick");
+    context.reset();
+    Some(VagabondGamePhase::Start)
+}
+
+fn recv_end_game(response: GameEndGameResponse) -> Option<VagabondGamePhase> {
+    println!(
+        "[RECV] GameEndGame {}",
+        if response.success {
+            "OK"
+        } else {
+            "ERROR"
+        }
+    );
+    None
+}
+
+fn recv_update_state(response: GameUpdateStateResponse, send: &mut EventWriter<UiEvent>) -> Option<VagabondGamePhase> {
     println!("[RECV] GameUpdateState");
     send.send(UiEvent::PlayerState(response.player_state));
     send.send(UiEvent::MachineStateUpdate(response.local_machine, response.remote_machine));
+    None
 }
 
 pub fn gameplay_exit(
