@@ -3,7 +3,7 @@ $color:yellow=0.722,0.525,0.043,1.0
 $color:red=0.545,0.0,0.0,1.0
 $color:green=0.0,0.392,0.0,1.0
 $color:blue=0.0,0.0,0.545,1.0
-?row_a:gameplay.372x080@29,26!grey
+*row_a:gameplay.372x080@29,26!grey
 &a:main.48.center@35,34,64,64!grey|A
 *aa_bg:gameplay.064x064@104,34!grey
 &aa:main.48.center@108,38,56,56!grey|-
@@ -13,7 +13,7 @@ $color:blue=0.0,0.0,0.545,1.0
 &ac:main.48.center@258,38,56,56!grey|-
 *ad_bg:gameplay.064x064@329,34!grey
 &ad:main.48.center@333,38,56,56!grey|-
-?row_b:gameplay.372x080@29,102!grey
+*row_b:gameplay.372x080@29,102!grey
 &b:main.48.center@35,110,64,64!grey|B
 *ba_bg:gameplay.064x064@104,110!grey
 &ba:main.48.center@108,114,56,56!grey|-
@@ -23,7 +23,7 @@ $color:blue=0.0,0.0,0.545,1.0
 &bc:main.48.center@258,114,56,56!grey|-
 *bd_bg:gameplay.064x064@329,110!grey
 &bd:main.48.center@333,114,56,56!grey|-
-?row_c:gameplay.372x080@29,178!grey
+*row_c:gameplay.372x080@29,178!grey
 &c:main.48.center@35,186,64,64!grey|C
 *ca_bg:gameplay.064x064@104,186!grey
 &ca:main.48.center@108,190,56,56!grey|-
@@ -33,7 +33,7 @@ $color:blue=0.0,0.0,0.545,1.0
 &cc:main.48.center@258,190,56,56!grey|-
 *cd_bg:gameplay.064x064@329,186!grey
 &cd:main.48.center@333,190,56,56!grey|-
-?row_d:gameplay.372x080@29,254!grey
+*row_d:gameplay.372x080@29,254!grey
 &d:main.48.center@35,266,64,64!grey|D
 *da_bg:gameplay.064x064@104,262!grey
 &da:main.48.center@108,266,56,56!grey|-
@@ -69,7 +69,7 @@ $color:blue=0.0,0.0,0.545,1.0
 &ld:main.48.center@33,990,56,56!green|00
 *phase_bg:gameplay.290x064@1519,986!grey
 &phase:main.28.center@1530,1002,268,32!grey|PHASE
-?next:gameplay.064x064@1823,986!grey
+*next:gameplay.064x064@1823,986!grey
 *local_bg:gameplay.372x300@29,390!green
 /local:machine@35,397,361,286
 *remote_bg:gameplay.372x300@1519,390!red

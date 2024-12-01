@@ -179,6 +179,36 @@ enum UiEvent {
 #[derive(Component)]
 struct AttributeRow(AttrKind);
 
+trait PickableRowEntityCommandsExtension {
+    fn insert_pickable_row(self, kind: AttrKind) -> Self;
+    fn insert_next_button(self) -> Self;
+    fn insert_card(self, layout: CardLayout) -> Self;
+}
+
+impl PickableRowEntityCommandsExtension for &mut EntityCommands<'_> {
+    fn insert_pickable_row(self, kind: AttrKind) -> Self {
+        self //
+            .insert((AttributeRow(kind), PickingBehavior::default()))
+            .observe(on_click_attr)
+            .observe(on_over_attr)
+            .observe(on_out_attr)
+    }
+    fn insert_next_button(self) -> Self {
+        self //
+            .insert(PickingBehavior::default())
+            .observe(on_click_next)
+            .observe(on_over_next)
+            .observe(on_out_next)
+    }
+    fn insert_card(self, layout: CardLayout) -> Self {
+        self //
+            .insert((layout, PickingBehavior::default()))
+            .observe(on_card_drag_start)
+            .observe(on_card_drag)
+            .observe(on_card_drag_end)
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn gameplay_enter(
     // bevy system
@@ -221,12 +251,12 @@ fn gameplay_enter(
 
     commands.entity(layout.entity("phase")).insert(PhaseText);
 
-    commands.entity(layout.entity("next")).observe(on_click_next).observe(on_over_next).observe(on_out_next);
+    commands.entity(layout.entity("next")).insert_next_button();
 
-    commands.entity(layout.entity("row_a")).insert(AttributeRow(AttrKind::Analyze)).observe(on_click_attr).observe(on_over_attr).observe(on_out_attr);
-    commands.entity(layout.entity("row_b")).insert(AttributeRow(AttrKind::Breach)).observe(on_click_attr).observe(on_over_attr).observe(on_out_attr);
-    commands.entity(layout.entity("row_c")).insert(AttributeRow(AttrKind::Compute)).observe(on_click_attr).observe(on_over_attr).observe(on_out_attr);
-    commands.entity(layout.entity("row_d")).insert(AttributeRow(AttrKind::Disrupt)).observe(on_click_attr).observe(on_over_attr).observe(on_out_attr);
+    commands.entity(layout.entity("row_a")).insert_pickable_row(AttrKind::Analyze);
+    commands.entity(layout.entity("row_b")).insert_pickable_row(AttrKind::Breach);
+    commands.entity(layout.entity("row_c")).insert_pickable_row(AttrKind::Compute);
+    commands.entity(layout.entity("row_d")).insert_pickable_row(AttrKind::Disrupt);
 
     const MACHINES: [(&str, MachineKind); 2] = [("local", MachineKind::Local), ("remote", MachineKind::Remote)];
 
@@ -256,7 +286,7 @@ fn gameplay_enter(
         card_layout.delay = commands.entity(layout.entity(&format!("card{}/delay", card_index))).insert(CardText).id();
         card_layout.launch = commands.entity(layout.entity(&format!("card{}/launch", card_index))).insert(CardText).id();
         card_layout.run = commands.entity(layout.entity(&format!("card{}/run", card_index))).insert(CardText).id();
-        commands.entity(layout.entity(&format!("card{}", card_index))).insert((card_layout, PickingBehavior::default())).observe(on_card_drag_start).observe(on_card_drag).observe(on_card_drag_end);
+        commands.entity(layout.entity(&format!("card{}", card_index))).insert_card(card_layout);
     }
 
     commands.remove_resource::<GameplayInitHandoff>();

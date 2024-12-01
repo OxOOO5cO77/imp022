@@ -40,7 +40,6 @@ struct SpriteElement {
     item: String,
     position: Vec3,
     color: Srgba,
-    pickable: bool,
 }
 
 struct TextElement {
@@ -106,7 +105,7 @@ impl ScreenLayout {
         Some(true)
     }
 
-    fn parse_sprite(&mut self, name: &str, remain: &str, pickable: bool, z: f32, colors: &mut ColorMap) -> Option<bool> {
+    fn parse_sprite(&mut self, name: &str, remain: &str, z: f32, colors: &mut ColorMap) -> Option<bool> {
         let (atlas_item, remain) = remain.split_once('@')?;
         let (atlas, item) = atlas_item.split_once('.')?;
         let (position, color) = remain.split_once("!")?;
@@ -116,7 +115,6 @@ impl ScreenLayout {
             item: item.to_string(),
             position: Self::parse_position(position, z)?,
             color: *colors.get(color)?,
-            pickable,
         };
 
         if self.element_map.insert(name.to_string(), Element::Sprite(element)).is_some() {
@@ -237,8 +235,7 @@ impl ScreenLayoutManager {
                         "color" => Self::parse_color(remain, &mut colors),
                         _ => None,
                     },
-                    '*' => screen_layout.parse_sprite(name, remain, false, z, &mut colors),
-                    '?' => screen_layout.parse_sprite(name, remain, true, z, &mut colors),
+                    '*' => screen_layout.parse_sprite(name, remain, z, &mut colors),
                     '&' => screen_layout.parse_text(name, remain, z, &mut colors),
                     '#' => screen_layout.parse_shape(name, remain, z, &mut colors),
                     '/' => screen_layout.parse_layout(name, remain, z),
@@ -358,11 +355,7 @@ impl ScreenLayoutManager {
                 Element::Sprite(e) => {
                     let translation = Vec3::new(e.position.x, e.position.y, e.position.z + *offset_z);
                     if let Some(sprite) = Self::make_sprite_bundle(am, e.atlas.as_str(), e.item.as_str(), translation, e.color) {
-                        if e.pickable {
-                            parent.spawn((sprite, PickingBehavior::default())).id()
-                        } else {
-                            parent.spawn((sprite, PickingBehavior::IGNORE)).id()
-                        }
+                        parent.spawn((sprite, PickingBehavior::IGNORE)).id()
                     } else {
                         continue;
                     }

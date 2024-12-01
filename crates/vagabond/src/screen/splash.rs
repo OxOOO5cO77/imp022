@@ -60,7 +60,7 @@ fn splash_update(
     let mut splash = splash_q.single_mut();
     splash.timer.tick(time.delta());
 
-    if splash.timer.just_finished() || keyboard_input.pressed(KeyCode::Space) || mouse_button.pressed(MouseButton::Left) {
+    if splash.timer.just_finished() || keyboard_input.any_pressed([KeyCode::Space, KeyCode::Enter]) || mouse_button.pressed(MouseButton::Left) {
         app_state.set(AppState::LoginDrawbridge);
     }
 }

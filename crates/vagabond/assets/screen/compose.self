@@ -18,7 +18,7 @@ $color:dark_grey=0.2,0.2,0.2,1.0
 /part7:part@1276,16,200,300
 *part8_slot:compose.200x300@1486,16!dark_grey
 /part8:part@1486,16,200,300
-?row_a:compose.372x080@16,442!grey
+*row_a:compose.372x080@16,442!grey
 &a:main.48.center@22,454,64,64!grey|A
 *aa_bg:compose.064x064@91,450!med_grey
 &aa:main.48.center@95,454,56,56!grey|-
@@ -28,7 +28,7 @@ $color:dark_grey=0.2,0.2,0.2,1.0
 &ac:main.48.center@245,454,56,56!grey|-
 *ad_bg:compose.064x064@316,450!med_grey
 &ad:main.48.center@320,454,56,56!grey|-
-?row_b:compose.372x080@16,538!grey
+*row_b:compose.372x080@16,538!grey
 &b:main.48.center@22,549,64,64!grey|B
 *ba_bg:compose.064x064@91,546!med_grey
 &ba:main.48.center@95,550,56,56!grey|-
@@ -38,7 +38,7 @@ $color:dark_grey=0.2,0.2,0.2,1.0
 &bc:main.48.center@245,550,56,56!grey|-
 *bd_bg:compose.064x064@316,546!med_grey
 &bd:main.48.center@320,550,56,56!grey|-
-?row_c:compose.372x080@16,634!grey
+*row_c:compose.372x080@16,634!grey
 &c:main.48.center@22,645,64,64!grey|C
 *ca_bg:compose.064x064@91,642!med_grey
 &ca:main.48.center@95,646,56,56!grey|-
@@ -48,7 +48,7 @@ $color:dark_grey=0.2,0.2,0.2,1.0
 &cc:main.48.center@245,646,56,56!grey|-
 *cd_bg:compose.064x064@316,642!med_grey
 &cd:main.48.center@320,646,56,56!grey|-
-?row_d:compose.372x080@16,730!grey
+*row_d:compose.372x080@16,730!grey
 &d:main.48.center@22,740,64,64!grey|D
 *da_bg:compose.064x064@91,738!med_grey
 &da:main.48.center@95,742,56,56!grey|-
@@ -58,7 +58,7 @@ $color:dark_grey=0.2,0.2,0.2,1.0
 &dc:main.48.center@245,742,56,56!grey|-
 *dd_bg:compose.064x064@316,738!med_grey
 &dd:main.48.center@320,742,56,56!grey|-
-?build_values:compose.080x410@460,442!grey
+*build_values:compose.080x410@460,442!grey
 *build_a_bg:compose.064x064@468,450!med_grey
 &build_a:main.48.center@472,454,56,56!grey|-
 *build_b_bg:compose.064x064@468,560!med_grey
@@ -67,7 +67,7 @@ $color:dark_grey=0.2,0.2,0.2,1.0
 &build_c:main.48.center@472,674,56,56!grey|-
 *build_d_bg:compose.064x064@468,780!med_grey
 &build_d:main.48.center@472,784,56,56!grey|-
-?detail_values:compose.080x410@940,442!grey
+*detail_values:compose.080x410@940,442!grey
 *detail_a_bg:compose.064x064@948,450!med_grey
 &detail_a:main.48.center@952,454,56,56!grey|-
 *detail_b_bg:compose.064x064@948,560!med_grey
@@ -76,7 +76,7 @@ $color:dark_grey=0.2,0.2,0.2,1.0
 &detail_c:main.48.center@952,674,56,56!grey|-
 *detail_d_bg:compose.064x064@948,780!med_grey
 &detail_d:main.48.center@952,784,56,56!grey|-
-?build:compose.304x452@558,400!grey
+*build:compose.304x452@558,400!grey
 &ant_title:main.16.center@565,415,290,28!med_grey|ANT
 *ant_bg:compose.290x064@565,450!med_grey
 &ant:main.24.center@565,454,290,56!grey|-
@@ -89,7 +89,7 @@ $color:dark_grey=0.2,0.2,0.2,1.0
 &dsk_title:main.16.center@565,745,290,28!med_grey|DSK
 *dsk_bg:compose.290x064@565,780!med_grey
 &dsk:main.24.center@565,784,290,56!grey|-
-?detail:compose.304x452@1038,400!grey
+*detail:compose.304x452@1038,400!grey
 &ins_title:main.16.center@1045,415,290,28!med_grey|Institution
 *ins_bg:compose.290x064@1045,450!med_grey
 &ins:main.24.center@1045,454,290,56!grey|-
@@ -114,7 +114,7 @@ $color:dark_grey=0.2,0.2,0.2,1.0
 &age_title:main.16.center@1394,745,290,28!med_grey|Age
 *age_bg:compose.290x064@1394,780!med_grey
 &age:main.24.center@1394,784,290,56!grey|-
-?submit:compose.064x064@1620,1000!grey
+*submit:compose.064x064@1620,1000!grey
 /card01:card_header@1700,0,220,24
 /card02:card_header@1700,27,220,24
 /card03:card_header@1700,54,220,24

@@ -182,17 +182,37 @@ fn make_full_part_layout(commands: &mut Commands, layout: &ScreenLayout, name: &
     part_layout
 }
 
-trait DragDropForPart {
-    fn drag_drop_for_part(self) -> Self;
+trait PartEntityCommandsExtension {
+    fn observe_part_drag(self) -> Self;
+    fn observe_part_drop(self) -> Self;
+    fn insert_empty_slot(self, slot: Slot, layout: PartLayout) -> Self;
+    fn insert_filled_slot(self, slot: Slot, layout: PartLayout, part: VagabondPart) -> Self;
+    fn insert_submit_button(self) -> Self;
 }
 
-impl DragDropForPart for &mut EntityCommands<'_> {
-    fn drag_drop_for_part(self) -> Self {
+impl PartEntityCommandsExtension for &mut EntityCommands<'_> {
+    fn observe_part_drag(self) -> Self {
         self //
-            .observe(on_part_drop)
             .observe(on_part_drag_start)
             .observe(on_part_drag)
             .observe(on_part_drag_end)
+    }
+    fn observe_part_drop(self) -> Self {
+        self //
+            .observe(on_part_drop)
+    }
+    fn insert_empty_slot(self, slot: Slot, layout: PartLayout) -> Self {
+        self //
+            .insert((slot, layout, PartHolder::default(), PickingBehavior::default()))
+    }
+    fn insert_filled_slot(self, slot: Slot, layout: PartLayout, part: VagabondPart) -> Self {
+        self //
+            .insert((slot, layout, PartHolder::new(part), PickingBehavior::default()))
+    }
+    fn insert_submit_button(self) -> Self {
+        self //
+            .insert(PickingBehavior::default())
+            .observe(on_click_commit)
     }
 }
 
@@ -224,8 +244,9 @@ fn compose_enter(
         row_part_layout.values = collect_for_layout(&mut commands, layout, &row);
         commands //
             .entity(layout.entity(row_name))
-            .insert((row_part_layout, Slot::StatRow(kind), PartHolder::default()))
-            .drag_drop_for_part();
+            .insert_empty_slot(Slot::StatRow(kind), row_part_layout)
+            .observe_part_drag()
+            .observe_part_drop();
     }
 
     const BUILD: [&str; 4] = ["ant", "brd", "cpu", "dsk"];
@@ -233,32 +254,36 @@ fn compose_enter(
     build_part_layout.build = collect_for_layout(&mut commands, layout, &BUILD);
     commands //
         .entity(layout.entity("build"))
-        .insert((build_part_layout, Slot::Build, PartHolder::default()))
-        .drag_drop_for_part();
+        .insert_empty_slot(Slot::Build, build_part_layout)
+        .observe_part_drag()
+        .observe_part_drop();
 
     const BUILD_VALUES: [&str; 4] = ["build_a", "build_b", "build_c", "build_d"];
     let mut build_values_part_layout = PartLayout::new();
     build_values_part_layout.values = collect_for_layout(&mut commands, layout, &BUILD_VALUES);
     commands //
         .entity(layout.entity("build_values"))
-        .insert((build_values_part_layout, Slot::StatRow(StatRowKind::Build), PartHolder::default()))
-        .drag_drop_for_part();
+        .insert_empty_slot(Slot::StatRow(StatRowKind::Build), build_values_part_layout)
+        .observe_part_drag()
+        .observe_part_drop();
 
     const DETAIL: [&str; 4] = ["ins", "rol", "loc", "dis"];
     let mut detail_part_layout = PartLayout::new();
     detail_part_layout.detail = collect_for_layout(&mut commands, layout, &DETAIL);
     commands //
         .entity(layout.entity("detail"))
-        .insert((detail_part_layout, Slot::Detail, PartHolder::default()))
-        .drag_drop_for_part();
+        .insert_empty_slot(Slot::Detail, detail_part_layout)
+        .observe_part_drag()
+        .observe_part_drop();
 
     const DETAIL_VALUES: [&str; 4] = ["detail_a", "detail_b", "detail_c", "detail_d"];
     let mut detail_values_part_layout = PartLayout::new();
     detail_values_part_layout.values = collect_for_layout(&mut commands, layout, &DETAIL_VALUES);
     commands //
         .entity(layout.entity("detail_values"))
-        .insert((detail_values_part_layout, Slot::StatRow(StatRowKind::Detail), PartHolder::default()))
-        .drag_drop_for_part();
+        .insert_empty_slot(Slot::StatRow(StatRowKind::Detail), detail_values_part_layout)
+        .observe_part_drag()
+        .observe_part_drop();
 
     commands.entity(layout.entity("id")).insert(InfoKind::ID);
     commands.entity(layout.entity("name")).insert(InfoKind::Name);
@@ -273,15 +298,16 @@ fn compose_enter(
 
         let part_entity = commands //
             .entity(layout.entity(&name))
-            .insert((part_layout, PickingBehavior::default(), Slot::Card, PartHolder::new(part.clone())))
-            .drag_drop_for_part()
+            .insert_filled_slot(Slot::Card, part_layout, part.clone())
+            .observe_part_drag()
+            .observe_part_drop()
             .id();
 
         let slot_name = format!("part{}_slot", slot_index);
         commands //
             .entity(layout.entity(&slot_name))
-            .insert((PartLayout::new(), PickingBehavior::default(), Slot::Empty(part_entity), PartHolder::default()))
-            .observe(on_part_drop);
+            .insert_empty_slot(Slot::Empty(part_entity), PartLayout::new())
+            .observe_part_drop();
     }
 
     for card_header in 0..40 {
@@ -289,10 +315,14 @@ fn compose_enter(
         commands.entity(layout.entity(&name)).insert(CardHolder::new(card_header));
     }
 
-    commands.entity(layout.entity("submit")).observe(on_click_commit);
+    commands.entity(layout.entity("submit")).insert_submit_button();
 
     let draggable_layout = make_full_part_layout(&mut commands, layout, "draggable");
-    let draggable = commands.entity(layout.entity("draggable")).insert((draggable_layout, Slot::Card, PartHolder::default(), Visibility::Hidden)).id();
+    let draggable = commands //
+        .entity(layout.entity("draggable"))
+        .insert_empty_slot(Slot::Card, draggable_layout)
+        .insert(Visibility::Hidden)
+        .id();
     commands.insert_resource(Draggable::new(draggable));
 
     commands.insert_resource(ComposeState::default());
@@ -374,11 +404,13 @@ fn handle_swap(source: Option<&mut PartHolder>, target: &mut PartHolder, drag: &
 }
 
 fn handle_empty(empty: Entity, original: Entity, mut holder_q: Query<(&mut PartHolder, &Slot)>) {
-    if original != Entity::PLACEHOLDER {
-        if let Ok([mut empty, mut card]) = holder_q.get_many_mut([empty, original]) {
-            card.0.part = empty.0.part.clone();
-            empty.0.part = None;
-        }
+    if original == Entity::PLACEHOLDER {
+        return;
+    }
+
+    if let Ok([mut empty, mut card]) = holder_q.get_many_mut([empty, original]) {
+        card.0.part = empty.0.part.clone();
+        empty.0.part = None;
     }
 }
 
