@@ -32,8 +32,8 @@ impl PlayerPartBuilder {
         PlayerPart {
             seed: self.seed,
             values: self.values,
-            build: [self.build[0].to_player(&0), self.build[1].to_player(&0), self.build[2].to_player(&0), self.build[3].to_player(&0)],
-            detail: [self.detail[0].to_player(&0), self.detail[1].to_player(&0), self.detail[2].to_player(&0), self.detail[3].to_player(&0)],
+            build: self.build.each_ref().map(|b| b.to_player(0)),
+            detail: self.detail.each_ref().map(|d| d.to_player(0)),
         }
     }
 }
@@ -78,15 +78,23 @@ impl PlayerBuilder {
     }
 
     pub(crate) fn build_from_parts(build: &PlayerPartBuilder, values: &PlayerPartBuilder) -> [PlayerBuild; 4] {
-        [build.build[0].to_player(&values.values[0]), build.build[1].to_player(&values.values[1]), build.build[2].to_player(&values.values[2]), build.build[3].to_player(&values.values[3])]
+        core::array::from_fn(|i| build.build[i].to_player(values.values[i]))
     }
 
     pub(crate) fn detail_from_parts(detail: &PlayerPartBuilder, values: &PlayerPartBuilder) -> [PlayerDetail; 4] {
-        [detail.detail[0].to_player(&values.values[0]), detail.detail[1].to_player(&values.values[1]), detail.detail[2].to_player(&values.values[2]), detail.detail[3].to_player(&values.values[3])]
+        core::array::from_fn(|i| detail.detail[i].to_player(values.values[i]))
     }
 
+    #[rustfmt::skip]
     fn generate_seed(&self) -> SeedType {
-        0x00000000000000FF & self.access.seed | 0x000000000000FF00 & &self.breach.seed | 0x0000000000FF0000 & &self.compute.seed | 0x00000000FF000000 & &self.disrupt.seed | 0x000000FF00000000 & &self.build.seed | 0x0000FF0000000000 & &self.build_values.seed | 0x00FF000000000000 & &self.detail.seed | 0xFF00000000000000 & &self.detail_values.seed
+          0x00000000000000FF & self.access.seed
+        | 0x000000000000FF00 & self.breach.seed
+        | 0x0000000000FF0000 & self.compute.seed
+        | 0x00000000FF000000 & self.disrupt.seed
+        | 0x000000FF00000000 & self.build.seed
+        | 0x0000FF0000000000 & self.build_values.seed
+        | 0x00FF000000000000 & self.detail.seed
+        | 0xFF00000000000000 & self.detail_values.seed
     }
 
     fn fill_deck(&self, rng: &mut impl Rng, dm: &DataManager) -> Option<VecDeque<PlayerCard>> {
@@ -119,17 +127,17 @@ mod player_builder_test {
     #[test]
     fn test_player_builder_full() -> Result<(), std::io::Error> {
         let dm = DataManager::new()?;
-        let parts = parts(&dm);
+        let [access, breach, compute, disrupt, build, build_values, detail, detail_values] = parts(&dm);
 
         let full_builder = PlayerBuilder {
-            access: parts[0].clone(),
-            breach: parts[1].clone(),
-            compute: parts[2].clone(),
-            disrupt: parts[3].clone(),
-            build: parts[4].clone(),
-            build_values: parts[5].clone(),
-            detail: parts[6].clone(),
-            detail_values: parts[7].clone(),
+            access,
+            breach,
+            compute,
+            disrupt,
+            build,
+            build_values,
+            detail,
+            detail_values,
         };
         let player = full_builder.create_player(&dm);
         assert!(player.is_some());

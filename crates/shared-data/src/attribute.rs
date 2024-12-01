@@ -10,7 +10,6 @@ pub enum AttributeKind {
     Disrupt,
 }
 
-
 #[derive(Default, Clone, Copy, Serialize, Deserialize)]
 pub struct AttributeValues {
     pub accuracy: AttributeValueType,
@@ -33,11 +32,12 @@ impl AttributeValues {
     }
 
     pub fn from_array(array: [AttributeValueType; 4]) -> Self {
+        let [accuracy, boost, celerity, duration] = array;
         Self {
-            accuracy: array[0],
-            boost: array[1],
-            celerity: array[2],
-            duration: array[3],
+            accuracy,
+            boost,
+            celerity,
+            duration,
         }
     }
 }
@@ -48,20 +48,22 @@ impl Attributes {
     }
 
     pub fn from_arrays(array: [[AttributeValueType; 4]; 4]) -> Self {
+        let [analyze, breach, compute, disrupt] = array.map(AttributeValues::from_array);
         Self {
-            analyze: AttributeValues::from_array(array[0]),
-            breach: AttributeValues::from_array(array[1]),
-            compute: AttributeValues::from_array(array[2]),
-            disrupt: AttributeValues::from_array(array[3]),
+            analyze,
+            breach,
+            compute,
+            disrupt,
         }
     }
 
     pub fn get(&self, kind: AttributeKind) -> [AttributeValueType; 4] {
         match kind {
-            AttributeKind::Analyze => self.analyze.to_array(),
-            AttributeKind::Breach => self.breach.to_array(),
-            AttributeKind::Compute => self.compute.to_array(),
-            AttributeKind::Disrupt => self.disrupt.to_array(),
+            AttributeKind::Analyze => self.analyze,
+            AttributeKind::Breach => self.breach,
+            AttributeKind::Compute => self.compute,
+            AttributeKind::Disrupt => self.disrupt,
         }
+        .to_array()
     }
 }

@@ -44,7 +44,7 @@ fn compose_init_update(
 ) {
     if let Ok(GateCommand::GameActivate(response)) = gate.grx.try_recv() {
         let init_handoff = ComposeInitHandoff {
-            parts: [dm.convert_part(&response.parts[0]).unwrap_or_default(), dm.convert_part(&response.parts[1]).unwrap_or_default(), dm.convert_part(&response.parts[2]).unwrap_or_default(), dm.convert_part(&response.parts[3]).unwrap_or_default(), dm.convert_part(&response.parts[4]).unwrap_or_default(), dm.convert_part(&response.parts[5]).unwrap_or_default(), dm.convert_part(&response.parts[6]).unwrap_or_default(), dm.convert_part(&response.parts[7]).unwrap_or_default()],
+            parts: response.parts.map(|part| dm.convert_part(&part).unwrap_or_default()),
         };
         gate.game_id = response.game_id;
         commands.insert_resource(init_handoff);
@@ -474,27 +474,21 @@ fn finish_player(
         let mut parts = [0, 0, 0, 0, 0, 0, 0, 0];
 
         for (holder, holder_kind) in holder_q.iter() {
-            match holder_kind {
+            if let Some(idx) = match holder_kind {
                 Slot::StatRow(row) => match row {
-                    StatRowKind::Analyze => {
-                        parts[0] = seed_from_holder(holder);
-                    }
-                    StatRowKind::Breach => {
-                        parts[1] = seed_from_holder(holder);
-                    }
-                    StatRowKind::Compute => {
-                        parts[2] = seed_from_holder(holder);
-                    }
-                    StatRowKind::Disrupt => {
-                        parts[3] = seed_from_holder(holder);
-                    }
-                    StatRowKind::Build => parts[5] = seed_from_holder(holder),
-                    StatRowKind::Detail => parts[7] = seed_from_holder(holder),
+                    StatRowKind::Analyze => Some(0),
+                    StatRowKind::Breach => Some(1),
+                    StatRowKind::Compute => Some(2),
+                    StatRowKind::Disrupt => Some(3),
+                    StatRowKind::Build => Some(5),
+                    StatRowKind::Detail => Some(7),
                 },
-                Slot::Build => parts[4] = seed_from_holder(holder),
-                Slot::Detail => parts[6] = seed_from_holder(holder),
-                Slot::Card => {}
-                Slot::Empty(_) => {}
+                Slot::Build => Some(4),
+                Slot::Detail => Some(6),
+                Slot::Card => None,
+                Slot::Empty(_) => None,
+            } {
+                parts[idx] = seed_from_holder(holder);
             }
         }
 

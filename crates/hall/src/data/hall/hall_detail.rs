@@ -18,11 +18,11 @@ impl HallDetail {
         discriminant(&self.detail) == discriminant(&other(0, 0))
     }
 
-    pub fn to_player(&self, value: &u8) -> PlayerDetail {
+    pub fn to_player(&self, value: u8) -> PlayerDetail {
         PlayerDetail {
             detail: self.detail,
             number: self.number,
-            value: *value,
+            value,
         }
     }
 }

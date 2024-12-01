@@ -13,7 +13,7 @@ pub struct PlayerBio {
 
 impl PlayerBio {
     pub fn birthplace(&self) -> String {
-        format!("{},{},{}", self.birthplace.0, self.birthplace.1, self.birthplace.2)
+        format!("{}, {}, {}", self.birthplace.0, self.birthplace.1, self.birthplace.2)
     }
 
     pub fn age(&self) -> u32 {

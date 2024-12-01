@@ -18,11 +18,11 @@ impl HallBuild {
         discriminant(&self.build) == discriminant(&other(0, 0))
     }
 
-    pub fn to_player(&self, value: &u8) -> PlayerBuild {
+    pub fn to_player(&self, value: u8) -> PlayerBuild {
         PlayerBuild {
             build: self.build,
             number: self.number,
-            value: *value,
+            value,
         }
     }
 }
