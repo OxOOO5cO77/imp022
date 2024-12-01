@@ -1,10 +1,12 @@
 use bevy::prelude::*;
+use bevy::ui::FocusPolicy;
+use bevy_simple_text_input::{TextInput, TextInputInactive, TextInputSettings, TextInputSubmitEvent, TextInputTextColor, TextInputTextFont, TextInputValue};
 use shared_net::types::AuthType;
 use std::env;
 use std::mem::discriminant;
 use tokio::sync::mpsc;
 
-use crate::manager::NetworkManager;
+use crate::manager::{AtlasManager, NetworkManager, ScreenLayoutManager};
 use crate::network::client_drawbridge;
 use crate::network::client_drawbridge::{AuthInfo, DrawbridgeClient, DrawbridgeIFace};
 use crate::network::client_gate::{GateClient, GateCommand, GateIFace};
@@ -16,8 +18,10 @@ impl Plugin for LoginPlugin {
     fn build(&self, app: &mut App) {
         app //
             .add_systems(OnEnter(AppState::LoginDrawbridge), drawbridge_enter)
-            .add_systems(OnEnter(AppState::LoginDrawbridge), login_ui_setup.after(drawbridge_enter))
+            .add_systems(OnEnter(AppState::LoginDrawbridge), login_ui_init.after(drawbridge_enter))
+            .add_systems(OnEnter(AppState::LoginDrawbridge), login_ui_setup.after(login_ui_init))
             .add_systems(Update, drawbridge_update.run_if(in_state(AppState::LoginDrawbridge)))
+            .add_systems(Update, textedit_update.run_if(in_state(AppState::LoginDrawbridge)))
             .add_systems(OnExit(AppState::LoginDrawbridge), drawbridge_exit)
             .add_systems(OnEnter(AppState::LoginGate), gate_enter)
             .add_systems(Update, gate_update.run_if(in_state(AppState::LoginGate)))
@@ -27,6 +31,15 @@ impl Plugin for LoginPlugin {
 
 #[derive(Component)]
 struct LoginScreen;
+
+#[derive(Component)]
+struct ConnectedIcon;
+
+#[derive(Resource)]
+struct LoginContext {
+    username: Entity,
+    password: Entity,
+}
 
 #[derive(Resource)]
 struct DrawbridgeHandoff {
@@ -69,14 +82,95 @@ fn drawbridge_enter(
     net.current_task = DrawbridgeClient::start("[::1]:23450".to_string(), from_drawbridge_tx, to_drawbridge_rx, &net.runtime);
 }
 
+fn login_ui_init(asset_server: Res<AssetServer>, mut am: ResMut<AtlasManager>, mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>) {
+    am.load_atlas("atlas/login", &asset_server, &mut texture_atlas_layouts).unwrap_or_default();
+}
+
+fn textedit_bundle(left: f32, top: f32, width: f32, height: f32, mask_character: Option<char>, active: bool, value: &str) -> impl Bundle {
+    (
+        Node {
+            left: Val::Px(left),
+            top: Val::Px(top),
+            width: Val::Px(width),
+            height: Val::Px(height),
+            ..default()
+        },
+        // Prevent clicks on the input from also bubbling down to the container
+        // behind it
+        FocusPolicy::Block,
+        TextInput,
+        TextInputTextFont(TextFont {
+            font_size: 32.0,
+            ..default()
+        }),
+        TextInputValue(value.into()),
+        TextInputTextColor(TextColor(Color::WHITE)),
+        TextInputInactive(!active),
+        TextInputSettings {
+            retain_on_submit: true,
+            mask_character,
+        },
+    )
+}
+
 fn login_ui_setup(
     // bevy system
     mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    am: Res<AtlasManager>,
+    mut slm: ResMut<ScreenLayoutManager>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
     drawbridge: Res<DrawbridgeIFace>,
 ) {
-    commands.spawn(LoginScreen);
+    let layout = slm.build(&mut commands, "login", &am, &asset_server, &mut meshes, &mut materials);
 
-    client_drawbridge::send_authorize(&drawbridge.dtx, drawbridge.username.clone(), drawbridge.password.clone());
+    commands.entity(layout.entity("connected_icon")).insert(ConnectedIcon);
+
+    let ui_base = Node {
+        display: Display::Block,
+        position_type: PositionType::Absolute,
+        left: Val::Percent(0.0),
+        top: Val::Percent(0.0),
+        width: Val::Percent(100.0),
+        height: Val::Percent(100.0),
+        ..default()
+    };
+
+    let mut tracker = LoginContext {
+        username: Entity::PLACEHOLDER,
+        password: Entity::PLACEHOLDER,
+    };
+    commands //
+        .spawn((LoginScreen, ui_base))
+        .with_children(|parent| {
+            tracker.username = parent.spawn(textedit_bundle(768.0, 500.0, 475.0, 44.0, None, true, &drawbridge.username)).id();
+            tracker.password = parent.spawn(textedit_bundle(768.0, 560.0, 475.0, 44.0, Some('*'), false, &drawbridge.password)).id();
+        });
+    commands.insert_resource(tracker)
+}
+
+fn textedit_update(
+    // bevy system
+    mut commands: Commands,
+    mut events: EventReader<TextInputSubmitEvent>,
+    tracker: Res<LoginContext>,
+    mut drawbridge: ResMut<DrawbridgeIFace>,
+) {
+    for event in events.read() {
+        commands.entity(tracker.username).insert(TextInputInactive(true));
+        commands.entity(tracker.password).insert(TextInputInactive(false));
+
+        if event.entity == tracker.username {
+            drawbridge.username = event.value.clone();
+        } else if event.entity == tracker.password {
+            drawbridge.password = event.value.clone();
+
+            if !drawbridge.username.is_empty() && !drawbridge.password.is_empty() {
+                client_drawbridge::send_authorize(&drawbridge.dtx, drawbridge.username.clone(), drawbridge.password.clone());
+            }
+        }
+    }
 }
 
 fn drawbridge_update(
@@ -84,8 +178,12 @@ fn drawbridge_update(
     mut app_state: ResMut<NextState<AppState>>,
     mut commands: Commands,
     mut drawbridge: ResMut<DrawbridgeIFace>,
+    mut sprite_q: Query<&mut Sprite, With<ConnectedIcon>>,
 ) {
     if let Ok(auth_info) = drawbridge.drx.try_recv() {
+        if let Ok(mut sprite) = sprite_q.get_single_mut() {
+            sprite.color = bevy::color::palettes::css::YELLOW.into()
+        }
         commands.insert_resource(DrawbridgeHandoff::new(auth_info));
         app_state.set(AppState::LoginGate);
     }
@@ -126,8 +224,12 @@ fn gate_update(
     // bevy system
     mut app_state: ResMut<NextState<AppState>>,
     mut gate: ResMut<GateIFace>,
+    mut sprite_q: Query<&mut Sprite, With<ConnectedIcon>>,
 ) {
     if let Ok(gate_command) = gate.grx.try_recv() {
+        if let Ok(mut sprite) = sprite_q.get_single_mut() {
+            sprite.color = bevy::color::palettes::css::GREEN.into()
+        }
         match gate_command {
             GateCommand::Hello => app_state.set(AppState::ComposeInit),
             _ => println!("[Login] Unexpected command received {:?}", discriminant(&gate_command)),
@@ -139,8 +241,11 @@ fn login_exit(
     // bevy system
     mut commands: Commands,
     login_q: Query<Entity, With<LoginScreen>>,
+    mut slm: ResMut<ScreenLayoutManager>,
 ) {
     for e in &login_q {
         commands.entity(e).despawn_recursive();
     }
+    commands.remove_resource::<LoginContext>();
+    slm.destroy(commands, "login");
 }
