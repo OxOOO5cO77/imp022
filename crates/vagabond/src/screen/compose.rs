@@ -509,8 +509,15 @@ fn finish_player(
     }
 }
 
+#[derive(Resource)]
+pub(crate) struct ComposeHandoff {
+    pub(crate) local_name: String,
+    pub(crate) local_id: String,
+}
+
 fn compose_update(
     // bevy system
+    mut commands: Commands,
     mut gate: ResMut<GateIFace>,
     mut deck_q: Query<(&mut Text2d, &CardHolder), Without<InfoKind>>,
     mut info_q: Query<(&mut Text2d, &InfoKind), Without<CardHolder>>,
@@ -530,6 +537,11 @@ fn compose_update(
                             InfoKind::Age => *info = player_bio.age().to_string().into(),
                         }
                     }
+
+                    commands.insert_resource(ComposeHandoff {
+                        local_name: player_bio.name,
+                        local_id: player_bio.id,
+                    });
 
                     let deck = dm.convert_deck(gate_response.deck);
 

@@ -1,5 +1,6 @@
 use crate::manager::{AtlasManager, DataManager, ScreenLayoutManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
+use crate::screen::compose::ComposeHandoff;
 use crate::system::app_state::AppState;
 use bevy::prelude::*;
 use hall::data::game::GameMachinePlayerView;
@@ -7,7 +8,7 @@ use hall::data::player::player_state::PlayerStatePlayerView;
 use hall::message::{AttrKind, CardIdxType, CardTarget, GameUpdateStateResponse};
 use shared_data::build::BuildValueType;
 use shared_data::card::{DelayType, ErgType};
-use std::cmp::Ordering;
+use std::cmp::{Ordering, PartialEq};
 use std::collections::HashMap;
 
 pub struct GameplayPlugin;
@@ -30,6 +31,8 @@ impl Plugin for GameplayPlugin {
 #[derive(Resource)]
 struct GameplayInitHandoff {
     initial_response: Option<Box<GameUpdateStateResponse>>,
+    name: String,
+    id: String,
 }
 
 fn gameplay_init_enter(
@@ -48,12 +51,16 @@ fn gameplay_init_update(
     mut commands: Commands,
     mut gate: ResMut<GateIFace>,
     mut app_state: ResMut<NextState<AppState>>,
+    gameplay_handoff: Res<ComposeHandoff>,
 ) {
     if let Ok(GateCommand::GameUpdateState(gate_response)) = gate.grx.try_recv() {
         let handoff = GameplayInitHandoff {
             initial_response: Some(gate_response),
+            name: gameplay_handoff.local_name.clone(),
+            id: gameplay_handoff.local_id.clone(),
         };
         commands.insert_resource(handoff);
+        commands.remove_resource::<ComposeHandoff>();
         app_state.set(AppState::Gameplay)
     }
 }
@@ -132,7 +139,7 @@ struct CardText;
 #[derive(Component)]
 struct MachineQueueItem(DelayType);
 
-#[derive(Component)]
+#[derive(Component, PartialEq)]
 enum MachineTextKind {
     Title,
     Id,
@@ -150,6 +157,11 @@ enum MachineKind {
     Remote,
 }
 
+struct MachineInfo {
+    name: String,
+    id: String,
+}
+
 #[derive(Event)]
 enum UiEvent {
     GamePhase(GamePhaseKind),
@@ -157,7 +169,8 @@ enum UiEvent {
     ChooseAttr(Option<AttrKind>),
     Roll([ErgType; 4]),
     Resources([ErgType; 4], [ErgType; 4], [BuildValueType; 4]),
-    MachineUpdate(GameMachinePlayerView, GameMachinePlayerView),
+    MachineInfoUpdate(MachineKind, MachineInfo),
+    MachineStateUpdate(GameMachinePlayerView, GameMachinePlayerView),
 }
 
 #[derive(Component)]
@@ -249,6 +262,12 @@ fn gameplay_enter(
     let initial_response = handoff.initial_response.take().unwrap();
     handle_game_update_state(&mut send, *initial_response);
     send.send(UiEvent::GamePhase(GamePhaseKind::Start));
+
+    let info = MachineInfo {
+        name: handoff.name.clone(),
+        id: handoff.id.clone(),
+    };
+    send.send(UiEvent::MachineInfoUpdate(MachineKind::Local, info));
 }
 
 fn on_click_next(_: Trigger<Pointer<Click>>, mut context: ResMut<GameplayContext>, gate: Res<GateIFace>) {
@@ -609,69 +628,83 @@ fn machine_ui_update(
     dm: Res<DataManager>,
 ) {
     for ui_event in receive.read() {
-        if let UiEvent::MachineUpdate(local, remote) = ui_event {
-            for (machine_component, mut text, MachineText(kind)) in text_q.iter_mut() {
-                if let MachineTextKind::Stat(index) = kind {
-                    let machine = if *machine_component == MachineKind::Local {
-                        local
-                    } else {
-                        remote
-                    };
-                    *text = machine.stats[*index].to_string().into();
-                }
-            }
-
-            for (machine_component, mut text, MachineText(kind)) in text_q.iter_mut() {
-                if let MachineTextKind::CurrentProgram = kind {
-                    let machine = if *machine_component == MachineKind::Local {
-                        local
-                    } else {
-                        remote
-                    };
-                    let mut result = " v- <idle>".to_string();
-                    if let Some(current) = machine.queue.iter().find(|item| item.delay == 0) {
-                        if let Some(card) = dm.convert_card(&current.player_card) {
-                            result = format!(" v- {}", card.title);
+        match ui_event {
+            UiEvent::MachineInfoUpdate(machine, info) => {
+                for (machine_component, mut text, MachineText(kind)) in text_q.iter_mut() {
+                    if machine_component == machine {
+                        match kind {
+                            MachineTextKind::Title => *text = info.name.to_string().into(),
+                            MachineTextKind::Id => *text = info.id.to_string().into(),
+                            _ => {}
                         }
                     }
-                    *text = result.into();
                 }
             }
-
-            for (machine_component, mut sprite, MachineQueueItem(index)) in sprite_q.iter_mut() {
-                let machine = if *machine_component == MachineKind::Local {
-                    local
-                } else {
-                    remote
-                };
-                sprite.color = if let Some(process) = machine.queue.iter().find(|item| item.delay == *index) {
-                    if process.local {
-                        bevy::color::palettes::basic::GREEN
-                    } else {
-                        bevy::color::palettes::basic::RED
+            UiEvent::MachineStateUpdate(local, remote) => {
+                for (machine_component, mut text, MachineText(kind)) in text_q.iter_mut() {
+                    if let MachineTextKind::Stat(index) = kind {
+                        let machine = if *machine_component == MachineKind::Local {
+                            local
+                        } else {
+                            remote
+                        };
+                        *text = machine.stats[*index].to_string().into();
                     }
-                } else {
-                    bevy::color::palettes::basic::WHITE
                 }
-                .into();
-            }
 
-            for (machine_component, mut text, MachineText(kind)) in text_q.iter_mut() {
-                if let MachineTextKind::Process(index) = kind {
+                for (machine_component, mut text, MachineText(kind)) in text_q.iter_mut() {
+                    if let MachineTextKind::CurrentProgram = kind {
+                        let machine = if *machine_component == MachineKind::Local {
+                            local
+                        } else {
+                            remote
+                        };
+                        let mut result = " v- <idle>".to_string();
+                        if let Some(current) = machine.queue.iter().find(|item| item.delay == 0) {
+                            if let Some(card) = dm.convert_card(&current.player_card) {
+                                result = format!(" v- {}", card.title);
+                            }
+                        }
+                        *text = result.into();
+                    }
+                }
+
+                for (machine_component, mut sprite, MachineQueueItem(index)) in sprite_q.iter_mut() {
                     let machine = if *machine_component == MachineKind::Local {
                         local
                     } else {
                         remote
                     };
-                    let mut result = "?".to_string();
-                    if let Some(process) = machine.running.get(*index) {
-                        if let Some(card) = dm.convert_card(&process.player_card) {
-                            result = card.title.clone();
+                    sprite.color = if let Some(process) = machine.queue.iter().find(|item| item.delay == *index) {
+                        if process.local {
+                            bevy::color::palettes::basic::GREEN
+                        } else {
+                            bevy::color::palettes::basic::RED
                         }
+                    } else {
+                        bevy::color::palettes::basic::WHITE
                     }
-                    *text = result.into();
+                    .into();
+                }
+
+                for (machine_component, mut text, MachineText(kind)) in text_q.iter_mut() {
+                    if let MachineTextKind::Process(index) = kind {
+                        let machine = if *machine_component == MachineKind::Local {
+                            local
+                        } else {
+                            remote
+                        };
+                        let mut result = "?".to_string();
+                        if let Some(process) = machine.running.get(*index) {
+                            if let Some(card) = dm.convert_card(&process.player_card) {
+                                result = card.title.clone();
+                            }
+                        }
+                        *text = result.into();
+                    }
                 }
             }
+            _ => {}
         }
     }
 }
@@ -778,7 +811,7 @@ fn gameplay_update(
 fn handle_game_update_state(send: &mut EventWriter<UiEvent>, response: GameUpdateStateResponse) {
     println!("[RECV] GameUpdateState");
     send.send(UiEvent::PlayerState(response.player_state));
-    send.send(UiEvent::MachineUpdate(response.local_machine, response.remote_machine));
+    send.send(UiEvent::MachineStateUpdate(response.local_machine, response.remote_machine));
 }
 
 pub fn gameplay_exit(
