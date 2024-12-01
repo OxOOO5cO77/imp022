@@ -11,9 +11,10 @@ use shared_data::card::{DelayType, ErgType};
 use std::cmp::{Ordering, PartialEq};
 use std::collections::HashMap;
 
-pub struct GameplayPlugin;
+const SCREEN_LAYOUT: &str = "gameplay";
+const SCREEN_ATLAS: &str = "atlas/gameplay";
 
-const INDICATOR_Z: f32 = 100.0;
+pub struct GameplayPlugin;
 
 impl Plugin for GameplayPlugin {
     fn build(&self, app: &mut App) {
@@ -42,7 +43,7 @@ fn gameplay_init_enter(
     mut am: ResMut<AtlasManager>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
-    am.load_atlas("atlas/gameplay", &asset_server, &mut texture_atlas_layouts).unwrap_or_default();
+    am.load_atlas(SCREEN_ATLAS, &asset_server, &mut texture_atlas_layouts).unwrap_or_default();
     gate.send_game_update_state();
 }
 
@@ -64,6 +65,8 @@ fn gameplay_init_update(
         app_state.set(AppState::Gameplay)
     }
 }
+
+const INDICATOR_Z: f32 = 100.0;
 
 #[derive(Clone, Copy, PartialEq)]
 enum WaitKind {
@@ -188,7 +191,7 @@ fn gameplay_enter(
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut send: EventWriter<UiEvent>,
 ) {
-    let layout = slm.build(&mut commands, "gameplay", &am, &asset_server, &mut meshes, &mut materials);
+    let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, &asset_server, &mut meshes, &mut materials);
 
     const LOCAL_ATTR: [[&str; 4]; 4] = [["aa", "ab", "ac", "ad"], ["ba", "bb", "bc", "bd"], ["ca", "cb", "cc", "cd"], ["da", "db", "dc", "dd"]];
 
@@ -837,5 +840,5 @@ pub fn gameplay_exit(
     mut slm: ResMut<ScreenLayoutManager>,
 ) {
     commands.remove_resource::<GameplayContext>();
-    slm.destroy(commands, "gameplay");
+    slm.destroy(commands, SCREEN_LAYOUT);
 }

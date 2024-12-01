@@ -12,6 +12,9 @@ use crate::network::client_drawbridge::{AuthInfo, DrawbridgeClient, DrawbridgeIF
 use crate::network::client_gate::{GateClient, GateCommand, GateIFace};
 use crate::system::app_state::AppState;
 
+const SCREEN_LAYOUT: &str = "login";
+const SCREEN_ATLAS: &str = "atlas/login";
+
 pub struct LoginPlugin;
 
 impl Plugin for LoginPlugin {
@@ -83,7 +86,7 @@ fn drawbridge_enter(
 }
 
 fn login_ui_init(asset_server: Res<AssetServer>, mut am: ResMut<AtlasManager>, mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>) {
-    am.load_atlas("atlas/login", &asset_server, &mut texture_atlas_layouts).unwrap_or_default();
+    am.load_atlas(SCREEN_ATLAS, &asset_server, &mut texture_atlas_layouts).unwrap_or_default();
 }
 
 fn textedit_bundle(left: f32, top: f32, width: f32, height: f32, mask_character: Option<char>, active: bool, value: &str) -> impl Bundle {
@@ -123,7 +126,7 @@ fn login_ui_setup(
     mut materials: ResMut<Assets<ColorMaterial>>,
     drawbridge: Res<DrawbridgeIFace>,
 ) {
-    let layout = slm.build(&mut commands, "login", &am, &asset_server, &mut meshes, &mut materials);
+    let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, &asset_server, &mut meshes, &mut materials);
 
     commands.entity(layout.entity("connected_icon")).insert(ConnectedIcon);
 
@@ -247,5 +250,5 @@ fn login_exit(
         commands.entity(e).despawn_recursive();
     }
     commands.remove_resource::<LoginContext>();
-    slm.destroy(commands, "login");
+    slm.destroy(commands, SCREEN_LAYOUT);
 }

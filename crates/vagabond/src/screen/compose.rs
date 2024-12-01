@@ -4,6 +4,9 @@ use crate::system::app_state::AppState;
 use bevy::prelude::*;
 use vagabond::data::VagabondPart;
 
+const SCREEN_LAYOUT: &str = "compose";
+const SCREEN_ATLAS: &str = "atlas/compose";
+
 pub struct ComposePlugin;
 
 impl Plugin for ComposePlugin {
@@ -30,7 +33,7 @@ fn compose_init_enter(
     mut am: ResMut<AtlasManager>,
     mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
-    am.load_atlas("atlas/compose", &asset_server, &mut texture_atlas_layouts).unwrap_or_default();
+    am.load_atlas(SCREEN_ATLAS, &asset_server, &mut texture_atlas_layouts).unwrap_or_default();
 
     gate.send_game_activate();
 }
@@ -206,7 +209,7 @@ fn compose_enter(
     let parts = init_handoff.parts.clone();
     commands.remove_resource::<ComposeInitHandoff>();
 
-    let layout = slm.build(&mut commands, "compose", &am, &asset_server, &mut meshes, &mut materials);
+    let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, &asset_server, &mut meshes, &mut materials);
 
     const ATTR: [(&str, StatRowKind, [&str; 4]); 4] = [
         //
@@ -564,5 +567,5 @@ pub fn compose_exit(
     mut slm: ResMut<ScreenLayoutManager>,
 ) {
     commands.remove_resource::<ComposeState>();
-    slm.destroy(commands, "compose");
+    slm.destroy(commands, SCREEN_LAYOUT);
 }
