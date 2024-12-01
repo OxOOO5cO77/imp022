@@ -225,6 +225,9 @@ impl ScreenLayoutManager {
         let layout_file = std::fs::read_to_string(path)?;
 
         let mut colors = HashMap::new();
+        colors.insert("black".to_string(), Srgba::BLACK);
+        colors.insert("white".to_string(), Srgba::WHITE);
+
         let mut screen_layout = ScreenLayout::default();
         for (line_number, line) in layout_file.lines().enumerate() {
             let parsed = Self::parse_kind(line) //

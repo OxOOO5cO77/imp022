@@ -1,7 +1,5 @@
 $color:grey=0.663,0.663,0.663,1.0
 $color:green=0.0,0.392,0.0,1.0
-$color:white=1.0,1.0,1.0,1.0
-$color:black=0.0,0.0,0.0,1.0
 #bg:rect@0,0,200,300!black
 *border:compose.200x300@0,0!green
 *ant_image:compose.build@11,14!white
