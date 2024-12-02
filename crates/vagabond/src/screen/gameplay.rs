@@ -8,6 +8,7 @@ use hall::data::player::player_state::PlayerStatePlayerView;
 use hall::message::*;
 use shared_data::build::BuildValueType;
 use shared_data::card::{DelayType, ErgType};
+use shared_data::mission::MissionNodeIdType;
 use std::cmp::{Ordering, PartialEq};
 use std::collections::HashMap;
 
@@ -84,12 +85,22 @@ struct GameplayContext {
     phase: VagabondGamePhase,
     attr_pick: Option<AttrKind>,
     card_picks: HashMap<CardIdxType, CardTarget>,
+    current_remote: MissionNodeIdType,
 }
 
 impl GameplayContext {
     fn reset(&mut self) {
         self.attr_pick = None;
         self.card_picks.clear();
+    }
+
+    fn add_card_pick(&mut self, index: usize, target: MachineKind) {
+        let card_idx = index as CardIdxType;
+        let card_target = match target {
+            MachineKind::Local => CardTarget::Local,
+            MachineKind::Remote => CardTarget::Remote(self.current_remote),
+        };
+        self.card_picks.insert(card_idx, card_target);
     }
 }
 
@@ -369,7 +380,7 @@ fn on_out_attr(event: Trigger<Pointer<Out>>, mut sprite_q: Query<(&mut Sprite, &
 struct Indicator {
     translation: Vec3,
     offset: Vec2,
-    source: Entity,
+    parent: Entity,
     target: Option<MachineKind>,
 }
 
@@ -381,7 +392,7 @@ fn make_indicator_bundle(parent: Entity, translation: Vec3, offset: Vec2, mut me
         Indicator {
             translation,
             offset,
-            source: parent,
+            parent,
             target: None,
         },
         Mesh2d(meshes.add(Rectangle::new(16.0, 1.0))),
@@ -394,7 +405,7 @@ fn indicator_ui_update(mut commands: Commands, mut receive: EventReader<UiEvent>
     for ui_event in receive.read() {
         if let UiEvent::GamePhase(phase) = ui_event {
             match phase {
-                VagabondGamePhase::Start => indicator_q.iter().for_each(|(e, i)| cleanup_indicator(&mut commands, e, i.source)),
+                VagabondGamePhase::Start => indicator_q.iter().for_each(|(e, i)| cleanup_indicator(&mut commands, e, i.parent)),
                 VagabondGamePhase::Play => {}
                 VagabondGamePhase::Draw => {}
                 _ => {}
@@ -427,7 +438,7 @@ fn on_card_drag_start(
             if tracker.is_none() {
                 commands.spawn(make_indicator_bundle(target, translation, offset, meshes, materials));
                 commands.entity(target).insert(IndicatorTracker);
-            } else if let Some(mut indicator) = indicator_q.iter_mut().find(|i| i.source == target) {
+            } else if let Some(mut indicator) = indicator_q.iter_mut().find(|i| i.parent == target) {
                 indicator.offset = offset;
             }
         }
@@ -439,7 +450,7 @@ fn on_card_drag(event: Trigger<Pointer<Drag>>, mut indicator_q: Query<(&mut Tran
         return;
     }
     let target = event.target;
-    if let Some((mut transform, indicator)) = indicator_q.iter_mut().find(|(_, i)| i.source == target && i.target.is_none()) {
+    if let Some((mut transform, indicator)) = indicator_q.iter_mut().find(|(_, i)| i.parent == target && i.target.is_none()) {
         let distance = Vec2::new(event.distance.x + indicator.offset.x, event.distance.y - indicator.offset.y);
         let length = distance.length();
         let angle = distance.x.atan2(distance.y);
@@ -458,12 +469,24 @@ fn on_card_drag_end(
     commands.entity(event.target).insert(PickingBehavior::default());
 }
 
-fn on_card_drop(event: Trigger<Pointer<DragDrop>>, mut indicator_q: Query<&mut Indicator>, mut machine_q: Query<&MachineKind>) {
+fn on_card_drop(
+    //
+    event: Trigger<Pointer<DragDrop>>,
+    mut indicator_q: Query<&mut Indicator>,
+    mut machine_q: Query<&MachineKind>,
+    card_q: Query<&CardLayout>,
+    mut context: ResMut<GameplayContext>,
+) {
     let indicator_entity = event.dropped;
     let dropped_on = event.target;
 
-    if let Some(mut indicator) = indicator_q.iter_mut().find(|i| i.source == indicator_entity) {
+    if let Some(mut indicator) = indicator_q.iter_mut().find(|i| i.parent == indicator_entity) {
         indicator.target = machine_q.get_mut(dropped_on).ok().copied();
+        if let Some(target) = indicator.target {
+            if let Ok(card) = card_q.get(indicator.parent) {
+                context.add_card_pick(card.slot, target)
+            }
+        }
     }
 }
 
@@ -479,9 +502,9 @@ fn cleanup_indicator_post_update(
     indicator_q: Query<(Entity, &Indicator)>,
 ) {
     for event in receive.read() {
-        if let Some((entity, indicator)) = indicator_q.iter().find(|(_, i)| i.source == event.target) {
+        if let Some((entity, indicator)) = indicator_q.iter().find(|(_, i)| i.parent == event.target) {
             if indicator.target.is_none() {
-                cleanup_indicator(&mut commands, entity, indicator.source);
+                cleanup_indicator(&mut commands, entity, indicator.parent);
             }
         }
     }
