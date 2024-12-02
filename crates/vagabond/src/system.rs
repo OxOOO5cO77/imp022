@@ -1,12 +1,15 @@
 use crate::system::glower::GlowerPlugin;
 use bevy::app::{PluginGroup, PluginGroupBuilder};
 
-pub(crate) mod app_state;
-pub(crate) mod glower;
+mod app_state;
+mod glower;
 
-pub(crate) struct SystemPlugin;
+pub(crate) use app_state::AppState;
+pub(crate) use glower::Glower;
 
-impl PluginGroup for SystemPlugin {
+pub(super) struct SystemPlugins;
+
+impl PluginGroup for SystemPlugins {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>() //
             .add(GlowerPlugin)

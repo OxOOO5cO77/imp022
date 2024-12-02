@@ -1,12 +1,11 @@
 use crate::manager::{AtlasManager, DataManager, ScreenLayout, ScreenLayoutManager, WarehouseManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
-use crate::system::app_state::AppState;
-use crate::system::glower::Glower;
+use crate::system::AppState;
+use crate::system::Glower;
 use bevy::prelude::*;
 use vagabond::data::VagabondPart;
 
 const SCREEN_LAYOUT: &str = "compose";
-const SCREEN_ATLAS: &str = "atlas/compose";
 
 pub struct ComposePlugin;
 
@@ -31,12 +30,7 @@ struct ComposeInitHandoff {
 fn compose_init_enter(
     // bevy system
     gate: ResMut<GateIFace>,
-    asset_server: Res<AssetServer>,
-    mut am: ResMut<AtlasManager>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
-    am.load_atlas(SCREEN_ATLAS, &asset_server, &mut texture_atlas_layouts).unwrap_or_default();
-
     gate.send_game_activate();
 }
 
@@ -214,16 +208,14 @@ fn compose_enter(
     // bevy system
     mut commands: Commands,
     init_handoff: Res<ComposeInitHandoff>,
-    asset_server: Res<AssetServer>,
     am: Res<AtlasManager>,
     mut slm: ResMut<ScreenLayoutManager>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    for_slm: (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>),
 ) {
     let parts = init_handoff.parts.clone();
     commands.remove_resource::<ComposeInitHandoff>();
 
-    let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, &asset_server, &mut meshes, &mut materials);
+    let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, for_slm);
 
     const ATTR: [(&str, StatRowKind, [&str; 4]); 4] = [
         //

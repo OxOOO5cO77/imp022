@@ -1,7 +1,7 @@
 use bevy::app::App;
 use bevy::prelude::*;
 use bevy::window::WindowResolution;
-use system::app_state::AppState;
+use system::AppState;
 
 mod manager;
 mod network;
@@ -20,7 +20,7 @@ fn main() {
         }))
         .add_plugins(bevy_simple_text_input::TextInputPlugin)
         .add_plugins(pyri_tooltip::TooltipPlugin::default())
-        .add_plugins((manager::ManagerPlugin, screen::ScreenPlugin, system::SystemPlugin))
+        .add_plugins((manager::ManagerPlugins, screen::ScreenPlugins, system::SystemPlugins))
         .insert_resource(ClearColor(Color::srgb(0.0, 0.0, 0.0)))
         .init_state::<AppState>()
         .add_systems(Startup, setup)

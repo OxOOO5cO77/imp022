@@ -1,7 +1,7 @@
 use crate::manager::{AtlasManager, DataManager, ScreenLayoutManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::compose::ComposeHandoff;
-use crate::system::app_state::AppState;
+use crate::system::AppState;
 use bevy::prelude::*;
 use hall::data::game::GameMachinePlayerView;
 use hall::data::player::player_state::PlayerStatePlayerView;
@@ -12,7 +12,6 @@ use std::cmp::{Ordering, PartialEq};
 use std::collections::HashMap;
 
 const SCREEN_LAYOUT: &str = "gameplay";
-const SCREEN_ATLAS: &str = "atlas/gameplay";
 
 pub struct GameplayPlugin;
 
@@ -39,11 +38,7 @@ struct GameplayInitHandoff {
 fn gameplay_init_enter(
     // bevy system
     gate: ResMut<GateIFace>,
-    asset_server: Res<AssetServer>,
-    mut am: ResMut<AtlasManager>,
-    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
 ) {
-    am.load_atlas(SCREEN_ATLAS, &asset_server, &mut texture_atlas_layouts).unwrap_or_default();
     gate.send_game_update_state();
 }
 
@@ -209,19 +204,16 @@ impl PickableRowEntityCommandsExtension for &mut EntityCommands<'_> {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 fn gameplay_enter(
     // bevy system
     mut commands: Commands,
     mut handoff: ResMut<GameplayInitHandoff>,
-    asset_server: Res<AssetServer>,
+    mut send: EventWriter<UiEvent>,
     am: Res<AtlasManager>,
     mut slm: ResMut<ScreenLayoutManager>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    mut send: EventWriter<UiEvent>,
+    for_slm: (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>),
 ) {
-    let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, &asset_server, &mut meshes, &mut materials);
+    let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, for_slm);
 
     const LOCAL_ATTR: [[&str; 4]; 4] = [["aa", "ab", "ac", "ad"], ["ba", "bb", "bc", "bd"], ["ca", "cb", "cc", "cd"], ["da", "db", "dc", "dd"]];
 

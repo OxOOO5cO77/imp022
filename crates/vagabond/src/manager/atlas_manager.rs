@@ -1,8 +1,31 @@
+use crate::system::AppState;
 use bevy::prelude::*;
 use std::collections::HashMap;
 use std::fmt::Formatter;
 use std::num::ParseIntError;
-use std::path::Path;
+use std::path::PathBuf;
+
+pub(super) struct AtlasManagerPlugin;
+
+impl Plugin for AtlasManagerPlugin {
+    fn build(&self, app: &mut App) {
+        app //
+            .insert_resource(AtlasManager::default())
+            .add_systems(OnEnter(AppState::Splash), preload_atlases);
+    }
+}
+
+fn preload_atlases(
+    // bevy system
+    mut am: ResMut<AtlasManager>,
+    asset_server: Res<AssetServer>,
+    mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>,
+) {
+    match am.load_all_atlas(&asset_server, &mut texture_atlas_layouts) {
+        Ok(_) => {}
+        Err(e) => panic!("Failed to load atlases: {:?}", e),
+    }
+}
 
 #[derive(Resource, Default)]
 pub(crate) struct AtlasManager {
@@ -30,9 +53,20 @@ impl std::fmt::Debug for AtlasManagerError {
 }
 
 impl AtlasManager {
-    pub(crate) fn load_atlas(&mut self, path: impl AsRef<Path>, asset_server: &Res<AssetServer>, texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>) -> Result<(), AtlasManagerError> {
-        let (name, atlas) = Atlas::new(path, asset_server, texture_atlas_layouts)?;
-        self.map.insert(name, atlas);
+    fn filter_extension(path: PathBuf) -> Option<PathBuf> {
+        path.extension().map_or(false, |ext| ext == "atlas").then_some(path)
+    }
+
+    fn load_all_atlas(&mut self, asset_server: &Res<AssetServer>, texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>) -> Result<(), AtlasManagerError> {
+        for path in std::fs::read_dir("assets/atlas")
+            .map_err(AtlasManagerError::Io)? //
+            .filter_map(|res| res.ok()) //
+            .map(|dir_entry| dir_entry.path()) //
+            .filter_map(Self::filter_extension)
+        {
+            let (name, atlas) = Atlas::new(path, asset_server, texture_atlas_layouts)?;
+            self.map.insert(name, atlas);
+        }
         Ok(())
     }
 
@@ -116,12 +150,14 @@ fn parse_file(layout_file: &str) -> Result<(String, HashMap<String, AtlasEntry>,
 }
 
 impl Atlas {
-    pub(crate) fn new(path: impl AsRef<Path>, asset_server: &Res<AssetServer>, layouts: &mut ResMut<Assets<TextureAtlasLayout>>) -> Result<(String, Self), AtlasManagerError> {
-        let image_path = path.as_ref().with_extension("png");
-        let image_handle = asset_server.load(image_path);
-
-        let layout_path = Path::new("assets").join(path.as_ref().with_extension("atlas"));
+    fn new(path: PathBuf, asset_server: &Res<AssetServer>, layouts: &mut ResMut<Assets<TextureAtlasLayout>>) -> Result<(String, Self), AtlasManagerError> {
+        let layout_path = path.with_extension("atlas");
         let layout_file = std::fs::read_to_string(layout_path).map_err(AtlasManagerError::Io)?;
+
+        let mut components = path.components();
+        components.next();  // drop "assets/"
+        let image_path = components.as_path().with_extension("png");
+        let image_handle = asset_server.load(image_path);
 
         let (atlas_name, map, layout) = parse_file(&layout_file)?;
 
@@ -144,7 +180,7 @@ mod test {
     #[test]
     fn test_atlas_manager() -> Result<(), AtlasManagerError> {
         let layout_file = // test case
-            "gameplay:1024,1024
+"gameplay:1024,1024
 064x064:2,2,64,64
 236x312:734,56,236,312
 364x200:368,168,364,200

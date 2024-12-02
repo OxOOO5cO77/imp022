@@ -10,10 +10,9 @@ use crate::manager::{AtlasManager, NetworkManager, ScreenLayoutManager};
 use crate::network::client_drawbridge;
 use crate::network::client_drawbridge::{AuthInfo, DrawbridgeClient, DrawbridgeIFace};
 use crate::network::client_gate::{GateClient, GateCommand, GateIFace};
-use crate::system::app_state::AppState;
+use crate::system::AppState;
 
 const SCREEN_LAYOUT: &str = "login";
-const SCREEN_ATLAS: &str = "atlas/login";
 
 pub struct LoginPlugin;
 
@@ -21,8 +20,7 @@ impl Plugin for LoginPlugin {
     fn build(&self, app: &mut App) {
         app //
             .add_systems(OnEnter(AppState::LoginDrawbridge), drawbridge_enter)
-            .add_systems(OnEnter(AppState::LoginDrawbridge), login_ui_init.after(drawbridge_enter))
-            .add_systems(OnEnter(AppState::LoginDrawbridge), login_ui_setup.after(login_ui_init))
+            .add_systems(OnEnter(AppState::LoginDrawbridge), login_ui_setup.after(drawbridge_enter))
             .add_systems(Update, drawbridge_update.run_if(in_state(AppState::LoginDrawbridge)))
             .add_systems(Update, textedit_update.run_if(in_state(AppState::LoginDrawbridge)))
             .add_systems(OnExit(AppState::LoginDrawbridge), drawbridge_exit)
@@ -85,10 +83,6 @@ fn drawbridge_enter(
     net.current_task = DrawbridgeClient::start("[::1]:23450".to_string(), from_drawbridge_tx, to_drawbridge_rx, &net.runtime);
 }
 
-fn login_ui_init(asset_server: Res<AssetServer>, mut am: ResMut<AtlasManager>, mut texture_atlas_layouts: ResMut<Assets<TextureAtlasLayout>>) {
-    am.load_atlas(SCREEN_ATLAS, &asset_server, &mut texture_atlas_layouts).unwrap_or_default();
-}
-
 fn textedit_bundle(left: f32, top: f32, width: f32, height: f32, mask_character: Option<char>, active: bool, value: &str) -> impl Bundle {
     (
         Node {
@@ -119,14 +113,12 @@ fn textedit_bundle(left: f32, top: f32, width: f32, height: f32, mask_character:
 fn login_ui_setup(
     // bevy system
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    drawbridge: Res<DrawbridgeIFace>,
     am: Res<AtlasManager>,
     mut slm: ResMut<ScreenLayoutManager>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    drawbridge: Res<DrawbridgeIFace>,
+    for_slm: (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>),
 ) {
-    let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, &asset_server, &mut meshes, &mut materials);
+    let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, for_slm);
 
     commands.entity(layout.entity("connected_icon")).insert(ConnectedIcon);
 

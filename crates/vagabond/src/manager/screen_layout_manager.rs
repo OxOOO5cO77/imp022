@@ -305,7 +305,7 @@ impl ScreenLayoutManager {
 
     fn make_text_bundle(element: &TextElement, offset_z: f32, asset_server: &AssetServer) -> impl Bundle {
         let font = asset_server.load(element.font_name);
-        let translation = Vec3::new(element.position.x, element.position.y - (element.size.y/2.0), element.position.z + offset_z);
+        let translation = Vec3::new(element.position.x, element.position.y - (element.size.y / 2.0), element.position.z + offset_z);
 
         (
             //
@@ -381,12 +381,12 @@ impl ScreenLayoutManager {
         entities
     }
 
-    pub(crate) fn build(&mut self, commands: &mut Commands, layout_name: &str, am: &AtlasManager, asset_server: &AssetServer, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> &ScreenLayout {
+    pub(crate) fn build(&mut self, commands: &mut Commands, layout_name: &str, am: &AtlasManager, (asset_server, mut meshes, mut materials): (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>)) -> &ScreenLayout {
         let id = commands
             .spawn(ScreenLayoutContainer::default())
             .with_children(|parent| {
                 let mut offset = 0.0;
-                let entities = self.build_layout(layout_name, parent, &mut offset, "", am, (asset_server, meshes, materials));
+                let entities = self.build_layout(layout_name, parent, &mut offset, "", am, (&asset_server, &mut meshes, &mut materials));
                 let layout = self.layout_map.get_mut(layout_name).unwrap();
                 layout.entity_map = entities.into_iter().collect();
             })

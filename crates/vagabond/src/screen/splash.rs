@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::system::app_state::AppState;
+use crate::system::AppState;
 use bevy::prelude::*;
 use bevy::ui::Val::Percent;
 
