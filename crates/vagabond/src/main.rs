@@ -20,7 +20,7 @@ fn main() {
         }))
         .add_plugins(bevy_simple_text_input::TextInputPlugin)
         .add_plugins(pyri_tooltip::TooltipPlugin::default())
-        .add_plugins((manager::ManagerPlugin, screen::ScreenPlugin))
+        .add_plugins((manager::ManagerPlugin, screen::ScreenPlugin, system::SystemPlugin))
         .insert_resource(ClearColor(Color::srgb(0.0, 0.0, 0.0)))
         .init_state::<AppState>()
         .add_systems(Startup, setup)

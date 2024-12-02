@@ -12,6 +12,7 @@ pub(crate) use crate::manager::network_manager::NetworkManager;
 pub(crate) use crate::manager::screen_layout_manager::{ScreenLayoutManager,ScreenLayout};
 pub(crate) use crate::manager::warehouse_manager::WarehouseManager;
 
+
 pub(crate) struct ManagerPlugin;
 
 impl Plugin for ManagerPlugin {

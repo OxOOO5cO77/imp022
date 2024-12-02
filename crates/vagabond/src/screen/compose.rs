@@ -1,6 +1,7 @@
 use crate::manager::{AtlasManager, DataManager, ScreenLayout, ScreenLayoutManager, WarehouseManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::system::app_state::AppState;
+use crate::system::glower::Glower;
 use bevy::prelude::*;
 use vagabond::data::VagabondPart;
 
@@ -16,7 +17,8 @@ impl Plugin for ComposePlugin {
             .add_systems(OnEnter(AppState::ComposeInit), compose_init_enter)
             .add_systems(Update, compose_init_update.run_if(in_state(AppState::ComposeInit)))
             .add_systems(OnEnter(AppState::Compose), compose_enter)
-            .add_systems(Update, (populate_part_layouts, finish_player, compose_update).run_if(in_state(AppState::Compose)))
+            .add_systems(Update, (finish_player, compose_update).run_if(in_state(AppState::Compose)))
+            .add_systems(PostUpdate, populate_part_layouts.run_if(in_state(AppState::Compose)))
             .add_systems(OnExit(AppState::Compose), compose_exit);
     }
 }
@@ -66,7 +68,7 @@ enum ComposeState {
 #[derive(Event)]
 struct FinishPlayer;
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 enum StatRowKind {
     Analyze,
     Breach,
@@ -76,7 +78,7 @@ enum StatRowKind {
     Detail,
 }
 
-#[derive(Component)]
+#[derive(Debug, Component)]
 enum Slot {
     StatRow(StatRowKind),
     Build,
@@ -149,14 +151,6 @@ impl Draggable {
             active: false,
         }
     }
-}
-
-fn collect_for_layout(commands: &mut Commands, layout: &ScreenLayout, items: &[&str]) -> [Entity; 4] {
-    let mut result = [Entity::PLACEHOLDER; 4];
-    for (idx, item) in items.iter().enumerate() {
-        result[idx] = commands.entity(layout.entity(item)).id();
-    }
-    result
 }
 
 fn make_full_part_layout(commands: &mut Commands, layout: &ScreenLayout, name: &str) -> PartLayout {
@@ -241,7 +235,7 @@ fn compose_enter(
 
     for (row_name, kind, row) in ATTR {
         let mut row_part_layout = PartLayout::new();
-        row_part_layout.values = collect_for_layout(&mut commands, layout, &row);
+        row_part_layout.values = row.map(|item| commands.entity(layout.entity(item)).id());
         commands //
             .entity(layout.entity(row_name))
             .insert_empty_slot(Slot::StatRow(kind), row_part_layout)
@@ -251,7 +245,7 @@ fn compose_enter(
 
     const BUILD: [&str; 4] = ["ant", "brd", "cpu", "dsk"];
     let mut build_part_layout = PartLayout::new();
-    build_part_layout.build = collect_for_layout(&mut commands, layout, &BUILD);
+    build_part_layout.build = BUILD.map(|item| commands.entity(layout.entity(item)).id());
     commands //
         .entity(layout.entity("build"))
         .insert_empty_slot(Slot::Build, build_part_layout)
@@ -260,7 +254,7 @@ fn compose_enter(
 
     const BUILD_VALUES: [&str; 4] = ["build_a", "build_b", "build_c", "build_d"];
     let mut build_values_part_layout = PartLayout::new();
-    build_values_part_layout.values = collect_for_layout(&mut commands, layout, &BUILD_VALUES);
+    build_values_part_layout.values = BUILD_VALUES.map(|item| commands.entity(layout.entity(item)).id());
     commands //
         .entity(layout.entity("build_values"))
         .insert_empty_slot(Slot::StatRow(StatRowKind::Build), build_values_part_layout)
@@ -269,7 +263,7 @@ fn compose_enter(
 
     const DETAIL: [&str; 4] = ["ins", "rol", "loc", "dis"];
     let mut detail_part_layout = PartLayout::new();
-    detail_part_layout.detail = collect_for_layout(&mut commands, layout, &DETAIL);
+    detail_part_layout.detail = DETAIL.map(|item| commands.entity(layout.entity(item)).id());
     commands //
         .entity(layout.entity("detail"))
         .insert_empty_slot(Slot::Detail, detail_part_layout)
@@ -278,7 +272,7 @@ fn compose_enter(
 
     const DETAIL_VALUES: [&str; 4] = ["detail_a", "detail_b", "detail_c", "detail_d"];
     let mut detail_values_part_layout = PartLayout::new();
-    detail_values_part_layout.values = collect_for_layout(&mut commands, layout, &DETAIL_VALUES);
+    detail_values_part_layout.values = DETAIL_VALUES.map(|item| commands.entity(layout.entity(item)).id());
     commands //
         .entity(layout.entity("detail_values"))
         .insert_empty_slot(Slot::StatRow(StatRowKind::Detail), detail_values_part_layout)
@@ -320,7 +314,7 @@ fn compose_enter(
     let draggable_layout = make_full_part_layout(&mut commands, layout, "draggable");
     let draggable = commands //
         .entity(layout.entity("draggable"))
-        .insert_empty_slot(Slot::Card, draggable_layout)
+        .insert((Slot::Card, draggable_layout, PartHolder::default())) // no PickableBehavior::default()!
         .insert(Visibility::Hidden)
         .id();
     commands.insert_resource(Draggable::new(draggable));
@@ -332,10 +326,10 @@ fn on_part_drag_start(
     //
     event: Trigger<Pointer<DragStart>>,
     mut commands: Commands,
-    mut holder_q: Query<&mut PartHolder>,
+    mut holder_q: Query<(Entity, &Slot, &mut PartHolder)>,
     mut draggable: ResMut<Draggable>,
 ) {
-    if let Ok([mut holder, mut drag_holder]) = holder_q.get_many_mut([event.target, draggable.drag]) {
+    if let Ok([(_, _, mut holder), (_, _, mut drag_holder)]) = holder_q.get_many_mut([event.target, draggable.drag]) {
         if holder.part.is_none() {
             draggable.active = false;
             return;
@@ -346,6 +340,19 @@ fn on_part_drag_start(
         draggable.active = true;
 
         commands.entity(event.target).insert(PickingBehavior::IGNORE);
+    }
+
+    for (entity, slot, holder) in &holder_q {
+        if entity != draggable.drag {
+            let glow = match slot {
+                Slot::Card => continue,
+                Slot::Empty(_) => Srgba::new(0.7, 0.7, 0.0, 1.0),
+                _ if holder.part.is_none() => Srgba::new(0.0, 1.0, 0.0, 1.0),
+                _ => Srgba::new(0.8, 0.8, 0.8, 1.0),
+            };
+            let glower = Glower::new(glow);
+            commands.entity(entity).insert(glower);
+        }
     }
 }
 
@@ -371,6 +378,7 @@ fn on_part_drag_end(
     mut commands: Commands,
     mut holder_q: Query<(&mut PartHolder, &Slot)>,
     mut draggable: ResMut<Draggable>,
+    mut glower_q: Query<(Entity, &mut Sprite, &Glower)>,
 ) {
     if !draggable.active {
         return;
@@ -385,6 +393,11 @@ fn on_part_drag_end(
 
     draggable.active = false;
     commands.entity(event.target).insert(PickingBehavior::default());
+
+    for (e, mut sprite, glower) in glower_q.iter_mut() {
+        sprite.color = glower.original().unwrap_or(sprite.color.into()).into();
+        commands.entity(e).remove::<Glower>();
+    }
 }
 
 fn handle_swap(source: Option<&mut PartHolder>, target: &mut PartHolder, drag: &mut PartHolder, target_slot: &Slot) -> Entity {
@@ -408,9 +421,9 @@ fn handle_empty(empty: Entity, original: Entity, mut holder_q: Query<(&mut PartH
         return;
     }
 
-    if let Ok([mut empty, mut card]) = holder_q.get_many_mut([empty, original]) {
-        card.0.part = empty.0.part.clone();
-        empty.0.part = None;
+    if let Ok([(mut empty, _), (mut card, _)]) = holder_q.get_many_mut([empty, original]) {
+        card.part = empty.part.clone();
+        empty.part = None;
     }
 }
 
@@ -426,8 +439,8 @@ fn on_part_drop(
     }
 
     let mut original = Entity::PLACEHOLDER;
-    if let Ok([mut source, mut target, mut drag]) = holder_q.get_many_mut([event.dropped, event.target, draggable.drag]) {
-        original = handle_swap(Some(&mut source.0), &mut target.0, &mut drag.0, target.1);
+    if let Ok([(mut source, _), (mut target, slot), (mut drag, _)]) = holder_q.get_many_mut([event.dropped, event.target, draggable.drag]) {
+        original = handle_swap(Some(&mut source), &mut target, &mut drag, slot);
     }
 
     handle_empty(event.target, original, holder_q);
