@@ -40,6 +40,7 @@ impl Bufferable for GameBuildRequest {
     }
 }
 
+#[derive(Default)]
 pub struct GameBuildResponse {
     pub seed: SeedType,
     pub deck: Vec<PlayerCard>,

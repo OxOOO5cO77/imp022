@@ -2,12 +2,38 @@ use std::collections::{HashMap, VecDeque};
 
 use crate::data::hall::HallCard;
 use crate::data::player::PlayerCard;
+use crate::message::{CardIdxType, CardTarget};
 use rand::{seq::SliceRandom, Rng};
 use shared_data::attribute::{AttributeKind, AttributeValueType, Attributes};
 use shared_data::card::ErgType;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
-use crate::message::{CardIdxType, CardTarget};
+
+#[derive(Default, PartialEq, Copy, Clone, Debug)]
+pub enum PlayerCommandState {
+    #[default]
+    Invalid,
+    Expected(op::Command),
+    Actual(op::Command),
+}
+
+impl PlayerCommandState {
+    pub fn is(&self, command: op::Command) -> bool {
+        matches!(self, PlayerCommandState::Actual(c) if *c == command)
+    }
+    pub fn should_be(&mut self, command: op::Command) {
+        *self = PlayerCommandState::Expected(command);
+    }
+    pub fn try_set(&mut self, command: op::Command) -> Result<(), Self> {
+        match self {
+            PlayerCommandState::Invalid => *self = PlayerCommandState::Actual(command),
+            PlayerCommandState::Expected(expected) if command == *expected => *self = PlayerCommandState::Actual(command),
+            PlayerCommandState::Actual(actual) if command == *actual => *self = PlayerCommandState::Actual(command),
+            _ => return Err(*self),
+        }
+        Ok(())
+    }
+}
 
 #[derive(Default)]
 pub struct PlayerState {
@@ -16,8 +42,8 @@ pub struct PlayerState {
     heap: Vec<HallCard>,
     hand: Vec<HallCard>,
     erg: HashMap<AttributeKind, ErgType>,
-    play: Vec<(HallCard,CardTarget)>,
-    pub last_command: Option<op::Command>,
+    play: Vec<(HallCard, CardTarget)>,
+    pub command: PlayerCommandState,
     pub resolve_kind: Option<AttributeKind>,
 }
 
@@ -65,13 +91,12 @@ impl PlayerState {
         false
     }
 
-    const KIND_MAP: [AttributeKind; 4] = [AttributeKind::Analyze, AttributeKind::Breach, AttributeKind::Compute, AttributeKind::Disrupt];
-
     pub fn add_erg(&mut self, kind: AttributeKind, erg_array: ErgArray) {
+        const KIND_MAP: [AttributeKind; 4] = [AttributeKind::Analyze, AttributeKind::Breach, AttributeKind::Compute, AttributeKind::Disrupt];
         for (idx, erg) in erg_array.iter().enumerate() {
-            let entry = self.erg.entry(Self::KIND_MAP[idx]).or_insert(0);
+            let entry = self.erg.entry(KIND_MAP[idx]).or_insert(0);
             *entry += erg;
-            if kind == Self::KIND_MAP[idx] {
+            if kind == KIND_MAP[idx] {
                 *entry += 1;
             }
         }

@@ -71,8 +71,9 @@ impl GameState {
         } // else log error
     }
 
-    pub fn set_phase(&mut self, phase: GamePhase) {
+    pub fn set_phase(&mut self, phase: GamePhase, expected: op::Command) {
         self.set_stage(GameStage::Running(phase));
+        self.users.iter_mut().for_each(|(_, user)| user.state.command.should_be(expected));
     }
 
     pub fn get_user(&mut self, user_id_type: UserIdType) -> Option<&GameUser> {
@@ -105,7 +106,7 @@ impl GameState {
     }
 
     pub fn all_users_last_command(&self, command: op::Command) -> bool {
-        self.users.iter().all(|(_, user)| user.state.last_command == Some(command))
+        self.users.iter().all(|(_, user)| user.state.command.is(command))
     }
 
     pub fn user_add(&mut self, user_id_type: UserIdType, game_user: GameUser) {

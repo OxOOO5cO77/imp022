@@ -65,7 +65,7 @@ impl PlayerBuilder {
     pub(crate) fn create_player(&self, dm: &DataManager) -> Option<Player> {
         let seed = self.generate_seed();
         let mut rng = StdRng::seed_from_u64(seed);
-        let deck = self.fill_deck(&mut rng, dm)?;
+        let deck = self.fill_deck(dm, &mut rng)?;
 
         let player = Player {
             seed,
@@ -97,7 +97,7 @@ impl PlayerBuilder {
         | 0xFF00000000000000 & self.detail_values.seed
     }
 
-    fn fill_deck(&self, rng: &mut impl Rng, dm: &DataManager) -> Option<VecDeque<PlayerCard>> {
+    fn fill_deck(&self, dm: &DataManager, rng: &mut impl Rng) -> Option<VecDeque<PlayerCard>> {
         let mut deck = VecDeque::new();
 
         let build_zip = zip(&self.build.build, self.build_values.values);
