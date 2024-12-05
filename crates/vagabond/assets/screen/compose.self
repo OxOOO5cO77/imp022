@@ -114,7 +114,7 @@ $color:dark_grey=0.2,0.2,0.2,1.0
 &age_title:main.16.center@1394,745,290,28!med_grey|Age
 *age_bg:compose.290x064@1394,780!med_grey
 &age:main.24.center@1394,784,290,56!grey|-
-*submit:compose.064x064@1620,1000!grey
+*commit:compose.064x064@1620,1000!grey
 /card01:card_header@1700,0,220,24
 /card02:card_header@1700,27,220,24
 /card03:card_header@1700,54,220,24

@@ -132,6 +132,9 @@ impl PartLayout {
     }
 }
 
+#[derive(Component)]
+struct CommitButton;
+
 #[derive(Resource)]
 struct Draggable {
     drag: Entity,
@@ -175,7 +178,7 @@ trait PartEntityCommandsExtension {
     fn observe_part_drop(self) -> Self;
     fn insert_empty_slot(self, slot: Slot, layout: PartLayout) -> Self;
     fn insert_filled_slot(self, slot: Slot, layout: PartLayout, part: VagabondPart) -> Self;
-    fn insert_submit_button(self) -> Self;
+    fn insert_commit_button(self) -> Self;
 }
 
 impl PartEntityCommandsExtension for &mut EntityCommands<'_> {
@@ -197,10 +200,12 @@ impl PartEntityCommandsExtension for &mut EntityCommands<'_> {
         self //
             .insert((slot, layout, PartHolder::new(part), PickingBehavior::default()))
     }
-    fn insert_submit_button(self) -> Self {
+    fn insert_commit_button(self) -> Self {
         self //
-            .insert(PickingBehavior::default())
+            .insert((CommitButton, PickingBehavior::default()))
             .observe(on_click_commit)
+            .observe(on_over_commit)
+            .observe(on_out_commit)
     }
 }
 
@@ -301,7 +306,7 @@ fn compose_enter(
         commands.entity(layout.entity(&name)).insert(CardHolder::new(card_header));
     }
 
-    commands.entity(layout.entity("submit")).insert_submit_button();
+    commands.entity(layout.entity("commit")).insert_commit_button();
 
     let draggable_layout = make_full_part_layout(&mut commands, layout, "draggable");
     let draggable = commands //
@@ -453,6 +458,18 @@ fn on_click_commit(
     send.send(FinishPlayer);
 }
 
+fn on_over_commit(event: Trigger<Pointer<Over>>, mut sprite_q: Query<&mut Sprite, With<CommitButton>>) {
+    if let Ok(mut sprite) = sprite_q.get_mut(event.target) {
+        sprite.color = bevy::color::palettes::basic::RED.into();
+    }
+}
+
+fn on_out_commit(event: Trigger<Pointer<Out>>, mut sprite_q: Query<&mut Sprite, With<CommitButton>>) {
+    if let Ok(mut sprite) = sprite_q.get_mut(event.target) {
+        sprite.color = bevy::color::palettes::css::DARK_GRAY.into();
+    }
+}
+
 fn populate_part_layouts(
     //
     layout_q: Query<(Entity, &PartLayout, &PartHolder, &Slot), Changed<PartHolder>>,
@@ -549,12 +566,14 @@ pub(crate) struct ComposeHandoff {
     pub(crate) local_id: String,
 }
 
+#[allow(clippy::too_many_arguments)]
 fn compose_update(
     // bevy system
     mut commands: Commands,
     mut gate: ResMut<GateIFace>,
     mut deck_q: Query<(&mut Text2d, &CardHolder), Without<InfoKind>>,
     mut info_q: Query<(&mut Text2d, &InfoKind), Without<CardHolder>>,
+    button_q: Query<Entity, With<CommitButton>>,
     wm: Res<WarehouseManager>,
     dm: Res<DataManager>,
     mut app_state: ResMut<NextState<AppState>>,
@@ -572,10 +591,11 @@ fn compose_update(
                         }
                     }
 
-                    commands.insert_resource(ComposeHandoff {
+                    let handoff = ComposeHandoff {
                         local_name: player_bio.name,
                         local_id: player_bio.id,
-                    });
+                    };
+                    commands.insert_resource(handoff);
 
                     let deck = dm.convert_deck(gate_response.deck);
 
@@ -584,6 +604,9 @@ fn compose_update(
                             *card_text = card.title.clone().into();
                         }
                     }
+
+                    let button_entity = button_q.single();
+                    commands.entity(button_entity).insert(Glower::new(bevy::color::palettes::basic::GREEN));
                 }
             }
             Err(err) => println!("Error: {err}"),
