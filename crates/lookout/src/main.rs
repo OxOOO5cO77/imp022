@@ -33,7 +33,7 @@ async fn main() -> Result<(), ()> {
 
     let result = courtyard_client.await;
 
-    println!("[Lookout] START");
+    println!("[Lookout] END");
 
     result
 }
