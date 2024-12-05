@@ -554,6 +554,8 @@ fn finish_player(
                 *state = ComposeState::Ready;
             }
             gate.send_game_build(parts, *state == ComposeState::Committed);
+        } else {
+            *state = ComposeState::Build;
         }
 
         receive.clear();
