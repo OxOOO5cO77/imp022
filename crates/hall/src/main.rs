@@ -1,34 +1,32 @@
+use crate::logic::handle_phase_complete;
 use crate::manager::data_manager::DataManager;
 use crate::network::broadcaster::Broadcaster;
+use crate::network::util::send_routed_message;
+use gate::message::gate_header::GateHeader;
 use hall::data::game::GameState;
-use shared_net::types::GameIdType;
+use hall::message::{GameRequestMessage, GameResponseMessage};
+use shared_net::types::{GameIdType, NodeType};
 use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 use std::collections::HashMap;
 use std::env;
 use std::rc::Rc;
-use std::sync::Mutex;
+use std::sync::RwLock;
 use tokio::sync::mpsc;
+use tokio::sync::mpsc::error::SendError;
 use tokio::sync::mpsc::UnboundedSender;
 
 mod logic;
 mod manager;
 mod network;
 
-pub(crate) type HallContext = Rc<Mutex<Hall>>;
+pub(crate) type HallContext = Rc<Hall>;
 pub(crate) type HallGames = HashMap<GameIdType, GameState>;
 
 struct Hall {
-    games: HallGames,
-    data_manager: DataManager,
-    bx: Broadcaster,
+    games: RwLock<HallGames>,
+    data_manager: RwLock<DataManager>,
+    bx: RwLock<Broadcaster>,
 }
-
-impl Hall {
-    fn split_borrow(&mut self) -> (&mut HallGames, &DataManager, &mut Broadcaster) {
-        (&mut self.games, &self.data_manager, &mut self.bx)
-    }
-}
-
 
 #[tokio::main]
 async fn main() -> Result<(), ()> {
@@ -41,11 +39,11 @@ async fn main() -> Result<(), ()> {
     let (local_tx, local_rx) = mpsc::unbounded_channel();
 
     let context = Hall {
-        games: HashMap::new(),
-        data_manager: DataManager::new().expect("[Hall] Unable to initialize DataManager"),
-        bx: Broadcaster::new(local_tx.clone()),
+        games: RwLock::new(HashMap::new()),
+        data_manager: RwLock::new(DataManager::new().expect("[Hall] Unable to initialize DataManager")),
+        bx: RwLock::new(Broadcaster::new(local_tx.clone())),
     };
-    let context = Rc::new(Mutex::new(context));
+    let context = Rc::new(context);
 
     let courtyard_client = shared_net::async_client(context, op::Flavor::Hall, local_tx, local_rx, iface_to_courtyard, process_courtyard);
 
@@ -57,16 +55,45 @@ async fn main() -> Result<(), ()> {
 }
 
 fn process_courtyard(context: HallContext, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
-    match buf.pull::<op::Command>() {
-        op::Command::GameActivate => logic::recv_game_activate(context, tx, buf),
-        op::Command::GameBuild => logic::recv_game_build(context, tx, buf),
-        op::Command::GameStartTurn => logic::recv_game_start_turn(context, tx, buf),
-        op::Command::GameChooseAttr => logic::recv_game_choose_attr(context, tx, buf),
-        op::Command::GamePlayCard => logic::recv_game_play_card(context, tx, buf),
-        op::Command::GameEndTurn => logic::recv_game_end_turn(context, tx, buf),
-        op::Command::GameEndGame => logic::recv_game_end(context, tx, buf),
-        op::Command::GameUpdateState => logic::recv_game_update_state(context, tx, buf),
-        _ => {}
+    let result = match buf.pull::<op::Command>() {
+        op::Command::GameBuild => handle_recv(&context, tx, buf, logic::recv_game_build),
+        op::Command::GameActivate => handle_recv(&context, tx, buf, logic::recv_game_activate),
+        op::Command::GameStartTurn => handle_recv(&context, tx, buf, logic::recv_game_start_turn),
+        op::Command::GameChooseAttr => handle_recv(&context, tx, buf, logic::recv_game_choose_attr),
+        op::Command::GamePlayCard => handle_recv(&context, tx, buf, logic::recv_game_play_card),
+        op::Command::GameEndTurn => handle_recv(&context, tx, buf, logic::recv_game_end_turn),
+        op::Command::GameEndGame => handle_recv(&context, tx, buf, logic::recv_game_end_game),
+        op::Command::GameUpdateState => handle_recv(&context, tx, buf, logic::recv_game_update_state),
+        _ => return VClientMode::Continue,
     };
+
+    if let Ok(game_id) = result {
+        handle_phase_complete(context, game_id);
+    }
+
     VClientMode::Continue
+}
+
+fn handle_recv<Request, Response>(context: &HallContext, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer, handle_request: impl Fn(&HallContext, Request, NodeType, GateHeader) -> Option<Response>) -> Result<GameIdType, SendError<RoutedMessage>>
+where
+    Request: GameRequestMessage,
+    Response: GameResponseMessage,
+{
+    let gate = buf.pull::<NodeType>();
+    let header = buf.pull::<GateHeader>();
+    let request = buf.pull::<Request>();
+
+    let game_id = request.game_id();
+    let vagabond = header.vagabond;
+
+    let response = handle_request(context, request, gate, header);
+
+    if let Some(response) = response {
+        match send_routed_message(&response, gate, vagabond, &tx) {
+            Ok(_) => Ok(game_id),
+            Err(err) => Err(err),
+        }
+    } else {
+        Ok(game_id)
+    }
 }

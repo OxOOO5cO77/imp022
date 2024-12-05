@@ -80,12 +80,23 @@ enum VagabondGamePhase {
     Wait(WaitKind),
 }
 
-#[derive(Resource, Default)]
+#[derive(Resource)]
 struct GameplayContext {
     phase: VagabondGamePhase,
     attr_pick: Option<AttrKind>,
     card_picks: HashMap<CardIdxType, CardTarget>,
     current_remote: MissionNodeIdType,
+}
+
+impl Default for GameplayContext {
+    fn default() -> Self {
+        Self {
+            phase: Default::default(),
+            attr_pick: None,
+            card_picks: Default::default(),
+            current_remote: 1,
+        }
+    }
 }
 
 impl GameplayContext {
@@ -263,23 +274,27 @@ fn gameplay_enter(
 
     const MACHINES: [(&str, MachineKind); 2] = [("local", MachineKind::Local), ("remote", MachineKind::Remote)];
 
-    for machine in &MACHINES {
-        commands.entity(layout.entity(machine.0)).insert((machine.1, PickingBehavior::default())).observe(on_card_drop);
+    for (machine_name, machine_kind) in &MACHINES {
+        commands.entity(layout.entity(machine_name)).insert((*machine_kind, PickingBehavior::default())).observe(on_card_drop);
 
-        commands.entity(layout.entity(&format!("{}/title", machine.0))).insert((machine.1, MachineText(MachineTextKind::Title)));
-        commands.entity(layout.entity(&format!("{}/id", machine.0))).insert((machine.1, MachineText(MachineTextKind::Id)));
+        commands.entity(layout.entity(&format!("{}/title", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Title)));
+        commands.entity(layout.entity(&format!("{}/id", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Id)));
 
-        commands.entity(layout.entity(&format!("{}/free_space", machine.0))).insert((machine.1, MachineText(MachineTextKind::Stat(0))));
-        commands.entity(layout.entity(&format!("{}/thermal_capacity", machine.0))).insert((machine.1, MachineText(MachineTextKind::Stat(1))));
-        commands.entity(layout.entity(&format!("{}/system_health", machine.0))).insert((machine.1, MachineText(MachineTextKind::Stat(2))));
-        commands.entity(layout.entity(&format!("{}/open_ports", machine.0))).insert((machine.1, MachineText(MachineTextKind::Stat(3))));
+        commands.entity(layout.entity(&format!("{}/free_space", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Stat(0))));
+        commands.entity(layout.entity(&format!("{}/thermal_capacity", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Stat(1))));
+        commands.entity(layout.entity(&format!("{}/system_health", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Stat(2))));
+        commands.entity(layout.entity(&format!("{}/open_ports", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Stat(3))));
 
-        commands.entity(layout.entity(&format!("{}/current_program", machine.0))).insert((machine.1, MachineText(MachineTextKind::CurrentProgram)));
+        commands.entity(layout.entity(&format!("{}/current_program", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::CurrentProgram)));
 
-        commands.entity(layout.entity(&format!("{}/running1", machine.0))).insert((machine.1, MachineText(MachineTextKind::Process(0))));
-        commands.entity(layout.entity(&format!("{}/running2", machine.0))).insert((machine.1, MachineText(MachineTextKind::Process(1))));
-        commands.entity(layout.entity(&format!("{}/running3", machine.0))).insert((machine.1, MachineText(MachineTextKind::Process(2))));
-        commands.entity(layout.entity(&format!("{}/running4", machine.0))).insert((machine.1, MachineText(MachineTextKind::Process(3))));
+        for queue_index in 0..10 {
+            commands.entity(layout.entity(&format!("{}/queue{}", machine_name, queue_index))).insert((*machine_kind, MachineQueueItem(queue_index)));
+        }
+
+        commands.entity(layout.entity(&format!("{}/running1", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Process(0))));
+        commands.entity(layout.entity(&format!("{}/running2", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Process(1))));
+        commands.entity(layout.entity(&format!("{}/running3", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Process(2))));
+        commands.entity(layout.entity(&format!("{}/running4", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Process(3))));
     }
 
     for card_index in 1..=5 {
@@ -307,20 +322,16 @@ fn gameplay_enter(
 }
 
 fn on_click_next(_: Trigger<Pointer<Click>>, mut context: ResMut<GameplayContext>, gate: Res<GateIFace>) {
-    match context.phase {
+    let wait = match context.phase {
         VagabondGamePhase::Start => gate.send_game_start_turn(),
-        VagabondGamePhase::Pick => {
-            if let Some(kind) = context.attr_pick {
-                gate.send_game_choose_attr(kind);
-            } else {
-                return;
-            }
-        }
+        VagabondGamePhase::Pick => gate.send_game_choose_attr(context.attr_pick),
         VagabondGamePhase::Play => gate.send_game_play_cards(&context.card_picks),
         VagabondGamePhase::Draw => gate.send_game_end_turn(),
-        VagabondGamePhase::Wait(_) => return,
+        VagabondGamePhase::Wait(_) => false,
     };
-    context.phase = VagabondGamePhase::Wait(WaitKind::One);
+    if wait {
+        context.phase = VagabondGamePhase::Wait(WaitKind::One);
+    }
 }
 
 fn on_over_next(event: Trigger<Pointer<Over>>, context: Res<GameplayContext>, mut sprite_q: Query<&mut Sprite>) {
@@ -405,9 +416,9 @@ fn indicator_ui_update(mut commands: Commands, mut receive: EventReader<UiEvent>
     for ui_event in receive.read() {
         if let UiEvent::GamePhase(phase) = ui_event {
             match phase {
-                VagabondGamePhase::Start => indicator_q.iter().for_each(|(e, i)| cleanup_indicator(&mut commands, e, i.parent)),
+                VagabondGamePhase::Start => {}
                 VagabondGamePhase::Play => {}
-                VagabondGamePhase::Draw => {}
+                VagabondGamePhase::Draw => indicator_q.iter().for_each(|(e, i)| cleanup_indicator(&mut commands, e, i.parent)),
                 _ => {}
             }
         }
@@ -549,28 +560,35 @@ fn roll_ui_update(
 
 fn card_ui_update(
     // bevy system
+    mut commands: Commands,
     mut receive: EventReader<UiEvent>,
-    layout_q: Query<&CardLayout>,
+    layout_q: Query<(Entity, &CardLayout)>,
     mut text_q: Query<&mut Text2d, With<CardText>>,
     dm: Res<DataManager>,
 ) {
     for ui_event in receive.read() {
         if let UiEvent::PlayerState(player_state) = ui_event {
-            for layout in &layout_q {
+            for (entity, layout) in &layout_q {
                 let card = player_state.hand.get(layout.slot).and_then(|o| dm.convert_card(o));
 
-                if let Ok(mut title_text) = text_q.get_mut(layout.title) {
-                    *title_text = card.as_ref().map_or("<Empty>".to_string(), |o| o.title.clone()).into();
-                }
-                if let Ok(mut cost_text) = text_q.get_mut(layout.cost) {
-                    *cost_text = card.as_ref().map_or("<Empty>".to_string(), |o| o.cost.to_string()).into();
-                }
-                if let Ok(mut launch_text) = text_q.get_mut(layout.launch) {
-                    *launch_text = card.as_ref().map_or("<Empty>".to_string(), |o| o.launch_rules.clone()).into();
-                }
-                if let Ok(mut run_text) = text_q.get_mut(layout.run) {
-                    *run_text = card.as_ref().map_or("<Empty>".to_string(), |o| o.run_rules.clone()).into();
-                }
+                let visibility = if let Some(card) = card {
+                    if let Ok(mut title_text) = text_q.get_mut(layout.title) {
+                        *title_text = card.title.into();
+                    }
+                    if let Ok(mut cost_text) = text_q.get_mut(layout.cost) {
+                        *cost_text = card.cost.to_string().into();
+                    }
+                    if let Ok(mut launch_text) = text_q.get_mut(layout.launch) {
+                        *launch_text = card.launch_rules.into();
+                    }
+                    if let Ok(mut run_text) = text_q.get_mut(layout.run) {
+                        *run_text = card.run_rules.into();
+                    }
+                    Visibility::Visible
+                } else {
+                    Visibility::Hidden
+                };
+                commands.entity(entity).insert(visibility);
             }
         }
     }
@@ -708,7 +726,7 @@ fn machine_ui_update(
                             remote
                         };
                         let mut result = " v- <idle>".to_string();
-                        if let Some(current) = machine.queue.iter().find(|item| item.delay == 0) {
+                        if let Some(current) = machine.queue.iter().find(|(_, delay)| *delay == 0).map(|(item, _)| item) {
                             if let Some(card) = dm.convert_card(&current.player_card) {
                                 result = format!(" v- {}", card.title);
                             }
@@ -718,13 +736,13 @@ fn machine_ui_update(
                 }
 
                 for (machine_component, mut sprite, MachineQueueItem(index)) in sprite_q.iter_mut() {
-                    let machine = if *machine_component == MachineKind::Local {
-                        local
+                    let (machine, player_owned) = if *machine_component == MachineKind::Local {
+                        (local,true)
                     } else {
-                        remote
+                        (remote,false)
                     };
-                    sprite.color = if let Some(process) = machine.queue.iter().find(|item| item.delay == *index) {
-                        if process.local {
+                    sprite.color = if let Some(process) = machine.queue.iter().find(|(_, delay)| delay == index).map(|(item, _)| item) {
+                        if process.local == player_owned {
                             bevy::color::palettes::basic::GREEN
                         } else {
                             bevy::color::palettes::basic::RED
@@ -768,7 +786,7 @@ fn gameplay_update(
         Ok(GateCommand::GameRoll(gate_response)) => recv_roll(*gate_response, &mut send),
         Ok(GateCommand::GameChooseAttr(gate_response)) => recv_choose_attr(*gate_response),
         Ok(GateCommand::GameResources(gate_response)) => recv_resources(*gate_response, &mut send),
-        Ok(GateCommand::GamePlayCard(gate_response)) => recv_play_card(*gate_response, &mut context),
+        Ok(GateCommand::GamePlayCard(gate_response)) => recv_play_card(*gate_response),
         Ok(GateCommand::GameResolveCards(gate_response)) => recv_resolve_cards(*gate_response),
         Ok(GateCommand::GameEndTurn(gate_response)) => recv_end_turn(*gate_response),
         Ok(GateCommand::GameTick(gate_response)) => recv_tick(*gate_response, &mut context),
@@ -821,7 +839,7 @@ fn recv_resources(response: GameResourcesMessage, send: &mut EventWriter<UiEvent
     Some(VagabondGamePhase::Play)
 }
 
-fn recv_play_card(response: GamePlayCardResponse, context: &mut GameplayContext) -> Option<VagabondGamePhase> {
+fn recv_play_card(response: GamePlayCardResponse) -> Option<VagabondGamePhase> {
     let success = response.success.iter().all(|&success| success);
     println!(
         "[RECV] GamePlayCard {}",
@@ -831,9 +849,6 @@ fn recv_play_card(response: GamePlayCardResponse, context: &mut GameplayContext)
             "ERROR"
         }
     );
-    if success {
-        context.card_picks.clear();
-    }
     success.then_some(VagabondGamePhase::Wait(WaitKind::All))
 }
 
@@ -874,6 +889,7 @@ fn recv_end_game(response: GameEndGameResponse) -> Option<VagabondGamePhase> {
 
 fn recv_update_state(response: GameUpdateStateResponse, send: &mut EventWriter<UiEvent>) -> Option<VagabondGamePhase> {
     println!("[RECV] GameUpdateState");
+
     send.send(UiEvent::PlayerState(response.player_state));
     send.send(UiEvent::MachineStateUpdate(response.local_machine, response.remote_machine));
     None

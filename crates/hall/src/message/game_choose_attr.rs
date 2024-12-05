@@ -1,5 +1,5 @@
+use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
 use shared_data::attribute::AttributeKind;
-use crate::message::CommandMessage;
 use shared_net::types::GameIdType;
 
 use shared_net::sizedbuffers::Bufferable;
@@ -73,6 +73,12 @@ impl CommandMessage for GameChooseAttrRequest {
     const COMMAND: op::Command = op::Command::GameChooseAttr;
 }
 
+impl GameRequestMessage for GameChooseAttrRequest {
+    fn game_id(&self) -> GameIdType {
+        self.game_id
+    }
+}
+
 impl Bufferable for GameChooseAttrRequest {
     fn push_into(&self, buf: &mut VSizedBuffer) {
         self.game_id.push_into(buf);
@@ -101,6 +107,8 @@ pub struct GameChooseAttrResponse {
 impl CommandMessage for GameChooseAttrResponse {
     const COMMAND: op::Command = op::Command::GameChooseAttr;
 }
+
+impl GameResponseMessage for GameChooseAttrResponse {}
 
 impl Bufferable for GameChooseAttrResponse {
     fn push_into(&self, buf: &mut VSizedBuffer) {

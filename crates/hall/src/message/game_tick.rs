@@ -1,10 +1,11 @@
 use crate::message::CommandMessage;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
+use crate::data::game::TickType;
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameTickMessage {
-    pub success: bool,
+    pub tick: TickType,
 }
 
 impl CommandMessage for GameTickMessage {
@@ -13,18 +14,18 @@ impl CommandMessage for GameTickMessage {
 
 impl Bufferable for GameTickMessage {
     fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.success.push_into(buf);
+        self.tick.push_into(buf);
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let success = bool::pull_from(buf);
+        let tick = TickType::pull_from(buf);
         Self {
-            success,
+            tick,
         }
     }
 
     fn size_in_buffer(&self) -> usize {
-        self.success.size_in_buffer()
+        self.tick.size_in_buffer()
     }
 }
 
@@ -37,7 +38,7 @@ mod test {
     #[test]
     fn test_response() {
         let orig = GameTickMessage {
-            success: true,
+            tick: 123,
         };
 
         let mut buf = VSizedBuffer::new(orig.size_in_buffer());

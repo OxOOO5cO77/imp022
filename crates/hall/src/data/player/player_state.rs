@@ -1,13 +1,14 @@
-use std::collections::{HashMap, VecDeque};
-
 use crate::data::hall::HallCard;
 use crate::data::player::PlayerCard;
-use crate::message::{CardIdxType, CardTarget};
+use crate::message::{CardTarget, PicksType};
 use rand::{seq::SliceRandom, Rng};
 use shared_data::attribute::{AttributeKind, AttributeValueType, Attributes};
 use shared_data::card::ErgType;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
+use std::collections::{HashMap, VecDeque};
+
+const HAND_SIZE: usize = 5;
 
 #[derive(Default, PartialEq, Copy, Clone, Debug)]
 pub enum PlayerCommandState {
@@ -40,9 +41,9 @@ pub struct PlayerState {
     attr: Attributes,
     deck: VecDeque<HallCard>,
     heap: Vec<HallCard>,
-    hand: Vec<HallCard>,
+    hand: [Option<HallCard>; HAND_SIZE],
     erg: HashMap<AttributeKind, ErgType>,
-    play: Vec<(HallCard, CardTarget)>,
+    pub play: Vec<(HallCard, CardTarget)>,
     pub command: PlayerCommandState,
     pub resolve_kind: Option<AttributeKind>,
 }
@@ -60,35 +61,37 @@ impl PlayerState {
         self.deck.make_contiguous().shuffle(rng)
     }
 
-    fn fill_hand(&mut self) {
-        const HAND_SIZE: usize = 5;
-
-        let mut kinds = vec![AttributeKind::Analyze, AttributeKind::Breach, AttributeKind::Compute, AttributeKind::Disrupt];
-        kinds.retain(|&kind| !self.hand.iter().any(|card| card.kind == kind));
-        for kind in kinds {
-            if let Some(index) = self.deck.iter().position(|card| card.kind == kind) {
-                if let Some(card) = self.deck.remove(index) {
-                    self.hand.push(card);
-                }
-            }
-        }
-        while self.hand.len() < HAND_SIZE {
-            if let Some(card) = self.deck.pop_front() {
-                self.hand.push(card);
+    pub(crate) fn fill_hand(&mut self) {
+        for hand in self.hand.iter_mut() {
+            if hand.is_none() {
+                *hand = self.deck.pop_front();
             }
         }
     }
 
-    pub fn play_card(&mut self, index: CardIdxType, target: CardTarget) -> bool {
-        let index = index as usize;
-        if let Some(card) = self.hand.get(index) {
-            if card.cost <= *self.erg.get(&card.kind).unwrap_or(&0) {
-                let card = self.hand.remove(index);
-                self.play.push((card, target));
+    fn play_card(&mut self, index: usize, target: &CardTarget, erg: &mut HashMap<AttributeKind, ErgType>) -> bool {
+        if let Some(Some(card)) = self.hand.get(index) {
+            let erg = erg.entry(card.kind).or_insert(0);
+            if *erg >= card.cost {
+                *erg -= card.cost;
+                self.play.push((card.clone(), *target));
+                self.hand[index] = None;
                 return true;
             }
         }
         false
+    }
+
+    pub fn play_cards(&mut self, picks: &PicksType) -> [bool; HAND_SIZE] {
+        let mut result = [true; HAND_SIZE];
+        let mut temp_erg = self.erg.clone();
+
+        for (index, target) in picks {
+            let index = *index as usize;
+            result[index] = result[index] && self.play_card(index, target, &mut temp_erg);
+        }
+
+        result
     }
 
     pub fn add_erg(&mut self, kind: AttributeKind, erg_array: ErgArray) {
@@ -123,8 +126,14 @@ impl From<&PlayerState> for PlayerStatePlayerView {
             attr: player_state.attr.to_arrays(),
             deck: player_state.deck.len() as DeckCountType,
             heap: player_state.heap.iter().map(HallCard::to_player_card).collect(),
-            hand: player_state.hand.iter().map(HallCard::to_player_card).collect(),
-            erg: [*player_state.erg.get(&AttributeKind::Analyze).unwrap_or(&0), *player_state.erg.get(&AttributeKind::Breach).unwrap_or(&0), *player_state.erg.get(&AttributeKind::Compute).unwrap_or(&0), *player_state.erg.get(&AttributeKind::Disrupt).unwrap_or(&0)],
+            hand: player_state.hand.iter().flatten().map(HallCard::to_player_card).collect(),
+            erg: [
+                //
+                *player_state.erg.get(&AttributeKind::Analyze).unwrap_or(&0),
+                *player_state.erg.get(&AttributeKind::Breach).unwrap_or(&0),
+                *player_state.erg.get(&AttributeKind::Compute).unwrap_or(&0),
+                *player_state.erg.get(&AttributeKind::Disrupt).unwrap_or(&0),
+            ],
         }
     }
 }

@@ -14,10 +14,10 @@ mod game_update_state;
 
 pub use game_activate::{GameActivateRequest, GameActivateResponse};
 pub use game_build::{GameBuildRequest, GameBuildResponse};
-pub use game_choose_attr::{GameChooseAttrRequest, GameChooseAttrResponse, AttrKind};
+pub use game_choose_attr::{AttrKind, GameChooseAttrRequest, GameChooseAttrResponse};
 pub use game_end_game::{GameEndGameRequest, GameEndGameResponse};
 pub use game_end_turn::{GameEndTurnRequest, GameEndTurnResponse};
-pub use game_play_card::{GamePlayCardRequest, GamePlayCardResponse, CardIdxType, CardTarget};
+pub use game_play_card::{CardIdxType, CardTarget, GamePlayCardRequest, GamePlayCardResponse, PicksType};
 pub use game_start_turn::{GameStartTurnRequest, GameStartTurnResponse};
 pub use game_update_state::{GameUpdateStateRequest, GameUpdateStateResponse};
 
@@ -29,7 +29,15 @@ pub use game_tick::GameTickMessage;
 
 use shared_net::op;
 use shared_net::sizedbuffers::Bufferable;
+use shared_net::types::GameIdType;
 
 pub trait CommandMessage: Bufferable {
     const COMMAND: op::Command;
+}
+
+pub trait GameRequestMessage: CommandMessage {
+    fn game_id(&self) -> GameIdType;
+}
+
+pub trait GameResponseMessage: CommandMessage {
 }

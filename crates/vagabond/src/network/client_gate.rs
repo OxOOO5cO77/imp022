@@ -119,76 +119,81 @@ fn recv_response<T: Bufferable>(context: GateClient, buf: &mut VSizedBuffer, as_
 }
 
 impl GateIFace {
-    fn send_request<T: CommandMessage>(&self, request: T) {
+    fn send_request<T: CommandMessage>(&self, request: T) -> bool {
         let mut out = VSizedBuffer::new(T::COMMAND.size_in_buffer() + self.auth.size_in_buffer() + request.size_in_buffer());
         out.push(&T::COMMAND);
         out.push(&self.auth);
         out.push(&request);
 
-        let _ = self.gtx.send(RoutedMessage {
+        let result = self.gtx.send(RoutedMessage {
             route: op::Route::Local,
             buf: out,
         });
+
+        result.is_ok()
     }
 
-    pub fn send_game_activate(&self) {
+    pub fn send_game_activate(&self) -> bool {
         let request = GameActivateRequest {
             game_id: self.game_id,
         };
 
-        self.send_request(request);
+        self.send_request(request)
     }
 
-    pub fn send_game_build(&self, parts: [PartType; 8], commit: bool) {
+    pub fn send_game_build(&self, parts: [PartType; 8], commit: bool) -> bool {
         let request = GameBuildRequest {
             game_id: self.game_id,
             parts,
             commit,
         };
 
-        self.send_request(request);
+        self.send_request(request)
     }
 
-    pub fn send_game_start_turn(&self) {
+    pub fn send_game_start_turn(&self) -> bool {
         let request = GameStartTurnRequest {
             game_id: self.game_id,
         };
 
-        self.send_request(request);
+        self.send_request(request)
     }
 
-    pub fn send_game_choose_attr(&self, attr: AttrKind) {
-        let request = GameChooseAttrRequest {
-            game_id: self.game_id,
-            attr,
-        };
-
-        self.send_request(request);
+    pub fn send_game_choose_attr(&self, kind: Option<AttrKind>) -> bool {
+        if let Some(attr) = kind {
+            let request = GameChooseAttrRequest {
+                game_id: self.game_id,
+                attr,
+            };
+            self.send_request(request)
+        } else {
+            false
+        }
     }
 
-    pub fn send_game_play_cards(&self, picks_map: &HashMap<CardIdxType, CardTarget>) {
+    pub fn send_game_play_cards(&self, picks_map: &HashMap<CardIdxType, CardTarget>) -> bool {
         let request = GamePlayCardRequest {
             game_id: self.game_id,
             picks: picks_map.iter().map(|(&idx, &target)| (idx, target)).collect(),
         };
 
-        self.send_request(request);
+        self.send_request(request)
     }
 
-    pub fn send_game_end_turn(&self) {
+    pub fn send_game_end_turn(&self) -> bool {
         let request = GameEndTurnRequest {
             game_id: self.game_id,
         };
 
-        self.send_request(request);
+        self.send_request(request)
     }
 
-    pub fn send_game_update_state(&self) {
+    pub fn send_game_update_state(&self) -> bool {
         let request = GameUpdateStateRequest {
             game_id: self.game_id,
         };
 
-        self.send_request(request);
+        self.send_request(request)
     }
 
     #[allow(dead_code)]

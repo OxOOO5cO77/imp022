@@ -8,7 +8,7 @@ mod network;
 mod screen;
 mod system;
 
-fn main() {
+fn main() -> AppExit {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
@@ -24,7 +24,7 @@ fn main() {
         .insert_resource(ClearColor(Color::srgb(0.0, 0.0, 0.0)))
         .init_state::<AppState>()
         .add_systems(Startup, setup)
-        .run();
+        .run()
 }
 
 fn setup(mut commands: Commands) {

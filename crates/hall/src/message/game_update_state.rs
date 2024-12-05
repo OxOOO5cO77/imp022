@@ -1,6 +1,6 @@
 use crate::data::game::GameMachinePlayerView;
 use crate::data::player::player_state::PlayerStatePlayerView;
-use crate::message::CommandMessage;
+use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::types::GameIdType;
 use shared_net::{op, VSizedBuffer};
@@ -12,6 +12,12 @@ pub struct GameUpdateStateRequest {
 
 impl CommandMessage for GameUpdateStateRequest {
     const COMMAND: op::Command = op::Command::GameUpdateState;
+}
+
+impl GameRequestMessage for GameUpdateStateRequest {
+    fn game_id(&self) -> GameIdType {
+        self.game_id
+    }
 }
 
 impl Bufferable for GameUpdateStateRequest {
@@ -41,6 +47,8 @@ pub struct GameUpdateStateResponse {
 impl CommandMessage for GameUpdateStateResponse {
     const COMMAND: op::Command = op::Command::GameUpdateState;
 }
+
+impl GameResponseMessage for GameUpdateStateResponse {}
 
 impl Bufferable for GameUpdateStateResponse {
     fn push_into(&self, buf: &mut VSizedBuffer) {

@@ -1,7 +1,7 @@
 use crate::data::player::PlayerPart;
-use crate::message::CommandMessage;
-use shared_net::types::GameIdType;
+use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
 use shared_net::sizedbuffers::Bufferable;
+use shared_net::types::GameIdType;
 use shared_net::{op, VSizedBuffer};
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
@@ -11,6 +11,12 @@ pub struct GameActivateRequest {
 
 impl CommandMessage for GameActivateRequest {
     const COMMAND: op::Command = op::Command::GameActivate;
+}
+
+impl GameRequestMessage for GameActivateRequest {
+    fn game_id(&self) -> GameIdType {
+        self.game_id
+    }
 }
 
 impl Bufferable for GameActivateRequest {
@@ -41,6 +47,8 @@ pub struct GameActivateResponse {
 impl CommandMessage for GameActivateResponse {
     const COMMAND: op::Command = op::Command::GameActivate;
 }
+
+impl GameResponseMessage for GameActivateResponse {}
 
 impl Bufferable for GameActivateResponse {
     fn push_into(&self, buf: &mut VSizedBuffer) {

@@ -6,15 +6,19 @@ use shared_data::card::ErgType;
 use shared_net::types::{AuthType, UserIdType};
 
 use crate::data::game::game_remote::GameRemote;
+use crate::data::hall::HallCard;
+use crate::data::player::player_state::PlayerCommandState;
+use crate::data::player::PlayerCard;
 use crate::data::util;
 use shared_net::op;
 use std::cmp::Ordering;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::iter::zip;
+use rand::prelude::IteratorRandom;
 
-pub(crate) type RemoteIdType = u128;
-type TickType = u32;
+pub type RemoteIdType = u128;
+pub type TickType = u16;
 
 type UserMapType = HashMap<UserIdType, GameUser>;
 type RemoteMapType = HashMap<RemoteIdType, GameRemote>;
@@ -27,6 +31,12 @@ pub struct GameState {
     stage: GameStage,
     pub erg_roll: [ErgType; 4],
     pub rng: ThreadRng,
+}
+
+#[derive(PartialEq)]
+pub enum IdType {
+    Local(UserIdType),
+    Remote(RemoteIdType),
 }
 
 impl GameState {
@@ -105,8 +115,22 @@ impl GameState {
         self.users.iter().all(|(_, user)| user.player.is_some())
     }
 
-    pub fn all_users_last_command(&self, command: op::Command) -> bool {
-        self.users.iter().all(|(_, user)| user.state.command.is(command))
+    pub fn determine_last_command(&self) -> Option<op::Command> {
+        let first_op = match self.users.iter().next().map(|(_, user)| user.state.command) {
+            None => None,
+            Some(command) => match command {
+                PlayerCommandState::Invalid => None,
+                PlayerCommandState::Expected(_) => None,
+                PlayerCommandState::Actual(actual) => Some(actual),
+            },
+        };
+        let command = first_op?;
+
+        if self.users.iter().all(|(_, user)| user.state.command.is(command)) {
+            first_op
+        } else {
+            None
+        }
     }
 
     pub fn user_add(&mut self, user_id_type: UserIdType, game_user: GameUser) {
@@ -120,8 +144,8 @@ impl GameState {
         };
     }
 
-    pub fn pick_remote(&mut self) -> Option<RemoteIdType> {
-        self.remotes.keys().next().cloned()
+    pub fn pick_remote(&mut self, rng: &mut impl Rng) -> Option<RemoteIdType> {
+        self.remotes.keys().choose(rng).cloned()
     }
 
     pub fn get_remote(&self, remote: RemoteIdType) -> Option<&GameRemote> {
@@ -136,11 +160,16 @@ impl GameState {
         self.users.is_empty()
     }
 
-    pub fn tick(&mut self) {
+    pub fn tick(&mut self) -> TickType {
         self.current_tick += 1;
 
-        self.users.values_mut().for_each(|user| user.machine.tick());
+        self.users.values_mut().for_each(|user| {
+            user.machine.tick();
+            user.state.fill_hand();
+        });
         self.remotes.values_mut().for_each(|remote| remote.machine.tick());
+
+        self.current_tick
     }
 
     pub fn roll(&mut self) {
@@ -157,21 +186,35 @@ impl GameState {
     pub fn resolve_matchups(erg_roll: &[ErgType], p1: &[AttributeValueType; 4], p2: &[AttributeValueType; 4]) -> ([ErgType; 4], [ErgType; 4]) {
         let matchups = zip(erg_roll, zip(p1, p2)).collect::<Vec<_>>();
 
-        let mut p_alloc = [0, 0, 0, 0];
-        let mut a_alloc = [0, 0, 0, 0];
+        let mut local_alloc = [0, 0, 0, 0];
+        let mut remote_alloc = [0, 0, 0, 0];
 
         for (idx, (erg, (protag, antag))) in matchups.iter().enumerate() {
             match protag.cmp(antag) {
-                Ordering::Greater => p_alloc[idx] = **erg,
-                Ordering::Less => a_alloc[idx] = **erg,
+                Ordering::Greater => local_alloc[idx] = **erg,
+                Ordering::Less => remote_alloc[idx] = **erg,
                 Ordering::Equal => {
-                    p_alloc[idx] = **erg / 2;
-                    a_alloc[idx] = **erg / 2;
+                    local_alloc[idx] = **erg / 2;
+                    remote_alloc[idx] = **erg / 2;
                 }
             };
         }
 
-        (p_alloc, a_alloc)
+        (local_alloc, remote_alloc)
+    }
+
+    pub fn resolve_cards(&mut self, cards: Vec<(IdType, HallCard, IdType)>) -> Vec<(IdType, PlayerCard, IdType)> {
+        let mut result = Vec::new();
+        for (source, card, target) in cards.into_iter() {
+            let machine = match target {
+                IdType::Local(local_id) => self.users.get_mut(&local_id).map(|u| &mut u.machine),
+                IdType::Remote(remote_id) => self.remotes.get_mut(&remote_id).map(|r| &mut r.machine),
+            };
+            if let Some(played) = machine.and_then(|m| m.enqueue(card, source == target)) {
+                result.push((source, played, target));
+            }
+        }
+        result
     }
 }
 
