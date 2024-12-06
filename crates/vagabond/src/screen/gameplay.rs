@@ -1,7 +1,7 @@
 use crate::manager::{AtlasManager, DataManager, ScreenLayoutManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::compose::ComposeHandoff;
-use crate::system::ui_effects::Blinker;
+use crate::system::ui_effects::{Blinker, Glower};
 use crate::system::AppState;
 use bevy::prelude::*;
 use hall::data::game::GameMachinePlayerView;
@@ -369,8 +369,8 @@ fn on_out_next(event: Trigger<Pointer<Out>>, mut sprite_q: Query<&mut Sprite>) {
 }
 
 fn on_click_attr(event: Trigger<Pointer<Click>>, mut send: EventWriter<UiEvent>, attr_q: Query<&AttributeRow>) {
-    if let Ok(attr) = attr_q.get(event.target) {
-        send.send(UiEvent::ChooseAttr(Some(attr.0)));
+    if let Ok(AttributeRow(kind)) = attr_q.get(event.target) {
+        send.send(UiEvent::ChooseAttr(Some(*kind)));
     }
 }
 
@@ -688,8 +688,11 @@ fn local_state_update(
 
 fn local_ui_update(
     // bevy system
+    mut commands: Commands,
     mut receive: EventReader<UiEvent>,
     mut text_q: Query<(&mut Text2d, &mut TextColor, &AttributeText)>,
+    row_q: Query<Entity, With<AttributeRow>>,
+    mut glower_q: Query<(Entity, &mut Sprite, &Glower), With<AttributeRow>>,
     mut context: ResMut<GameplayContext>,
 ) {
     for ui_event in receive.read() {
@@ -702,6 +705,14 @@ fn local_ui_update(
             UiEvent::ChooseAttr(kind) => {
                 if context.phase != VagabondGamePhase::Pick {
                     continue;
+                }
+
+                if kind.is_none() {
+                    for row in row_q.iter() {
+                        commands.entity(row).insert(Glower::new(Srgba::new(0.0, 1.0, 0.0, 1.0)));
+                    }
+                } else {
+                    Glower::clear(&mut commands, glower_q.as_query_lens());
                 }
 
                 for (_, mut color, AttributeText(row, _)) in text_q.iter_mut() {
@@ -845,7 +856,7 @@ fn gameplay_update(
     let new_phase = match gate.grx.try_recv() {
         Ok(GateCommand::GameStartTurn(gate_response)) => recv_start_turn(*gate_response),
         Ok(GateCommand::GameRoll(gate_response)) => recv_roll(*gate_response, &mut send),
-        Ok(GateCommand::GameChooseAttr(gate_response)) => recv_choose_attr(*gate_response),
+        Ok(GateCommand::GameChooseAttr(gate_response)) => recv_choose_attr(*gate_response, &mut send),
         Ok(GateCommand::GameResources(gate_response)) => recv_resources(*gate_response, &mut send),
         Ok(GateCommand::GamePlayCard(gate_response)) => recv_play_card(*gate_response),
         Ok(GateCommand::GameResolveCards(gate_response)) => recv_resolve_cards(*gate_response),
@@ -881,7 +892,7 @@ fn recv_roll(response: GameRollMessage, send: &mut EventWriter<UiEvent>) -> Opti
     Some(VagabondGamePhase::Pick)
 }
 
-fn recv_choose_attr(response: GameChooseAttrResponse) -> Option<VagabondGamePhase> {
+fn recv_choose_attr(response: GameChooseAttrResponse, send: &mut EventWriter<UiEvent>) -> Option<VagabondGamePhase> {
     println!(
         "[RECV] GameChooseAttr {}",
         if response.success {
@@ -890,6 +901,10 @@ fn recv_choose_attr(response: GameChooseAttrResponse) -> Option<VagabondGamePhas
             "ERROR"
         }
     );
+    if !response.success {
+        send.send(UiEvent::ChooseAttr(None));
+    }
+
     response.success.then_some(VagabondGamePhase::Wait(WaitKind::All))
 }
 

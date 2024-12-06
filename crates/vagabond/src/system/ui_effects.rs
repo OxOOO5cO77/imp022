@@ -1,4 +1,5 @@
 use bevy::app::{App, Plugin, Update};
+use bevy::ecs::system::QueryLens;
 use bevy::math::ops;
 use bevy::prelude::{Commands, Component, Entity, Mix, Query, Res, Sprite, Srgba, Time};
 use std::f32::consts::PI;
@@ -36,6 +37,13 @@ impl Glower {
     }
     pub(crate) fn original(&self) -> Option<Srgba> {
         self.source
+    }
+
+    pub(crate) fn clear(commands: &mut Commands, mut glower_q: QueryLens<(Entity, &mut Sprite, &Glower)>) {
+        for (row, mut sprite, glower) in glower_q.query().iter_mut() {
+            sprite.color = glower.original().unwrap_or(sprite.color.into()).into();
+            commands.entity(row).remove::<Glower>();
+        }
     }
 }
 

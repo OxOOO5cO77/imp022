@@ -1,9 +1,9 @@
 use crate::manager::{AtlasManager, DataManager, ScreenLayout, ScreenLayoutManager, WarehouseManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
+use crate::system::ui_effects::Glower;
 use crate::system::AppState;
 use bevy::prelude::*;
 use vagabond::data::VagabondPart;
-use crate::system::ui_effects::Glower;
 
 const SCREEN_LAYOUT: &str = "compose";
 
@@ -391,10 +391,7 @@ fn on_part_drag_end(
     draggable.active = false;
     commands.entity(event.target).insert(PickingBehavior::default());
 
-    for (e, mut sprite, glower) in glower_q.iter_mut() {
-        sprite.color = glower.original().unwrap_or(sprite.color.into()).into();
-        commands.entity(e).remove::<Glower>();
-    }
+    Glower::clear(&mut commands, glower_q.as_query_lens());
 }
 
 fn handle_swap(source: Option<&mut PartHolder>, target: &mut PartHolder, drag: &mut PartHolder, target_slot: &Slot) -> Entity {
