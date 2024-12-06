@@ -1,7 +1,6 @@
 use crate::data::game::game_state::RemoteIdType;
 use crate::data::game::GameMachine;
-use crate::data::player::player_state::PlayerState;
-use crate::data::player::Player;
+use crate::data::player::{Player, PlayerState};
 use rand::Rng;
 use shared_net::types::{AuthType, PartType};
 

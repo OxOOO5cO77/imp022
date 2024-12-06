@@ -84,7 +84,7 @@ mod test {
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
 
-    use crate::data::player::player_card::PlayerCard;
+    use crate::data::player::PlayerCard;
     use crate::message::game_build::{GameBuildRequest, GameBuildResponse};
 
     pub const CARD_COUNT: usize = 40;

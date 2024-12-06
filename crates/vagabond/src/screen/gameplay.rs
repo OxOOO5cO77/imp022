@@ -1,16 +1,19 @@
 use crate::manager::{AtlasManager, DataManager, ScreenLayoutManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::compose::ComposeHandoff;
+use crate::system::ui_effects::Blinker;
 use crate::system::AppState;
 use bevy::prelude::*;
 use hall::data::game::GameMachinePlayerView;
-use hall::data::player::player_state::PlayerStatePlayerView;
+use hall::data::player::PlayerStatePlayerView;
 use hall::message::*;
+use shared_data::attribute::AttributeKind;
 use shared_data::build::BuildValueType;
 use shared_data::card::{DelayType, ErgType};
 use shared_data::mission::MissionNodeIdType;
 use std::cmp::{Ordering, PartialEq};
 use std::collections::HashMap;
+use vagabond::data::VagabondCard;
 
 const SCREEN_LAYOUT: &str = "gameplay";
 
@@ -23,7 +26,7 @@ impl Plugin for GameplayPlugin {
             .add_systems(OnEnter(AppState::GameplayInit), gameplay_init_enter)
             .add_systems(Update, gameplay_init_update.run_if(in_state(AppState::GameplayInit)))
             .add_systems(OnEnter(AppState::Gameplay), gameplay_enter)
-            .add_systems(Update, (gameplay_update, erg_ui_update, phase_ui_update, card_ui_update, indicator_ui_update, local_ui_update, roll_ui_update, remote_ui_update, machine_ui_update).run_if(in_state(AppState::Gameplay)))
+            .add_systems(Update, (gameplay_update, erg_ui_update, phase_ui_update, card_ui_update, indicator_ui_update, local_state_update, local_ui_update, roll_ui_update, remote_ui_update, machine_ui_update).run_if(in_state(AppState::Gameplay)))
             .add_systems(PostUpdate, cleanup_indicator_post_update.run_if(in_state(AppState::Gameplay)))
             .add_systems(OnExit(AppState::Gameplay), gameplay_exit);
     }
@@ -86,6 +89,8 @@ struct GameplayContext {
     attr_pick: Option<AttrKind>,
     card_picks: HashMap<CardIdxType, CardTarget>,
     current_remote: MissionNodeIdType,
+    last_state: PlayerStatePlayerView,
+    hand: Vec<VagabondCard>,
 }
 
 impl Default for GameplayContext {
@@ -95,6 +100,8 @@ impl Default for GameplayContext {
             attr_pick: None,
             card_picks: Default::default(),
             current_remote: 1,
+            last_state: Default::default(),
+            hand: Default::default(),
         }
     }
 }
@@ -133,6 +140,7 @@ struct AttributeText(usize, usize);
 #[derive(Component, Clone)]
 struct CardLayout {
     slot: usize,
+    bg: Entity,
     title: Entity,
     cost: Entity,
     delay: Entity,
@@ -144,6 +152,7 @@ impl CardLayout {
     fn new(slot: usize) -> Self {
         Self {
             slot,
+            bg: Entity::PLACEHOLDER,
             title: Entity::PLACEHOLDER,
             cost: Entity::PLACEHOLDER,
             delay: Entity::PLACEHOLDER,
@@ -299,6 +308,7 @@ fn gameplay_enter(
 
     for card_index in 1..=5 {
         let mut card_layout = CardLayout::new(card_index - 1);
+        card_layout.bg = commands.entity(layout.entity(&format!("card{}_bg", card_index))).id();
         card_layout.title = commands.entity(layout.entity(&format!("card{}/title", card_index))).insert(CardText).id();
         card_layout.cost = commands.entity(layout.entity(&format!("card{}/cost", card_index))).insert(CardText).id();
         card_layout.delay = commands.entity(layout.entity(&format!("card{}/delay", card_index))).insert(CardText).id();
@@ -425,11 +435,20 @@ fn indicator_ui_update(mut commands: Commands, mut receive: EventReader<UiEvent>
     }
 }
 
+fn kind_to_erg_index(kind: AttributeKind) -> usize {
+    match kind {
+        AttributeKind::Analyze => 0,
+        AttributeKind::Breach => 1,
+        AttributeKind::Compute => 2,
+        AttributeKind::Disrupt => 3,
+    }
+}
+
 fn on_card_drag_start(
     //
     event: Trigger<Pointer<DragStart>>,
     mut commands: Commands,
-    mut sprite_q: Query<(&mut Sprite, &mut Transform, Option<&IndicatorTracker>), With<PickingBehavior>>,
+    mut sprite_q: Query<(&CardLayout, &mut Sprite, &mut Transform, Option<&IndicatorTracker>), With<PickingBehavior>>,
     mut indicator_q: Query<&mut Indicator>,
     context: Res<GameplayContext>,
     meshes: ResMut<Assets<Mesh>>,
@@ -440,9 +459,16 @@ fn on_card_drag_start(
     }
 
     let target = event.target;
-    commands.entity(target).insert(PickingBehavior::IGNORE);
 
-    if let Ok((sprite, transform, tracker)) = sprite_q.get_mut(target) {
+    if let Ok((layout, sprite, transform, tracker)) = sprite_q.get_mut(target) {
+        let card = context.hand.get(layout.slot);
+        if card.is_none_or(|card| card.cost > context.last_state.erg[kind_to_erg_index(card.kind)]) {
+            commands.entity(layout.bg).insert(Blinker::new(bevy::color::palettes::basic::RED).with_count(4.0).with_speed(12.0));
+            return;
+        }
+
+        commands.entity(target).insert(PickingBehavior::IGNORE);
+
         if let Some(size) = sprite.custom_size {
             let translation = Vec3::new(transform.translation.x + (size.x / 2.0), transform.translation.y - (size.y / 2.0), INDICATOR_Z);
             let offset = Vec2::new(event.pointer_location.position.x - translation.x, -(event.pointer_location.position.y + translation.y));
@@ -456,7 +482,12 @@ fn on_card_drag_start(
     }
 }
 
-fn on_card_drag(event: Trigger<Pointer<Drag>>, mut indicator_q: Query<(&mut Transform, &Indicator)>, context: Res<GameplayContext>) {
+fn on_card_drag(
+    //
+    event: Trigger<Pointer<Drag>>,
+    mut indicator_q: Query<(&mut Transform, &Indicator)>,
+    context: Res<GameplayContext>,
+) {
     if context.phase != VagabondGamePhase::Play {
         return;
     }
@@ -495,7 +526,7 @@ fn on_card_drop(
         indicator.target = machine_q.get_mut(dropped_on).ok().copied();
         if let Some(target) = indicator.target {
             if let Ok(card) = card_q.get(indicator.parent) {
-                context.add_card_pick(card.slot, target)
+                context.add_card_pick(card.slot, target);
             }
         }
     }
@@ -558,6 +589,22 @@ fn roll_ui_update(
     }
 }
 
+trait CardDisplay {
+    fn display_card(&self) -> String;
+}
+
+impl CardDisplay for AttributeKind {
+    fn display_card(&self) -> String {
+        match self {
+            AttributeKind::Analyze => "A",
+            AttributeKind::Breach => "B",
+            AttributeKind::Compute => "C",
+            AttributeKind::Disrupt => "D",
+        }
+        .into()
+    }
+}
+
 fn card_ui_update(
     // bevy system
     mut commands: Commands,
@@ -576,7 +623,7 @@ fn card_ui_update(
                         *title_text = card.title.into();
                     }
                     if let Ok(mut cost_text) = text_q.get_mut(layout.cost) {
-                        *cost_text = card.cost.to_string().into();
+                        *cost_text = format!("{}:{}", card.kind.display_card(), card.cost).into();
                     }
                     if let Ok(mut launch_text) = text_q.get_mut(layout.launch) {
                         *launch_text = card.launch_rules.into();
@@ -621,6 +668,20 @@ fn phase_ui_update(
                 VagabondGamePhase::Wait(WaitKind::All) => "(Waiting)".to_string(),
             }
             .into();
+        }
+    }
+}
+
+fn local_state_update(
+    // bevy system
+    mut receive: EventReader<UiEvent>,
+    mut context: ResMut<GameplayContext>,
+    dm: Res<DataManager>,
+) {
+    for ui_event in receive.read() {
+        if let UiEvent::PlayerState(player_state) = ui_event {
+            context.last_state = player_state.clone();
+            context.hand = player_state.hand.iter().filter_map(|card| dm.convert_card(card)).collect::<Vec<_>>();
         }
     }
 }
@@ -737,9 +798,9 @@ fn machine_ui_update(
 
                 for (machine_component, mut sprite, MachineQueueItem(index)) in sprite_q.iter_mut() {
                     let (machine, player_owned) = if *machine_component == MachineKind::Local {
-                        (local,true)
+                        (local, true)
                     } else {
-                        (remote,false)
+                        (remote, false)
                     };
                     sprite.color = if let Some(process) = machine.queue.iter().find(|(_, delay)| delay == index).map(|(item, _)| item) {
                         if process.local == player_owned {

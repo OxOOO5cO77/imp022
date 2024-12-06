@@ -2,7 +2,7 @@ use crate::network::broadcaster::Broadcaster;
 use crate::HallContext;
 use gate::message::gate_header::GateHeader;
 use hall::data::game::{GameMachinePlayerView, GameState};
-use hall::data::player::player_state::PlayerStatePlayerView;
+use hall::data::player::PlayerStatePlayerView;
 use hall::message::{GameUpdateStateRequest, GameUpdateStateResponse};
 use shared_net::types::NodeType;
 

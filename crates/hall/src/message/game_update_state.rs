@@ -1,5 +1,5 @@
 use crate::data::game::GameMachinePlayerView;
-use crate::data::player::player_state::PlayerStatePlayerView;
+use crate::data::player::PlayerStatePlayerView;
 use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::types::GameIdType;
@@ -76,7 +76,7 @@ impl Bufferable for GameUpdateStateResponse {
 #[cfg(test)]
 mod test {
     use crate::data::game::GameMachinePlayerView;
-    use crate::data::player::player_state::PlayerStatePlayerView;
+    use crate::data::player::PlayerStatePlayerView;
     use crate::message::game_update_state::GameUpdateStateResponse;
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;

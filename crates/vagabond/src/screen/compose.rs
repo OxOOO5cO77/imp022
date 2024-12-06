@@ -1,9 +1,9 @@
 use crate::manager::{AtlasManager, DataManager, ScreenLayout, ScreenLayoutManager, WarehouseManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::system::AppState;
-use crate::system::Glower;
 use bevy::prelude::*;
 use vagabond::data::VagabondPart;
+use crate::system::ui_effects::Glower;
 
 const SCREEN_LAYOUT: &str = "compose";
 
@@ -608,7 +608,7 @@ fn compose_update(
                     }
 
                     let button_entity = button_q.single();
-                    commands.entity(button_entity).insert(Glower::new(bevy::color::palettes::basic::GREEN));
+                    commands.entity(button_entity).insert(Glower::new(bevy::color::palettes::basic::GREEN).with_speed(8.0));
                 }
             }
             Err(err) => println!("Error: {err}"),

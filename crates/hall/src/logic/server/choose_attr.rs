@@ -1,6 +1,6 @@
 use crate::network::broadcaster::Broadcaster;
 use hall::data::game::{GamePhase, GameState};
-use hall::data::player::player_state::PlayerStatePlayerView;
+use hall::data::player::PlayerStatePlayerView;
 use hall::message::GameResourcesMessage;
 use shared_net::op;
 

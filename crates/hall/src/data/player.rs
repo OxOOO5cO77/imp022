@@ -1,20 +1,19 @@
+use serde::{Deserialize, Serialize};
+use shared_data::attribute::Attributes;
+use shared_net::types::SeedType;
 use std::collections::VecDeque;
 
-use serde::{Deserialize, Serialize};
+mod player_build;
+mod player_card;
+mod player_detail;
+mod player_part;
+mod player_state;
 
 pub use player_build::PlayerBuild;
 pub use player_card::PlayerCard;
 pub use player_detail::PlayerDetail;
 pub use player_part::PlayerPart;
-
-use shared_data::attribute::Attributes;
-use shared_net::types::SeedType;
-
-pub mod player_build;
-pub mod player_card;
-pub mod player_detail;
-pub mod player_part;
-pub mod player_state;
+pub use player_state::{PlayerCommandState, PlayerState, PlayerStatePlayerView};
 
 #[derive(Serialize, Deserialize)]
 pub struct Player {

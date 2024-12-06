@@ -7,7 +7,7 @@ use shared_net::types::{AuthType, UserIdType};
 
 use crate::data::game::game_remote::GameRemote;
 use crate::data::hall::HallCard;
-use crate::data::player::player_state::PlayerCommandState;
+use crate::data::player::PlayerCommandState;
 use crate::data::player::PlayerCard;
 use crate::data::util;
 use shared_net::op;

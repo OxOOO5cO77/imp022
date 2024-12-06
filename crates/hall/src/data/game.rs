@@ -1,9 +1,9 @@
-pub(crate) mod game_machine;
-pub(crate) mod game_process;
-pub(crate) mod game_remote;
-pub(crate) mod game_stage;
-pub(crate) mod game_state;
-pub(crate) mod game_user;
+mod game_machine;
+mod game_process;
+mod game_remote;
+mod game_stage;
+mod game_state;
+mod game_user;
 
 pub use game_machine::{GameMachine, GameMachinePlayerView};
 pub use game_process::GameProcess;

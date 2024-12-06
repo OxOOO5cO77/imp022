@@ -110,7 +110,7 @@ type DeckCountType = u8;
 type AttributeArrays = [[AttributeValueType; 4]; 4];
 type ErgArray = [ErgType; 4];
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct PlayerStatePlayerView {
     pub attr: AttributeArrays,

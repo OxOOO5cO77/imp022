@@ -77,9 +77,9 @@ mod test {
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
 
-    use crate::data::player::player_build::PlayerBuild;
-    use crate::data::player::player_detail::PlayerDetail;
-    use crate::data::player::player_part::PlayerPart;
+    use crate::data::player::PlayerBuild;
+    use crate::data::player::PlayerDetail;
+    use crate::data::player::PlayerPart;
     use crate::message::game_activate::{GameActivateRequest, GameActivateResponse};
 
     #[test]

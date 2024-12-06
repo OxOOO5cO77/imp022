@@ -1,4 +1,4 @@
-use crate::data::player::player_state::PlayerStatePlayerView;
+use crate::data::player::PlayerStatePlayerView;
 use crate::message::CommandMessage;
 use shared_data::attribute::AttributeValueType;
 use shared_data::card::ErgType;
@@ -45,7 +45,7 @@ impl Bufferable for GameResourcesMessage {
 
 #[cfg(test)]
 mod test {
-    use crate::data::player::player_state::PlayerStatePlayerView;
+    use crate::data::player::PlayerStatePlayerView;
     use crate::message::game_resources::GameResourcesMessage;
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
