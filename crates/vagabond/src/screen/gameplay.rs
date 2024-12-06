@@ -463,7 +463,7 @@ fn on_card_drag_start(
     if let Ok((layout, sprite, transform, tracker)) = sprite_q.get_mut(target) {
         let card = context.hand.get(layout.slot);
         if card.is_none_or(|card| card.cost > context.last_state.erg[kind_to_erg_index(card.kind)]) {
-            commands.entity(layout.bg).insert(Blinker::new(bevy::color::palettes::basic::RED).with_count(4.0).with_speed(12.0));
+            commands.entity(layout.bg).insert(Blinker::new(bevy::color::palettes::basic::RED).with_count(2.0).with_speed(12.0));
             return;
         }
 

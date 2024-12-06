@@ -44,7 +44,6 @@ fn glower_update(
     mut glower_q: Query<(&mut Sprite, &mut Glower)>,
     time: Res<Time>,
 ) {
-
     for (mut sprite, mut glow) in glower_q.iter_mut() {
         let t = (ops::sin(time.elapsed_secs() * glow.speed) + 1.0) / 2.0;
         if glow.source.is_none() {
@@ -64,8 +63,8 @@ pub(crate) struct Blinker {
 }
 
 impl Blinker {
-    const DEFAULT_COUNT: f32 = 4.0;
-    const DEFAULT_SPEED: f32 = 4.0;
+    const DEFAULT_COUNT: f32 = 1.0;
+    const DEFAULT_SPEED: f32 = 1.0;
 
     pub(crate) fn new(target: Srgba) -> Self {
         Self {
@@ -96,15 +95,17 @@ fn blinker_update(
     time: Res<Time>,
 ) {
     for (e, mut sprite, mut blink) in blinker_q.iter_mut() {
-        blink.delta_time += time.delta().as_secs_f32();
-        let oscillate = blink.delta_time * blink.speed;
-        let t = (ops::sin(oscillate) + 1.0) / 2.0;
         if blink.source.is_none() {
             blink.source = Some(sprite.color.into());
         }
+
+        blink.delta_time += time.delta().as_secs_f32();
+        let x = (blink.delta_time * blink.speed) - (PI / 2.0);
+        let t = (ops::sin(x) + 1.0) / 2.0;
+
         sprite.color = blink.source.unwrap().mix(&blink.target, t).into();
-        let oscillations = (oscillate / PI).floor();
-        if oscillations > blink.count {
+        let target_time = (2.0 * PI * blink.count) / blink.speed;
+        if blink.delta_time > target_time {
             sprite.color = blink.original().unwrap_or(sprite.color.into()).into();
             commands.entity(e).remove::<Blinker>();
         }
