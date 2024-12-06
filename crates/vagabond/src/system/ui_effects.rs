@@ -1,7 +1,7 @@
 use bevy::app::{App, Plugin, Update};
 use bevy::ecs::system::QueryLens;
 use bevy::math::ops;
-use bevy::prelude::{Commands, Component, Entity, Mix, Query, Res, Sprite, Srgba, Time};
+use bevy::prelude::{Color, Commands, Component, Entity, Mix, Mut, Query, Res, Sprite, Time};
 use std::f32::consts::PI;
 
 pub(crate) struct UiEffectsPlugin;
@@ -16,17 +16,17 @@ impl Plugin for UiEffectsPlugin {
 
 #[derive(Component)]
 pub(crate) struct Glower {
-    source: Option<Srgba>,
-    target: Srgba,
+    source: Color,
+    target: Color,
     speed: f32,
 }
 
 impl Glower {
     const DEFAULT_SPEED: f32 = 4.0;
 
-    pub(crate) fn new(target: Srgba) -> Self {
+    pub(crate) fn new(source: Color, target: Color) -> Self {
         Self {
-            source: None,
+            source,
             target,
             speed: Self::DEFAULT_SPEED,
         }
@@ -35,16 +35,23 @@ impl Glower {
         self.speed = speed;
         self
     }
-    pub(crate) fn original(&self) -> Option<Srgba> {
-        self.source
-    }
 
-    pub(crate) fn clear(commands: &mut Commands, mut glower_q: QueryLens<(Entity, &mut Sprite, &Glower)>) {
+    pub(crate) fn remove_all(commands: &mut Commands, mut glower_q: QueryLens<(Entity, &mut Sprite, &Glower)>) {
         for (row, mut sprite, glower) in glower_q.query().iter_mut() {
-            sprite.color = glower.original().unwrap_or(sprite.color.into()).into();
+            sprite.color = glower.source;
             commands.entity(row).remove::<Glower>();
         }
     }
+
+    pub(crate) fn remove_all_optional(commands: &mut Commands, mut glower_q: QueryLens<(Entity, &mut Sprite, Option<&Glower>)>) {
+        for (row, mut sprite, glower) in glower_q.query().iter_mut() {
+            if let Some(glower) = glower {
+                sprite.color = glower.source;
+            }
+            commands.entity(row).remove::<Glower>();
+        }
+    }
+
 }
 
 fn glower_update(
@@ -52,19 +59,16 @@ fn glower_update(
     mut glower_q: Query<(&mut Sprite, &mut Glower)>,
     time: Res<Time>,
 ) {
-    for (mut sprite, mut glow) in glower_q.iter_mut() {
+    for (mut sprite, glow) in glower_q.iter_mut() {
         let t = (ops::sin(time.elapsed_secs() * glow.speed) + 1.0) / 2.0;
-        if glow.source.is_none() {
-            glow.source = Some(sprite.color.into());
-        }
-        sprite.color = glow.source.unwrap().mix(&glow.target, t).into();
+        sprite.color = glow.source.mix(&glow.target, t);
     }
 }
 
 #[derive(Component)]
 pub(crate) struct Blinker {
-    source: Option<Srgba>,
-    target: Srgba,
+    source: Color,
+    target: Color,
     count: f32,
     delta_time: f32,
     speed: f32,
@@ -74,9 +78,9 @@ impl Blinker {
     const DEFAULT_COUNT: f32 = 1.0;
     const DEFAULT_SPEED: f32 = 1.0;
 
-    pub(crate) fn new(target: Srgba) -> Self {
+    pub(crate) fn new(source: Color, target: Color) -> Self {
         Self {
-            source: None,
+            source,
             target,
             count: Self::DEFAULT_COUNT,
             delta_time: 0.0,
@@ -91,8 +95,9 @@ impl Blinker {
         self.speed = speed;
         self
     }
-    pub(crate) fn original(&self) -> Option<Srgba> {
-        self.source
+    pub(crate) fn remove(&self, commands: &mut Commands, sprite: &mut Mut<Sprite>, entity: Entity) {
+        sprite.color = self.source;
+        commands.entity(entity).remove::<Blinker>();
     }
 }
 
@@ -103,19 +108,14 @@ fn blinker_update(
     time: Res<Time>,
 ) {
     for (e, mut sprite, mut blink) in blinker_q.iter_mut() {
-        if blink.source.is_none() {
-            blink.source = Some(sprite.color.into());
-        }
-
         blink.delta_time += time.delta().as_secs_f32();
         let x = (blink.delta_time * blink.speed) - (PI / 2.0);
         let t = (ops::sin(x) + 1.0) / 2.0;
 
-        sprite.color = blink.source.unwrap().mix(&blink.target, t).into();
+        sprite.color = blink.source.mix(&blink.target, t);
         let target_time = (2.0 * PI * blink.count) / blink.speed;
         if blink.delta_time > target_time {
-            sprite.color = blink.original().unwrap_or(sprite.color.into()).into();
-            commands.entity(e).remove::<Blinker>();
+            blink.remove(&mut commands, &mut sprite, e);
         }
     }
 }

@@ -405,8 +405,11 @@ struct Indicator {
     target: Option<MachineKind>,
 }
 
-#[derive(Component, Default)]
+#[derive(Component)]
 struct IndicatorTracker;
+
+#[derive(Component)]
+struct IndicatorActive;
 
 fn make_indicator_bundle(parent: Entity, translation: Vec3, offset: Vec2, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<ColorMaterial>>) -> impl Bundle {
     (
@@ -444,12 +447,14 @@ fn kind_to_erg_index(kind: AttributeKind) -> usize {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn on_card_drag_start(
     //
     event: Trigger<Pointer<DragStart>>,
     mut commands: Commands,
-    mut sprite_q: Query<(&CardLayout, &mut Sprite, &mut Transform, Option<&IndicatorTracker>), With<PickingBehavior>>,
-    mut indicator_q: Query<&mut Indicator>,
+    sprite_q: Query<(&CardLayout, &mut Sprite, &mut Transform, Option<&IndicatorTracker>), With<PickingBehavior>>,
+    mut bg_q: Query<(&mut Sprite, Option<&Blinker>), Without<CardLayout>>,
+    mut indicator_q: Query<(Entity, &mut Indicator)>,
     context: Res<GameplayContext>,
     meshes: ResMut<Assets<Mesh>>,
     materials: ResMut<Assets<ColorMaterial>>,
@@ -460,10 +465,15 @@ fn on_card_drag_start(
 
     let target = event.target;
 
-    if let Ok((layout, sprite, transform, tracker)) = sprite_q.get_mut(target) {
+    if let Ok((layout, sprite, transform, tracker)) = sprite_q.get(target) {
         let card = context.hand.get(layout.slot);
-        if card.is_none_or(|card| card.cost > context.last_state.erg[kind_to_erg_index(card.kind)]) {
-            commands.entity(layout.bg).insert(Blinker::new(bevy::color::palettes::basic::RED).with_count(2.0).with_speed(12.0));
+        if tracker.is_none() && card.is_none_or(|card| card.cost > context.last_state.erg[kind_to_erg_index(card.kind)]) {
+            if let Ok((mut bg_sprite, blink)) = bg_q.get_mut(layout.bg) {
+                if let Some(blink) = blink {
+                    blink.remove(&mut commands, &mut bg_sprite, layout.bg);
+                }
+                commands.entity(layout.bg).insert(Blinker::new(bg_sprite.color, bevy::color::palettes::basic::RED.into()).with_count(2.0).with_speed(12.0));
+            }
             return;
         }
 
@@ -473,10 +483,12 @@ fn on_card_drag_start(
             let translation = Vec3::new(transform.translation.x + (size.x / 2.0), transform.translation.y - (size.y / 2.0), INDICATOR_Z);
             let offset = Vec2::new(event.pointer_location.position.x - translation.x, -(event.pointer_location.position.y + translation.y));
             if tracker.is_none() {
-                commands.spawn(make_indicator_bundle(target, translation, offset, meshes, materials));
+                commands.spawn(make_indicator_bundle(target, translation, offset, meshes, materials)).insert(IndicatorActive);
                 commands.entity(target).insert(IndicatorTracker);
-            } else if let Some(mut indicator) = indicator_q.iter_mut().find(|i| i.parent == target) {
+            } else if let Some((entity, mut indicator)) = indicator_q.iter_mut().find(|(_, i)| i.parent == target) {
+                indicator.target = None;
                 indicator.offset = offset;
+                commands.entity(entity).insert(IndicatorActive);
             }
         }
     }
@@ -485,14 +497,9 @@ fn on_card_drag_start(
 fn on_card_drag(
     //
     event: Trigger<Pointer<Drag>>,
-    mut indicator_q: Query<(&mut Transform, &Indicator)>,
-    context: Res<GameplayContext>,
+    mut indicator_q: Query<(&mut Transform, &Indicator), With<IndicatorActive>>,
 ) {
-    if context.phase != VagabondGamePhase::Play {
-        return;
-    }
-    let target = event.target;
-    if let Some((mut transform, indicator)) = indicator_q.iter_mut().find(|(_, i)| i.parent == target && i.target.is_none()) {
+    if let Ok((mut transform, indicator)) = indicator_q.get_single_mut() {
         let distance = Vec2::new(event.distance.x + indicator.offset.x, event.distance.y - indicator.offset.y);
         let length = distance.length();
         let angle = distance.x.atan2(distance.y);
@@ -505,35 +512,43 @@ fn on_card_drag(
 
 fn on_card_drag_end(
     //
-    event: Trigger<Pointer<DragStart>>,
+    event: Trigger<Pointer<DragEnd>>,
+    indicator_q: Query<Entity, With<IndicatorActive>>,
     mut commands: Commands,
 ) {
     commands.entity(event.target).insert(PickingBehavior::default());
+    if let Ok(entity) = indicator_q.get_single() {
+        commands.entity(entity).remove::<IndicatorActive>();
+    }
 }
 
 fn on_card_drop(
     //
     event: Trigger<Pointer<DragDrop>>,
-    mut indicator_q: Query<&mut Indicator>,
+    mut indicator_q: Query<&mut Indicator, With<IndicatorActive>>,
     mut machine_q: Query<&MachineKind>,
     card_q: Query<&CardLayout>,
     mut context: ResMut<GameplayContext>,
+    mut send: EventWriter<UiEvent>,
 ) {
-    let indicator_entity = event.dropped;
     let dropped_on = event.target;
 
-    if let Some(mut indicator) = indicator_q.iter_mut().find(|i| i.parent == indicator_entity) {
+    if let Ok(mut indicator) = indicator_q.get_single_mut() {
         indicator.target = machine_q.get_mut(dropped_on).ok().copied();
         if let Some(target) = indicator.target {
             if let Ok(card) = card_q.get(indicator.parent) {
                 context.add_card_pick(card.slot, target);
+                if let Some((kind, cost)) = context.hand.get_mut(card.slot).map(|card| (card.kind, card.cost)) {
+                    context.last_state.erg[kind_to_erg_index(kind)] -= cost;
+                    send.send(UiEvent::PlayerState(context.last_state.clone()));
+                }
             }
         }
     }
 }
 
 fn cleanup_indicator(commands: &mut Commands, indicator: Entity, parent: Entity) {
-    commands.entity(indicator).despawn();
+    commands.entity(indicator).despawn_recursive();
     commands.entity(parent).insert(PickingBehavior::default()).remove::<IndicatorTracker>();
 }
 
@@ -691,8 +706,7 @@ fn local_ui_update(
     mut commands: Commands,
     mut receive: EventReader<UiEvent>,
     mut text_q: Query<(&mut Text2d, &mut TextColor, &AttributeText)>,
-    row_q: Query<Entity, With<AttributeRow>>,
-    mut glower_q: Query<(Entity, &mut Sprite, &Glower), With<AttributeRow>>,
+    mut row_q: Query<(Entity, &mut Sprite, Option<&Glower>), With<AttributeRow>>,
     mut context: ResMut<GameplayContext>,
 ) {
     for ui_event in receive.read() {
@@ -708,11 +722,11 @@ fn local_ui_update(
                 }
 
                 if kind.is_none() {
-                    for row in row_q.iter() {
-                        commands.entity(row).insert(Glower::new(Srgba::new(0.0, 1.0, 0.0, 1.0)));
+                    for (entity, sprite, _) in row_q.iter() {
+                        commands.entity(entity).insert(Glower::new(sprite.color, Srgba::new(0.0, 1.0, 0.0, 1.0).into()));
                     }
                 } else {
-                    Glower::clear(&mut commands, glower_q.as_query_lens());
+                    Glower::remove_all_optional(&mut commands, row_q.as_query_lens());
                 }
 
                 for (_, mut color, AttributeText(row, _)) in text_q.iter_mut() {

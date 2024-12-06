@@ -323,10 +323,10 @@ fn on_part_drag_start(
     //
     event: Trigger<Pointer<DragStart>>,
     mut commands: Commands,
-    mut holder_q: Query<(Entity, &Slot, &mut PartHolder)>,
+    mut holder_q: Query<(Entity, &Sprite, &Slot, &mut PartHolder)>,
     mut draggable: ResMut<Draggable>,
 ) {
-    if let Ok([(_, _, mut holder), (_, _, mut drag_holder)]) = holder_q.get_many_mut([event.target, draggable.drag]) {
+    if let Ok([(_, _, _, mut holder), (_, _, _, mut drag_holder)]) = holder_q.get_many_mut([event.target, draggable.drag]) {
         if holder.part.is_none() {
             draggable.active = false;
             return;
@@ -339,15 +339,15 @@ fn on_part_drag_start(
         commands.entity(event.target).insert(PickingBehavior::IGNORE);
     }
 
-    for (entity, slot, holder) in &holder_q {
+    for (entity, sprite, slot, holder) in &holder_q {
         if entity != draggable.drag {
             let glow = match slot {
                 Slot::Card => continue,
                 Slot::Empty(_) => Srgba::new(0.7, 0.7, 0.0, 1.0),
                 _ if holder.part.is_none() => Srgba::new(0.0, 1.0, 0.0, 1.0),
                 _ => Srgba::new(0.8, 0.8, 0.8, 1.0),
-            };
-            let glower = Glower::new(glow);
+            }.into();
+            let glower = Glower::new(sprite.color, glow);
             commands.entity(entity).insert(glower);
         }
     }
@@ -391,7 +391,7 @@ fn on_part_drag_end(
     draggable.active = false;
     commands.entity(event.target).insert(PickingBehavior::default());
 
-    Glower::clear(&mut commands, glower_q.as_query_lens());
+    Glower::remove_all(&mut commands, glower_q.as_query_lens());
 }
 
 fn handle_swap(source: Option<&mut PartHolder>, target: &mut PartHolder, drag: &mut PartHolder, target_slot: &Slot) -> Entity {
@@ -572,7 +572,7 @@ fn compose_update(
     mut gate: ResMut<GateIFace>,
     mut deck_q: Query<(&mut Text2d, &CardHolder), Without<InfoKind>>,
     mut info_q: Query<(&mut Text2d, &InfoKind), Without<CardHolder>>,
-    button_q: Query<Entity, With<CommitButton>>,
+    button_q: Query<(Entity, &Sprite), With<CommitButton>>,
     wm: Res<WarehouseManager>,
     dm: Res<DataManager>,
     mut app_state: ResMut<NextState<AppState>>,
@@ -604,8 +604,8 @@ fn compose_update(
                         }
                     }
 
-                    let button_entity = button_q.single();
-                    commands.entity(button_entity).insert(Glower::new(bevy::color::palettes::basic::GREEN).with_speed(8.0));
+                    let (button_entity, button_sprite) = button_q.single();
+                    commands.entity(button_entity).insert(Glower::new(button_sprite.color, bevy::color::palettes::basic::GREEN.into()).with_speed(8.0));
                 }
             }
             Err(err) => println!("Error: {err}"),
