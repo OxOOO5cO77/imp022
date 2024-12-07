@@ -108,6 +108,10 @@ impl PlayerState {
     pub fn remove_erg(&mut self, kind: AttributeKind, cost: ErgType) {
         self.erg.entry(kind).and_modify(|entry| *entry = entry.saturating_sub(cost));
     }
+
+    pub fn add_to_heap(&mut self, card: HallCard) {
+        self.heap.push(card);
+    }
 }
 
 type DeckCountType = u8;

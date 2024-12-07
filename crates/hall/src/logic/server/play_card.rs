@@ -10,6 +10,7 @@ pub(crate) fn handle_play_card(game: &mut GameState, bx: &mut Broadcaster) {
         let played = user.state.play.drain(..).collect::<Vec<_>>();
         for (card, target) in played {
             user.state.remove_erg(card.kind, card.cost);
+            user.state.add_to_heap(card.clone());
             let played = match target {
                 CardTarget::Local => (IdType::Local(*user_id), card, IdType::Local(*user_id)),
                 CardTarget::Remote(_) => (IdType::Local(*user_id), card, IdType::Remote(user.remote.unwrap_or_default())), // todo: handle mission node -> remote conversion
