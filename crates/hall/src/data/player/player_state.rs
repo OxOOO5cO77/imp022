@@ -104,6 +104,10 @@ impl PlayerState {
             }
         }
     }
+
+    pub fn remove_erg(&mut self, kind: AttributeKind, cost: ErgType) {
+        self.erg.entry(kind).and_modify(|entry| *entry = entry.saturating_sub(cost));
+    }
 }
 
 type DeckCountType = u8;

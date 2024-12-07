@@ -1,21 +1,18 @@
-use crate::data::game::game_stage::{GamePhase, GameStage};
-use crate::data::game::GameUser;
+use rand::prelude::IteratorRandom;
 use rand::{distr::Uniform, rngs::ThreadRng, Rng};
 use shared_data::attribute::{AttributeValueType, Attributes};
 use shared_data::card::ErgType;
-use shared_net::types::{AuthType, UserIdType};
-
-use crate::data::game::game_remote::GameRemote;
-use crate::data::hall::HallCard;
-use crate::data::player::PlayerCommandState;
-use crate::data::player::PlayerCard;
-use crate::data::util;
 use shared_net::op;
+use shared_net::types::{AuthType, UserIdType};
 use std::cmp::Ordering;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::iter::zip;
-use rand::prelude::IteratorRandom;
+
+use crate::data::game::{GamePhase, GameRemote, GameStage, GameUser};
+use crate::data::hall::HallCard;
+use crate::data::player::{PlayerCard, PlayerCommandState};
+use crate::data::util;
 
 pub type RemoteIdType = u128;
 pub type TickType = u16;

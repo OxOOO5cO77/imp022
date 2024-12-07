@@ -197,6 +197,7 @@ enum UiEvent {
     PlayerState(PlayerStatePlayerView),
     ChooseAttr(Option<AttrKind>),
     Roll([ErgType; 4]),
+    PlayerErg([ErgType; 4]),
     Resources([ErgType; 4], [ErgType; 4], [BuildValueType; 4]),
     MachineInfoUpdate(MachineKind, MachineInfo),
     MachineStateUpdate(GameMachinePlayerView, GameMachinePlayerView),
@@ -455,9 +456,10 @@ fn on_card_drag_start(
     sprite_q: Query<(&CardLayout, &mut Sprite, &mut Transform, Option<&IndicatorTracker>), With<PickingBehavior>>,
     mut bg_q: Query<(&mut Sprite, Option<&Blinker>), Without<CardLayout>>,
     mut indicator_q: Query<(Entity, &mut Indicator)>,
-    context: Res<GameplayContext>,
+    mut context: ResMut<GameplayContext>,
     meshes: ResMut<Assets<Mesh>>,
     materials: ResMut<Assets<ColorMaterial>>,
+    mut send: EventWriter<UiEvent>,
 ) {
     if context.phase != VagabondGamePhase::Play {
         return;
@@ -466,8 +468,8 @@ fn on_card_drag_start(
     let target = event.target;
 
     if let Ok((layout, sprite, transform, tracker)) = sprite_q.get(target) {
-        let card = context.hand.get(layout.slot);
-        if tracker.is_none() && card.is_none_or(|card| card.cost > context.last_state.erg[kind_to_erg_index(card.kind)]) {
+        let card = context.hand.get(layout.slot).cloned();
+        if tracker.is_none() && card.as_ref().is_none_or(|card| card.cost > context.last_state.erg[kind_to_erg_index(card.kind)]) {
             if let Ok((mut bg_sprite, blink)) = bg_q.get_mut(layout.bg) {
                 if let Some(blink) = blink {
                     blink.remove(&mut commands, &mut bg_sprite, layout.bg);
@@ -486,6 +488,11 @@ fn on_card_drag_start(
                 commands.spawn(make_indicator_bundle(target, translation, offset, meshes, materials)).insert(IndicatorActive);
                 commands.entity(target).insert(IndicatorTracker);
             } else if let Some((entity, mut indicator)) = indicator_q.iter_mut().find(|(_, i)| i.parent == target) {
+                if let Some(card) = card {
+                    context.last_state.erg[kind_to_erg_index(card.kind)] += card.cost;
+                    send.send(UiEvent::PlayerErg(context.last_state.erg));
+                }
+                context.card_picks.remove(&(layout.slot as CardIdxType));
                 indicator.target = None;
                 indicator.offset = offset;
                 commands.entity(entity).insert(IndicatorActive);
@@ -527,7 +534,7 @@ fn on_card_drop(
     event: Trigger<Pointer<DragDrop>>,
     mut indicator_q: Query<&mut Indicator, With<IndicatorActive>>,
     mut machine_q: Query<&MachineKind>,
-    card_q: Query<&CardLayout>,
+    layout_q: Query<&CardLayout>,
     mut context: ResMut<GameplayContext>,
     mut send: EventWriter<UiEvent>,
 ) {
@@ -536,11 +543,11 @@ fn on_card_drop(
     if let Ok(mut indicator) = indicator_q.get_single_mut() {
         indicator.target = machine_q.get_mut(dropped_on).ok().copied();
         if let Some(target) = indicator.target {
-            if let Ok(card) = card_q.get(indicator.parent) {
-                context.add_card_pick(card.slot, target);
-                if let Some((kind, cost)) = context.hand.get_mut(card.slot).map(|card| (card.kind, card.cost)) {
+            if let Ok(layout) = layout_q.get(indicator.parent) {
+                context.add_card_pick(layout.slot, target);
+                if let Some((kind, cost)) = context.hand.get_mut(layout.slot).map(|card| (card.kind, card.cost)) {
                     context.last_state.erg[kind_to_erg_index(kind)] -= cost;
-                    send.send(UiEvent::PlayerState(context.last_state.clone()));
+                    send.send(UiEvent::PlayerErg(context.last_state.erg));
                 }
             }
         }
@@ -658,9 +665,9 @@ fn card_ui_update(
 
 fn erg_ui_update(mut receive: EventReader<UiEvent>, mut erg_q: Query<(&mut Text2d, &ErgText)>) {
     for ui_event in receive.read() {
-        if let UiEvent::PlayerState(player_state) = ui_event {
+        if let UiEvent::PlayerErg(erg) = ui_event {
             for (mut erg_text, ErgText(index)) in erg_q.iter_mut() {
-                *erg_text = format!("{:02}", player_state.erg[*index]).into();
+                *erg_text = format!("{:02}", erg[*index]).into();
             }
         }
     }
@@ -924,6 +931,7 @@ fn recv_choose_attr(response: GameChooseAttrResponse, send: &mut EventWriter<UiE
 
 fn recv_resources(response: GameResourcesMessage, send: &mut EventWriter<UiEvent>) -> Option<VagabondGamePhase> {
     println!("[RECV] GameResources => Play");
+    send.send(UiEvent::PlayerErg(response.player_state_view.erg));
     send.send(UiEvent::PlayerState(response.player_state_view));
     send.send(UiEvent::Resources(response.local_erg, response.remote_erg, response.remote_attr));
     Some(VagabondGamePhase::Play)
@@ -980,6 +988,7 @@ fn recv_end_game(response: GameEndGameResponse) -> Option<VagabondGamePhase> {
 fn recv_update_state(response: GameUpdateStateResponse, send: &mut EventWriter<UiEvent>) -> Option<VagabondGamePhase> {
     println!("[RECV] GameUpdateState");
 
+    send.send(UiEvent::PlayerErg(response.player_state.erg));
     send.send(UiEvent::PlayerState(response.player_state));
     send.send(UiEvent::MachineStateUpdate(response.local_machine, response.remote_machine));
     None
