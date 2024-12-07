@@ -121,7 +121,6 @@ impl GameplayContext {
         self.card_picks.insert(card_idx, card_target);
     }
 }
-
 #[derive(Component)]
 struct PhaseText;
 
@@ -129,13 +128,15 @@ struct PhaseText;
 struct RemoteAttrText(usize);
 
 #[derive(Component)]
-struct ErgText(usize);
-
-#[derive(Component)]
 struct RollText(usize);
 
 #[derive(Component)]
-struct AttributeText(usize, usize);
+enum PlayerStateText {
+    Attribute(usize, usize),
+    Erg(usize),
+    Deck,
+    Heap,
+}
 
 #[derive(Component, Clone)]
 struct CardLayout {
@@ -251,7 +252,7 @@ fn gameplay_enter(
 
     for (row_idx, row) in LOCAL_ATTR.iter().enumerate() {
         for (col_idx, name) in row.iter().enumerate() {
-            commands.entity(layout.entity(name)).insert(AttributeText(row_idx, col_idx));
+            commands.entity(layout.entity(name)).insert(PlayerStateText::Attribute(row_idx, col_idx));
         }
     }
 
@@ -270,11 +271,13 @@ fn gameplay_enter(
     const ERG: [&str; 4] = ["la", "lb", "lc", "ld"];
 
     for (erg_idx, erg) in ERG.iter().enumerate() {
-        commands.entity(layout.entity(erg)).insert(ErgText(erg_idx));
+        commands.entity(layout.entity(erg)).insert(PlayerStateText::Erg(erg_idx));
     }
 
-    commands.entity(layout.entity("phase")).insert(PhaseText);
+    commands.entity(layout.entity("deck")).insert(PlayerStateText::Deck);
+    commands.entity(layout.entity("heap")).insert(PlayerStateText::Heap);
 
+    commands.entity(layout.entity("phase")).insert(PhaseText);
     commands.entity(layout.entity("next")).insert_next_button();
 
     commands.entity(layout.entity("row_a")).insert_pickable_row(AttrKind::Analyze);
@@ -663,11 +666,13 @@ fn card_ui_update(
     }
 }
 
-fn erg_ui_update(mut receive: EventReader<UiEvent>, mut erg_q: Query<(&mut Text2d, &ErgText)>) {
+fn erg_ui_update(mut receive: EventReader<UiEvent>, mut erg_q: Query<(&mut Text2d, &PlayerStateText)>) {
     for ui_event in receive.read() {
         if let UiEvent::PlayerErg(erg) = ui_event {
-            for (mut erg_text, ErgText(index)) in erg_q.iter_mut() {
-                *erg_text = format!("{:02}", erg[*index]).into();
+            for (mut erg_text, state_text) in erg_q.iter_mut() {
+                if let PlayerStateText::Erg(index) = state_text {
+                    *erg_text = format!("{:02}", erg[*index]).into();
+                }
             }
         }
     }
@@ -712,15 +717,20 @@ fn local_ui_update(
     // bevy system
     mut commands: Commands,
     mut receive: EventReader<UiEvent>,
-    mut text_q: Query<(&mut Text2d, &mut TextColor, &AttributeText)>,
+    mut text_q: Query<(&mut Text2d, &mut TextColor, &PlayerStateText)>,
     mut row_q: Query<(Entity, &mut Sprite, Option<&Glower>), With<AttributeRow>>,
     mut context: ResMut<GameplayContext>,
 ) {
     for ui_event in receive.read() {
         match ui_event {
             UiEvent::PlayerState(player_state) => {
-                for (mut attr_text, _, AttributeText(row, col)) in text_q.iter_mut() {
-                    *attr_text = format!("{}", player_state.attr[*row][*col]).into();
+                for (mut text, _, state_text) in text_q.iter_mut() {
+                    match state_text {
+                        PlayerStateText::Attribute(row, col) => *text = format!("{}", player_state.attr[*row][*col]).into(),
+                        PlayerStateText::Deck => *text = player_state.deck.to_string().into(),
+                        PlayerStateText::Heap => *text = player_state.heap.len().to_string().into(),
+                        _ => {}
+                    }
                 }
             }
             UiEvent::ChooseAttr(kind) => {
@@ -736,18 +746,20 @@ fn local_ui_update(
                     Glower::remove_all_optional(&mut commands, row_q.as_query_lens());
                 }
 
-                for (_, mut color, AttributeText(row, _)) in text_q.iter_mut() {
-                    *color = if let Some(kind) = kind {
-                        if *row == map_kind_to_row(*kind) {
-                            context.attr_pick = Some(*kind);
-                            bevy::color::palettes::basic::GREEN
+                for (_, mut color, state_text) in text_q.iter_mut() {
+                    if let PlayerStateText::Attribute(row, _) = state_text {
+                        *color = if let Some(kind) = kind {
+                            if *row == map_kind_to_row(*kind) {
+                                context.attr_pick = Some(*kind);
+                                bevy::color::palettes::basic::GREEN
+                            } else {
+                                bevy::color::palettes::basic::GRAY
+                            }
                         } else {
                             bevy::color::palettes::basic::GRAY
                         }
-                    } else {
-                        bevy::color::palettes::basic::GRAY
+                        .into()
                     }
-                    .into()
                 }
             }
             _ => {}
