@@ -1,4 +1,3 @@
-use std::collections::VecDeque;
 use std::io::{Error, ErrorKind};
 use std::path::Path;
 
@@ -29,8 +28,8 @@ impl DataManager {
         self.card.iter().find(|card| card.set == in_card.set && card.rarity == in_card.rarity && card.number == in_card.number).cloned()
     }
 
-    pub(crate) fn convert_deck(&self, in_deck: Vec<PlayerCard>) -> VecDeque<VagabondCard> {
-        in_deck.iter().filter_map(|o| self.convert_card(o)).collect::<VecDeque<_>>()
+    pub(crate) fn convert_deck(&self, in_deck: Vec<PlayerCard>) -> Vec<VagabondCard> {
+        in_deck.iter().filter_map(|o| self.convert_card(o)).collect::<Vec<_>>()
     }
 
     fn convert_build(&self, in_build: &PlayerBuild) -> Option<VagabondBuild> {

@@ -1,12 +1,11 @@
 use crate::manager::{AtlasManager, DataManager, ScreenLayout, ScreenLayoutManager, WarehouseManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
+use crate::screen::util;
 use crate::system::ui_effects::Glower;
 use crate::system::AppState;
 use bevy::prelude::*;
-use std::collections::VecDeque;
 use vagabond::data::{VagabondCard, VagabondPart};
 use warehouse::data::player_bio::PlayerBio;
-use crate::screen::util;
 
 const SCREEN_LAYOUT: &str = "compose";
 
@@ -68,7 +67,7 @@ struct FinishPlayer;
 
 struct PopulatePlayerUiData {
     player_bio: PlayerBio,
-    deck: VecDeque<VagabondCard>,
+    deck: Vec<VagabondCard>,
 }
 
 #[derive(Event)]
@@ -702,7 +701,9 @@ fn compose_update(
                     };
                     commands.insert_resource(handoff);
 
-                    let deck = dm.convert_deck(gate_response.deck);
+                    let mut deck = dm.convert_deck(gate_response.deck);
+                    deck.sort_by_key(|c| (std::cmp::Reverse(c.rarity), c.set, c.number));
+
                     let data = PopulatePlayerUiData {
                         player_bio,
                         deck,
