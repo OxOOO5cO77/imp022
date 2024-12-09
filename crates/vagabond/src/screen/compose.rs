@@ -3,7 +3,10 @@ use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::system::ui_effects::Glower;
 use crate::system::AppState;
 use bevy::prelude::*;
-use vagabond::data::VagabondPart;
+use std::collections::VecDeque;
+use vagabond::data::{VagabondCard, VagabondPart};
+use warehouse::data::player_bio::PlayerBio;
+use crate::screen::util;
 
 const SCREEN_LAYOUT: &str = "compose";
 
@@ -13,10 +16,11 @@ impl Plugin for ComposePlugin {
     fn build(&self, app: &mut App) {
         app //
             .add_event::<FinishPlayer>()
+            .add_event::<PopulatePlayerUi>()
             .add_systems(OnEnter(AppState::ComposeInit), compose_init_enter)
             .add_systems(Update, compose_init_update.run_if(in_state(AppState::ComposeInit)))
             .add_systems(OnEnter(AppState::Compose), compose_enter)
-            .add_systems(Update, (finish_player, compose_update).run_if(in_state(AppState::Compose)))
+            .add_systems(Update, (finish_player, populate_bio_ui, populate_deck_ui, commit_button_ui, compose_update).run_if(in_state(AppState::Compose)))
             .add_systems(PostUpdate, populate_part_layouts.run_if(in_state(AppState::Compose)))
             .add_systems(OnExit(AppState::Compose), compose_exit);
     }
@@ -62,6 +66,17 @@ enum ComposeState {
 #[derive(Event)]
 struct FinishPlayer;
 
+struct PopulatePlayerUiData {
+    player_bio: PlayerBio,
+    deck: VecDeque<VagabondCard>,
+}
+
+#[derive(Event)]
+enum PopulatePlayerUi {
+    Hide,
+    Show(PopulatePlayerUiData),
+}
+
 #[derive(Debug, Copy, Clone)]
 enum StatRowKind {
     Analyze,
@@ -94,17 +109,18 @@ impl PartHolder {
     }
 }
 
-#[derive(Component, Clone)]
-struct CardHolder {
-    index: usize,
-}
+#[derive(Component)]
+struct PlayerBioGroup;
 
-impl CardHolder {
-    fn new(index: usize) -> Self {
-        Self {
-            index,
-        }
-    }
+#[derive(Component)]
+struct DeckGutterGroup;
+
+#[derive(Component)]
+struct CardHeader {
+    index: usize,
+    title: Entity,
+    cost: Entity,
+    frame: Entity,
 }
 
 #[derive(Component)]
@@ -276,10 +292,11 @@ fn compose_enter(
         .observe_part_drag()
         .observe_part_drop();
 
-    commands.entity(layout.entity("id")).insert(InfoKind::ID);
-    commands.entity(layout.entity("name")).insert(InfoKind::Name);
-    commands.entity(layout.entity("place")).insert(InfoKind::Birthplace);
-    commands.entity(layout.entity("age")).insert(InfoKind::Age);
+    commands.entity(layout.entity("bio")).insert((PlayerBioGroup, Visibility::Hidden));
+    commands.entity(layout.entity("bio/id")).insert(InfoKind::ID);
+    commands.entity(layout.entity("bio/name")).insert(InfoKind::Name);
+    commands.entity(layout.entity("bio/place")).insert(InfoKind::Birthplace);
+    commands.entity(layout.entity("bio/age")).insert(InfoKind::Age);
 
     for (index, part) in parts.iter().enumerate() {
         let slot_index = index + 1;
@@ -301,9 +318,22 @@ fn compose_enter(
             .observe_part_drop();
     }
 
-    for card_header in 0..40 {
-        let name = format!("card{:02}/title", card_header + 1);
-        commands.entity(layout.entity(&name)).insert(CardHolder::new(card_header));
+    commands.entity(layout.entity("gutter")).insert((DeckGutterGroup, Visibility::Hidden));
+    for index in 0..40 {
+        let slot_index = index + 1;
+        let title_string = format!("gutter/card{:02}/title", slot_index);
+        let title = commands.entity(layout.entity(&title_string)).id();
+        let cost_string = format!("gutter/card{:02}/cost", slot_index);
+        let cost = commands.entity(layout.entity(&cost_string)).id();
+        let frame_string = format!("gutter/card{:02}/frame", slot_index);
+        let frame = commands.entity(layout.entity(&frame_string)).id();
+        let header = CardHeader {
+            index,
+            title,
+            cost,
+            frame,
+        };
+        commands.entity(layout.entity(&format!("gutter/card{:02}", slot_index))).insert(header);
     }
 
     commands.entity(layout.entity("commit")).insert_commit_button();
@@ -346,7 +376,8 @@ fn on_part_drag_start(
                 Slot::Empty(_) => Srgba::new(0.7, 0.7, 0.0, 1.0),
                 _ if holder.part.is_none() => Srgba::new(0.0, 1.0, 0.0, 1.0),
                 _ => Srgba::new(0.8, 0.8, 0.8, 1.0),
-            }.into();
+            }
+            .into();
             let glower = Glower::new(sprite.color, glow);
             commands.entity(entity).insert(glower);
         }
@@ -375,7 +406,7 @@ fn on_part_drag_end(
     mut commands: Commands,
     mut holder_q: Query<(&mut PartHolder, &Slot)>,
     mut draggable: ResMut<Draggable>,
-    mut glower_q: Query<(Entity, &mut Sprite, &Glower)>,
+    mut glower_q: Query<(Entity, &mut Sprite, &Glower), Without<CommitButton>>,
 ) {
     if !draggable.active {
         return;
@@ -391,7 +422,9 @@ fn on_part_drag_end(
     draggable.active = false;
     commands.entity(event.target).insert(PickingBehavior::default());
 
-    Glower::remove_all(&mut commands, glower_q.as_query_lens());
+    for (entity, mut sprite, glower) in glower_q.iter_mut() {
+        glower.remove(&mut commands, &mut sprite, entity);
+    }
 }
 
 fn handle_swap(source: Option<&mut PartHolder>, target: &mut PartHolder, drag: &mut PartHolder, target_slot: &Slot) -> Entity {
@@ -513,18 +546,104 @@ fn populate_part_layouts(
     }
 }
 
+fn commit_button_ui(
+    // bevy system
+    mut commands: Commands,
+    mut read: EventReader<PopulatePlayerUi>,
+    mut glower_q: Query<(Entity, &mut Sprite, Option<&Glower>), With<CommitButton>>,
+) {
+    if let Some(event) = read.read().last() {
+        if let Ok((entity, mut sprite, glower)) = glower_q.get_single_mut() {
+            match event {
+                PopulatePlayerUi::Hide => {
+                    if let Some(glower) = glower {
+                        glower.remove(&mut commands, &mut sprite, entity);
+                    }
+                }
+                PopulatePlayerUi::Show(_) => {
+                    commands.entity(entity).insert(Glower::new(sprite.color, bevy::color::palettes::basic::GREEN.into()).with_speed(8.0));
+                }
+            };
+        }
+    }
+}
+
+fn populate_deck_ui(
+    // bevy system
+    mut commands: Commands,
+    mut read: EventReader<PopulatePlayerUi>,
+    header_q: Query<&CardHeader>,
+    mut text_q: Query<&mut Text2d>,
+    mut sprite_q: Query<&mut Sprite>,
+    gutter_q: Query<Entity, With<DeckGutterGroup>>,
+) {
+    if let Some(event) = read.read().last() {
+        let visibility = match event {
+            PopulatePlayerUi::Hide => Visibility::Hidden,
+            PopulatePlayerUi::Show(data) => {
+                for (idx, card) in data.deck.iter().enumerate() {
+                    if let Some(header) = header_q.iter().find(|h| h.index == idx) {
+                        if let Ok(mut title) = text_q.get_mut(header.title) {
+                            *title = card.title.clone().into();
+                        }
+                        if let Ok(mut cost) = text_q.get_mut(header.cost) {
+                            *cost = util::map_kind_to_cost(card.kind, card.cost).into();
+                        }
+                        if let Ok(mut frame) = sprite_q.get_mut(header.frame) {
+                            frame.color = util::map_kind_to_color(card.kind);
+                        }
+                    }
+                }
+                Visibility::Visible
+            }
+        };
+        if let Ok(gutter) = gutter_q.get_single() {
+            commands.entity(gutter).insert(visibility);
+        }
+    }
+}
+
+fn populate_bio_ui(
+    // bevy system
+    mut commands: Commands,
+    mut read: EventReader<PopulatePlayerUi>,
+    mut info_q: Query<(&mut Text2d, &InfoKind), Without<CardHeader>>,
+    bio_q: Query<Entity, With<PlayerBioGroup>>,
+) {
+    if let Some(event) = read.read().last() {
+        let visibility = match event {
+            PopulatePlayerUi::Hide => Visibility::Hidden,
+            PopulatePlayerUi::Show(data) => {
+                for (mut info, info_kind) in info_q.iter_mut() {
+                    match info_kind {
+                        InfoKind::Name => *info = data.player_bio.name.clone().into(),
+                        InfoKind::ID => *info = data.player_bio.id.clone().into(),
+                        InfoKind::Birthplace => *info = data.player_bio.birthplace().clone().into(),
+                        InfoKind::Age => *info = data.player_bio.age().to_string().into(),
+                    }
+                }
+                Visibility::Visible
+            }
+        };
+        if let Ok(bio) = bio_q.get_single() {
+            commands.entity(bio).insert(visibility);
+        }
+    }
+}
+
 fn seed_from_holder(holder: &PartHolder) -> u64 {
     holder.part.as_ref().map(|o| o.seed).unwrap_or_default()
 }
 
 fn finish_player(
     // bevy system
-    mut receive: EventReader<FinishPlayer>,
+    mut read: EventReader<FinishPlayer>,
+    mut send: EventWriter<PopulatePlayerUi>,
     holder_q: Query<(&PartHolder, &Slot)>,
     gate: Res<GateIFace>,
     mut state: ResMut<ComposeState>,
 ) {
-    if !receive.is_empty() {
+    if read.read().last().is_some() {
         let mut parts = [0, 0, 0, 0, 0, 0, 0, 0];
 
         for (holder, holder_kind) in holder_q.iter() {
@@ -553,9 +672,8 @@ fn finish_player(
             gate.send_game_build(parts, *state == ComposeState::Committed);
         } else {
             *state = ComposeState::Build;
+            send.send(PopulatePlayerUi::Hide);
         }
-
-        receive.clear();
     }
 }
 
@@ -565,14 +683,11 @@ pub(crate) struct ComposeHandoff {
     pub(crate) local_id: String,
 }
 
-#[allow(clippy::too_many_arguments)]
 fn compose_update(
     // bevy system
     mut commands: Commands,
     mut gate: ResMut<GateIFace>,
-    mut deck_q: Query<(&mut Text2d, &CardHolder), Without<InfoKind>>,
-    mut info_q: Query<(&mut Text2d, &InfoKind), Without<CardHolder>>,
-    button_q: Query<(Entity, &Sprite), With<CommitButton>>,
+    mut send: EventWriter<PopulatePlayerUi>,
     wm: Res<WarehouseManager>,
     dm: Res<DataManager>,
     mut app_state: ResMut<NextState<AppState>>,
@@ -581,31 +696,20 @@ fn compose_update(
         Ok(GateCommand::GameBuild(gate_response)) => match wm.fetch_player(gate_response.seed) {
             Ok(warehouse_response) => {
                 if let Some(player_bio) = warehouse_response.player_bio {
-                    for (mut info, info_kind) in info_q.iter_mut() {
-                        match info_kind {
-                            InfoKind::Name => *info = player_bio.name.clone().into(),
-                            InfoKind::ID => *info = player_bio.id.clone().into(),
-                            InfoKind::Birthplace => *info = player_bio.birthplace().clone().into(),
-                            InfoKind::Age => *info = player_bio.age().to_string().into(),
-                        }
-                    }
-
                     let handoff = ComposeHandoff {
-                        local_name: player_bio.name,
-                        local_id: player_bio.id,
+                        local_name: player_bio.name.clone(),
+                        local_id: player_bio.id.clone(),
                     };
                     commands.insert_resource(handoff);
 
                     let deck = dm.convert_deck(gate_response.deck);
-
-                    for (idx, card) in deck.iter().enumerate() {
-                        if let Some((mut card_text, _)) = deck_q.iter_mut().find(|(_, holder)| holder.index == idx) {
-                            *card_text = card.title.clone().into();
-                        }
-                    }
-
-                    let (button_entity, button_sprite) = button_q.single();
-                    commands.entity(button_entity).insert(Glower::new(button_sprite.color, bevy::color::palettes::basic::GREEN.into()).with_speed(8.0));
+                    let data = PopulatePlayerUiData {
+                        player_bio,
+                        deck,
+                    };
+                    send.send(PopulatePlayerUi::Show(data));
+                } else {
+                    send.send(PopulatePlayerUi::Hide);
                 }
             }
             Err(err) => println!("Error: {err}"),

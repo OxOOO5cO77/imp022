@@ -1,7 +1,6 @@
 use bevy::app::{App, Plugin, Update};
-use bevy::ecs::system::QueryLens;
 use bevy::math::ops;
-use bevy::prelude::{Color, Commands, Component, Entity, Mix, Mut, Query, Res, Sprite, Time};
+use bevy::prelude::{Color, Commands, Component, Entity, Mix, Query, Res, Sprite, Time};
 use std::f32::consts::PI;
 
 pub(crate) struct UiEffectsPlugin;
@@ -36,22 +35,10 @@ impl Glower {
         self
     }
 
-    pub(crate) fn remove_all(commands: &mut Commands, mut glower_q: QueryLens<(Entity, &mut Sprite, &Glower)>) {
-        for (row, mut sprite, glower) in glower_q.query().iter_mut() {
-            sprite.color = glower.source;
-            commands.entity(row).remove::<Glower>();
-        }
+    pub(crate) fn remove(&self, commands: &mut Commands, sprite: &mut Sprite, entity: Entity) {
+        sprite.color = self.source;
+        commands.entity(entity).remove::<Glower>();
     }
-
-    pub(crate) fn remove_all_optional(commands: &mut Commands, mut glower_q: QueryLens<(Entity, &mut Sprite, Option<&Glower>)>) {
-        for (row, mut sprite, glower) in glower_q.query().iter_mut() {
-            if let Some(glower) = glower {
-                sprite.color = glower.source;
-            }
-            commands.entity(row).remove::<Glower>();
-        }
-    }
-
 }
 
 fn glower_update(
@@ -95,7 +82,7 @@ impl Blinker {
         self.speed = speed;
         self
     }
-    pub(crate) fn remove(&self, commands: &mut Commands, sprite: &mut Mut<Sprite>, entity: Entity) {
+    pub(crate) fn remove(&self, commands: &mut Commands, sprite: &mut Sprite, entity: Entity) {
         sprite.color = self.source;
         commands.entity(entity).remove::<Blinker>();
     }

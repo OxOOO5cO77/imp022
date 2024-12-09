@@ -1,5 +1,6 @@
 use crate::manager::{AtlasManager, DataManager, ScreenLayoutManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
+use crate::screen::util;
 use crate::screen::compose::ComposeHandoff;
 use crate::system::ui_effects::{Blinker, Glower};
 use crate::system::AppState;
@@ -141,7 +142,7 @@ enum PlayerStateText {
 #[derive(Component, Clone)]
 struct CardLayout {
     slot: usize,
-    bg: Entity,
+    frame: Entity,
     title: Entity,
     cost: Entity,
     delay: Entity,
@@ -153,7 +154,7 @@ impl CardLayout {
     fn new(slot: usize) -> Self {
         Self {
             slot,
-            bg: Entity::PLACEHOLDER,
+            frame: Entity::PLACEHOLDER,
             title: Entity::PLACEHOLDER,
             cost: Entity::PLACEHOLDER,
             delay: Entity::PLACEHOLDER,
@@ -312,7 +313,7 @@ fn gameplay_enter(
 
     for card_index in 1..=5 {
         let mut card_layout = CardLayout::new(card_index - 1);
-        card_layout.bg = commands.entity(layout.entity(&format!("card{}_bg", card_index))).id();
+        card_layout.frame = commands.entity(layout.entity(&format!("card{}/frame", card_index))).id();
         card_layout.title = commands.entity(layout.entity(&format!("card{}/title", card_index))).insert(CardText).id();
         card_layout.cost = commands.entity(layout.entity(&format!("card{}/cost", card_index))).insert(CardText).id();
         card_layout.delay = commands.entity(layout.entity(&format!("card{}/delay", card_index))).insert(CardText).id();
@@ -473,11 +474,11 @@ fn on_card_drag_start(
     if let Ok((layout, sprite, transform, tracker)) = sprite_q.get(target) {
         let card = context.hand.get(layout.slot).cloned();
         if tracker.is_none() && card.as_ref().is_none_or(|card| card.cost > context.last_state.erg[kind_to_erg_index(card.kind)]) {
-            if let Ok((mut bg_sprite, blink)) = bg_q.get_mut(layout.bg) {
+            if let Ok((mut bg_sprite, blink)) = bg_q.get_mut(layout.frame) {
                 if let Some(blink) = blink {
-                    blink.remove(&mut commands, &mut bg_sprite, layout.bg);
+                    blink.remove(&mut commands, &mut bg_sprite, layout.frame);
                 }
-                commands.entity(layout.bg).insert(Blinker::new(bg_sprite.color, bevy::color::palettes::basic::RED.into()).with_count(2.0).with_speed(12.0));
+                commands.entity(layout.frame).insert(Blinker::new(bg_sprite.color, bevy::color::palettes::basic::RED.into()).with_count(2.0).with_speed(24.0));
             }
             return;
         }
@@ -614,28 +615,13 @@ fn roll_ui_update(
     }
 }
 
-trait CardDisplay {
-    fn display_card(&self) -> String;
-}
-
-impl CardDisplay for AttributeKind {
-    fn display_card(&self) -> String {
-        match self {
-            AttributeKind::Analyze => "A",
-            AttributeKind::Breach => "B",
-            AttributeKind::Compute => "C",
-            AttributeKind::Disrupt => "D",
-        }
-        .into()
-    }
-}
-
 fn card_ui_update(
     // bevy system
     mut commands: Commands,
     mut receive: EventReader<UiEvent>,
     layout_q: Query<(Entity, &CardLayout)>,
     mut text_q: Query<&mut Text2d, With<CardText>>,
+    mut sprite_q: Query<&mut Sprite>,
     dm: Res<DataManager>,
 ) {
     for ui_event in receive.read() {
@@ -648,13 +634,17 @@ fn card_ui_update(
                         *title_text = card.title.into();
                     }
                     if let Ok(mut cost_text) = text_q.get_mut(layout.cost) {
-                        *cost_text = format!("{}:{}", card.kind.display_card(), card.cost).into();
+                        *cost_text = util::map_kind_to_cost(card.kind, card.cost).into();
                     }
                     if let Ok(mut launch_text) = text_q.get_mut(layout.launch) {
                         *launch_text = card.launch_rules.into();
                     }
                     if let Ok(mut run_text) = text_q.get_mut(layout.run) {
                         *run_text = card.run_rules.into();
+                    }
+
+                    if let Ok(mut frame) = sprite_q.get_mut(layout.frame) {
+                        frame.color = util::map_kind_to_color(card.kind);
                     }
                     Visibility::Visible
                 } else {
@@ -743,7 +733,11 @@ fn local_ui_update(
                         commands.entity(entity).insert(Glower::new(sprite.color, Srgba::new(0.0, 1.0, 0.0, 1.0).into()));
                     }
                 } else {
-                    Glower::remove_all_optional(&mut commands, row_q.as_query_lens());
+                    for (entity, mut sprite, glower) in row_q.iter_mut() {
+                        if let Some(glower) = glower {
+                            glower.remove(&mut commands, &mut sprite, entity);
+                        }
+                    }
                 }
 
                 for (_, mut color, state_text) in text_q.iter_mut() {

@@ -4,8 +4,9 @@ mod compose;
 mod splash;
 mod gameplay;
 mod login;
+mod util;
 
-pub(super) struct ScreenPlugins;
+pub(crate) struct ScreenPlugins;
 
 impl PluginGroup for ScreenPlugins {
     fn build(self) -> PluginGroupBuilder {

@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use bevy::sprite::{Anchor, MeshMaterial2d};
 use bevy::text::TextBounds;
 use std::collections::HashMap;
+use std::f32::consts::PI;
 use std::path::Path;
 
 #[derive(Resource)]
@@ -26,6 +27,7 @@ enum Element {
 
 enum ShapeKind {
     Rect,
+    CapsuleX,
 }
 
 struct ShapeElement {
@@ -82,6 +84,7 @@ impl ScreenLayout {
     fn parse_shape_kind(shape_kind: &str) -> Option<ShapeKind> {
         match shape_kind {
             "rect" => Some(ShapeKind::Rect),
+            "capsule_x" => Some(ShapeKind::CapsuleX),
             _ => None,
         }
     }
@@ -278,13 +281,24 @@ impl ScreenLayoutManager {
     }
 
     fn make_shape_bundle(element: &ShapeElement, offset_z: f32, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> impl Bundle {
-        let mesh = match element.kind {
-            ShapeKind::Rect => Mesh2d(meshes.add(Rectangle::new(element.size.x, element.size.y))),
+        let handle = match element.kind {
+            ShapeKind::Rect => meshes.add(Rectangle::new(element.size.x, element.size.y)),
+            ShapeKind::CapsuleX => meshes.add(Capsule2d::new(element.size.y / 2.0, element.size.x - (element.size.y / 2.0))),
         };
+        let mesh = Mesh2d(handle);
         let material = MeshMaterial2d(materials.add(Color::Srgba(element.color)));
         let translation = Vec3::new(element.position.x, element.position.y, element.position.z + offset_z);
 
-        (mesh, material, Transform::from_translation(translation))
+        let transform = match element.kind {
+            ShapeKind::Rect => Transform::from_translation(translation),
+            ShapeKind::CapsuleX => Transform {
+                translation: translation + Vec3::new(element.size.y / 4.0, 0.0, 0.0),
+                rotation: Quat::from_rotation_z(PI / 2.0),
+                ..default()
+            },
+        };
+
+        (mesh, material, transform)
     }
 
     fn make_sprite_bundle(am: &AtlasManager, atlas_name: &str, texture_name: &str, translation: Vec3, color: Srgba) -> Option<impl Bundle> {

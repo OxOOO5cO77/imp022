@@ -1,0 +1,17 @@
+$color:text=0.7,0.7,0.7,1.0
+$color:header=0.6,0.6,0.6,1.0
+$color:bg=0.5,0.5,0.5,1.0
+$color:shade=0.0,0.0,0.0,0.95
+#bio_full:rect@0,0,290,425!shade
+&id_title:main.16.center@0,0,290,28!header|ID
+*id_bg:common.290x064@0,35!bg
+&id:main.24.center@0,39,290,56!text|-
+&name_title:main.16.center@0,110,290,28!header|Name
+*name_bg:common.290x064@0,145!bg
+&name:main.24.center@0,149,290,56!text|-
+&place_title:main.16.center@0,220,290,28!header|Birthplace
+*place_bg:common.290x064@0,255!bg
+&place:main.24.center@0,259,290,56!text|-
+&age_title:main.16.center@0,330,290,28!header|Age
+*age_bg:common.290x064@0,365!bg
+&age:main.24.center@0,369,290,56!text|-
