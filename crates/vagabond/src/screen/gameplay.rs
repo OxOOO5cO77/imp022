@@ -1,7 +1,7 @@
 use crate::manager::{AtlasManager, DataManager, ScreenLayoutManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
-use crate::screen::util;
 use crate::screen::compose::ComposeHandoff;
+use crate::screen::util;
 use crate::system::ui_effects::{Blinker, Glower};
 use crate::system::AppState;
 use bevy::prelude::*;
@@ -17,6 +17,10 @@ use std::collections::HashMap;
 use vagabond::data::VagabondCard;
 
 const SCREEN_LAYOUT: &str = "gameplay";
+
+const BLINKER_COUNT: f32 = 2.0;
+const BLINKER_SPEED: f32 = 24.0;
+const GLOWER_SPEED: f32 = 4.0;
 
 pub struct GameplayPlugin;
 
@@ -478,7 +482,7 @@ fn on_card_drag_start(
                 if let Some(blink) = blink {
                     blink.remove(&mut commands, &mut bg_sprite, layout.frame);
                 }
-                commands.entity(layout.frame).insert(Blinker::new(bg_sprite.color, bevy::color::palettes::basic::RED.into()).with_count(2.0).with_speed(24.0));
+                commands.entity(layout.frame).insert(Blinker::new(bg_sprite.color, bevy::color::palettes::basic::RED.into(), BLINKER_COUNT, BLINKER_SPEED));
             }
             return;
         }
@@ -730,7 +734,7 @@ fn local_ui_update(
 
                 if kind.is_none() {
                     for (entity, sprite, _) in row_q.iter() {
-                        commands.entity(entity).insert(Glower::new(sprite.color, Srgba::new(0.0, 1.0, 0.0, 1.0).into()));
+                        commands.entity(entity).insert(Glower::new(sprite.color, Srgba::new(0.0, 1.0, 0.0, 1.0).into(), GLOWER_SPEED));
                     }
                 } else {
                     for (entity, mut sprite, glower) in row_q.iter_mut() {

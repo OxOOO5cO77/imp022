@@ -9,6 +9,9 @@ use warehouse::data::player_bio::PlayerBio;
 
 const SCREEN_LAYOUT: &str = "compose";
 
+const GLOWER_DROP_TARGET_SPEED: f32 = 4.0;
+const GLOWER_COMMIT_SPEED: f32 = 8.0;
+
 pub struct ComposePlugin;
 
 impl Plugin for ComposePlugin {
@@ -377,7 +380,7 @@ fn on_part_drag_start(
                 _ => Srgba::new(0.8, 0.8, 0.8, 1.0),
             }
             .into();
-            let glower = Glower::new(sprite.color, glow);
+            let glower = Glower::new(sprite.color, glow, GLOWER_DROP_TARGET_SPEED);
             commands.entity(entity).insert(glower);
         }
     }
@@ -560,7 +563,7 @@ fn commit_button_ui(
                     }
                 }
                 PopulatePlayerUi::Show(_) => {
-                    commands.entity(entity).insert(Glower::new(sprite.color, bevy::color::palettes::basic::GREEN.into()).with_speed(8.0));
+                    commands.entity(entity).insert(Glower::new(sprite.color, bevy::color::palettes::basic::GREEN.into(), GLOWER_COMMIT_SPEED));
                 }
             };
         }

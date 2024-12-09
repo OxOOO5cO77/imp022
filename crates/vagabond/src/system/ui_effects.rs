@@ -21,20 +21,13 @@ pub(crate) struct Glower {
 }
 
 impl Glower {
-    const DEFAULT_SPEED: f32 = 4.0;
-
-    pub(crate) fn new(source: Color, target: Color) -> Self {
+    pub(crate) fn new(source: Color, target: Color, speed: f32) -> Self {
         Self {
             source,
             target,
-            speed: Self::DEFAULT_SPEED,
+            speed,
         }
     }
-    pub(crate) fn with_speed(mut self, speed: f32) -> Self {
-        self.speed = speed;
-        self
-    }
-
     pub(crate) fn remove(&self, commands: &mut Commands, sprite: &mut Sprite, entity: Entity) {
         sprite.color = self.source;
         commands.entity(entity).remove::<Glower>();
@@ -56,32 +49,22 @@ fn glower_update(
 pub(crate) struct Blinker {
     source: Color,
     target: Color,
-    count: f32,
     delta_time: f32,
+    target_time: f32,
     speed: f32,
 }
 
 impl Blinker {
-    const DEFAULT_COUNT: f32 = 1.0;
-    const DEFAULT_SPEED: f32 = 1.0;
-
-    pub(crate) fn new(source: Color, target: Color) -> Self {
+    pub(crate) fn new(source: Color, target: Color, count: f32, speed: f32) -> Self {
         Self {
             source,
             target,
-            count: Self::DEFAULT_COUNT,
             delta_time: 0.0,
-            speed: Self::DEFAULT_SPEED,
+            target_time: (2.0 * PI * count) / speed,
+            speed,
         }
     }
-    pub(crate) fn with_count(mut self, count: f32) -> Self {
-        self.count = count;
-        self
-    }
-    pub(crate) fn with_speed(mut self, speed: f32) -> Self {
-        self.speed = speed;
-        self
-    }
+
     pub(crate) fn remove(&self, commands: &mut Commands, sprite: &mut Sprite, entity: Entity) {
         sprite.color = self.source;
         commands.entity(entity).remove::<Blinker>();
@@ -96,13 +79,14 @@ fn blinker_update(
 ) {
     for (e, mut sprite, mut blink) in blinker_q.iter_mut() {
         blink.delta_time += time.delta().as_secs_f32();
+        if blink.delta_time > blink.target_time {
+            blink.remove(&mut commands, &mut sprite, e);
+            return;
+        }
+
         let x = (blink.delta_time * blink.speed) - (PI / 2.0);
         let t = (ops::sin(x) + 1.0) / 2.0;
 
         sprite.color = blink.source.mix(&blink.target, t);
-        let target_time = (2.0 * PI * blink.count) / blink.speed;
-        if blink.delta_time > target_time {
-            blink.remove(&mut commands, &mut sprite, e);
-        }
     }
 }
