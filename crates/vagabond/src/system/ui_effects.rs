@@ -47,6 +47,7 @@ fn glower_update(
 
 #[derive(Component)]
 pub(crate) struct Blinker {
+    original: Color,
     source: Color,
     target: Color,
     delta_time: f32,
@@ -55,9 +56,10 @@ pub(crate) struct Blinker {
 }
 
 impl Blinker {
-    pub(crate) fn new(source: Color, target: Color, count: f32, speed: f32) -> Self {
+    pub(crate) fn new(original: Color, target: Color, count: f32, speed: f32) -> Self {
         Self {
-            source,
+            original,
+            source: (original.to_srgba()/2.0).into(),
             target,
             delta_time: 0.0,
             target_time: (2.0 * PI * count) / speed,
@@ -66,7 +68,7 @@ impl Blinker {
     }
 
     pub(crate) fn remove(&self, commands: &mut Commands, sprite: &mut Sprite, entity: Entity) {
-        sprite.color = self.source;
+        sprite.color = self.original;
         commands.entity(entity).remove::<Blinker>();
     }
 }
@@ -84,7 +86,7 @@ fn blinker_update(
             return;
         }
 
-        let x = (blink.delta_time * blink.speed) - (PI / 2.0);
+        let x = (blink.delta_time * blink.speed);
         let t = (ops::sin(x) + 1.0) / 2.0;
 
         sprite.color = blink.source.mix(&blink.target, t);
