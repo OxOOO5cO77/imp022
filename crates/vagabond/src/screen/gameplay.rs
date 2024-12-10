@@ -253,7 +253,13 @@ fn gameplay_enter(
 ) {
     let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, for_slm);
 
-    const LOCAL_ATTR: [[&str; 4]; 4] = [["aa", "ab", "ac", "ad"], ["ba", "bb", "bc", "bd"], ["ca", "cb", "cc", "cd"], ["da", "db", "dc", "dd"]];
+    const LOCAL_ATTR: [[&str; 4]; 4] = [
+        //
+        ["attributes/aa", "attributes/ab", "attributes/ac", "attributes/ad"],
+        ["attributes/ba", "attributes/bb", "attributes/bc", "attributes/bd"],
+        ["attributes/ca", "attributes/cb", "attributes/cc", "attributes/cd"],
+        ["attributes/da", "attributes/db", "attributes/dc", "attributes/dd"],
+    ];
 
     for (row_idx, row) in LOCAL_ATTR.iter().enumerate() {
         for (col_idx, name) in row.iter().enumerate() {
@@ -285,10 +291,10 @@ fn gameplay_enter(
     commands.entity(layout.entity("phase")).insert(PhaseText);
     commands.entity(layout.entity("next")).insert_next_button();
 
-    commands.entity(layout.entity("row_a")).insert_pickable_row(AttrKind::Analyze);
-    commands.entity(layout.entity("row_b")).insert_pickable_row(AttrKind::Breach);
-    commands.entity(layout.entity("row_c")).insert_pickable_row(AttrKind::Compute);
-    commands.entity(layout.entity("row_d")).insert_pickable_row(AttrKind::Disrupt);
+    commands.entity(layout.entity("attributes/row_a")).insert_pickable_row(AttrKind::Analyze);
+    commands.entity(layout.entity("attributes/row_b")).insert_pickable_row(AttrKind::Breach);
+    commands.entity(layout.entity("attributes/row_c")).insert_pickable_row(AttrKind::Compute);
+    commands.entity(layout.entity("attributes/row_d")).insert_pickable_row(AttrKind::Disrupt);
 
     const MACHINES: [(&str, MachineKind); 2] = [("local", MachineKind::Local), ("remote", MachineKind::Remote)];
 
@@ -665,7 +671,7 @@ fn erg_ui_update(mut receive: EventReader<UiEvent>, mut erg_q: Query<(&mut Text2
         if let UiEvent::PlayerErg(erg) = ui_event {
             for (mut erg_text, state_text) in erg_q.iter_mut() {
                 if let PlayerStateText::Erg(index) = state_text {
-                    *erg_text = format!("{:02}", erg[*index]).into();
+                    *erg_text = format!("{}", erg[*index]).into();
                 }
             }
         }

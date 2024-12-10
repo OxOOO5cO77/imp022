@@ -242,10 +242,10 @@ fn compose_enter(
 
     const ATTR: [(&str, StatRowKind, [&str; 4]); 4] = [
         //
-        ("row_a", StatRowKind::Analyze, ["aa", "ab", "ac", "ad"]),
-        ("row_b", StatRowKind::Breach, ["ba", "bb", "bc", "bd"]),
-        ("row_c", StatRowKind::Compute, ["ca", "cb", "cc", "cd"]),
-        ("row_d", StatRowKind::Disrupt, ["da", "db", "dc", "dd"]),
+        ("attributes/row_a", StatRowKind::Analyze, ["attributes/aa", "attributes/ab", "attributes/ac", "attributes/ad"]),
+        ("attributes/row_b", StatRowKind::Breach, ["attributes/ba", "attributes/bb", "attributes/bc", "attributes/bd"]),
+        ("attributes/row_c", StatRowKind::Compute, ["attributes/ca", "attributes/cb", "attributes/cc", "attributes/cd"]),
+        ("attributes/row_d", StatRowKind::Disrupt, ["attributes/da", "attributes/db", "attributes/dc", "attributes/dd"]),
     ];
 
     for (row_name, kind, row) in ATTR {

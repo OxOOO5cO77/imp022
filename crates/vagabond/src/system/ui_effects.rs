@@ -86,7 +86,7 @@ fn blinker_update(
             return;
         }
 
-        let x = (blink.delta_time * blink.speed);
+        let x = (blink.delta_time * blink.speed) - (PI / 2.0);
         let t = (ops::sin(x) + 1.0) / 2.0;
 
         sprite.color = blink.source.mix(&blink.target, t);

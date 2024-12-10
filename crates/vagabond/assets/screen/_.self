@@ -9,5 +9,6 @@ $color:grey5=0.5,0.5,0.5,1.0
 $color:grey4=0.4,0.4,0.4,1.0
 $color:grey2=0.2,0.2,0.2,1.0
 $color:whitish=1.0,1.0,1.0,0.6
+$color:dim=0.0,0.0,0.0,0.75
 $font:main=font/RobotoMono.ttf
 $font:code=font/PCSenior.ttf
