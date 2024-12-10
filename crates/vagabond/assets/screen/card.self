@@ -1,4 +1,3 @@
-$color:whitish=1.0,1.0,1.0,0.6
 *frame:common.card@0,0!white
 #title_bg:capsule_x@8,5,180,16!whitish
 &title:main.12.center@8,4,180,18!black|CARD

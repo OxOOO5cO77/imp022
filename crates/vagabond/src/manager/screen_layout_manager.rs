@@ -4,12 +4,18 @@ use bevy::sprite::{Anchor, MeshMaterial2d};
 use bevy::text::TextBounds;
 use std::collections::HashMap;
 use std::f32::consts::PI;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[derive(Resource)]
 pub(crate) struct ScreenLayoutManager {
     layout_map: HashMap<String, ScreenLayout>,
     entity_map: HashMap<String, Entity>,
+}
+
+#[derive(Default)]
+struct ScreenResources {
+    color_map: HashMap<String, Srgba>,
+    font_map: HashMap<String, String>,
 }
 
 #[derive(Default)]
@@ -47,7 +53,7 @@ struct SpriteElement {
 struct TextElement {
     default_text: String,
     color: Srgba,
-    font_name: &'static str,
+    font_name: String,
     font_size: f32,
     position: Vec3,
     size: Vec2,
@@ -59,8 +65,6 @@ struct LayoutElement {
     position: Vec3,
     size: Vec2,
 }
-
-type ColorMap = HashMap<String, Srgba>;
 
 impl ScreenLayout {
     fn parse_position_size(rect: &str, z: f32) -> Option<(Vec3, Vec2)> {
@@ -89,7 +93,7 @@ impl ScreenLayout {
         }
     }
 
-    fn parse_shape(&mut self, name: &str, remain: &str, z: f32, colors: &mut ColorMap) -> Option<bool> {
+    fn parse_shape(&mut self, name: &str, remain: &str, z: f32, resources: &ScreenResources, overrides: &ScreenResources) -> Option<bool> {
         let (shape_kind, remain) = remain.split_once("@")?;
         let (position_size, color) = remain.split_once("!")?;
         let (raw_position, size) = Self::parse_position_size(position_size, z)?;
@@ -99,7 +103,7 @@ impl ScreenLayout {
             kind: Self::parse_shape_kind(shape_kind)?,
             position,
             size,
-            color: *colors.get(color)?,
+            color: *overrides.color_map.get(color).or(resources.color_map.get(color))?,
         };
 
         if self.element_map.insert(name.to_string(), Element::Shape(element)).is_some() {
@@ -108,7 +112,7 @@ impl ScreenLayout {
         Some(true)
     }
 
-    fn parse_sprite(&mut self, name: &str, remain: &str, z: f32, colors: &mut ColorMap) -> Option<bool> {
+    fn parse_sprite(&mut self, name: &str, remain: &str, z: f32, resources: &ScreenResources, overrides: &ScreenResources) -> Option<bool> {
         let (atlas_item, remain) = remain.split_once('@')?;
         let (atlas, item) = atlas_item.split_once('.')?;
         let (position, color) = remain.split_once("!")?;
@@ -117,7 +121,7 @@ impl ScreenLayout {
             atlas: atlas.to_string(),
             item: item.to_string(),
             position: Self::parse_position(position, z)?,
-            color: *colors.get(color)?,
+            color: *overrides.color_map.get(color).or(resources.color_map.get(color))?,
         };
 
         if self.element_map.insert(name.to_string(), Element::Sprite(element)).is_some() {
@@ -127,16 +131,13 @@ impl ScreenLayout {
         Some(true)
     }
 
-    fn parse_font_info(font_info: &str) -> Option<(&'static str, f32, JustifyText)> {
+    fn parse_font_info(font_info: &str, resources: &ScreenResources, overrides: &ScreenResources) -> Option<(String, f32, JustifyText)> {
         let mut parts = font_info.split(".");
         let name_str = parts.next()?;
         let font_size = parts.next()?.parse::<f32>().ok()?;
         let justify_str = parts.next()?;
 
-        let font_name = match name_str {
-            "main" => "font/RobotoMono.ttf",
-            _ => "font/RobotoMono.ttf",
-        };
+        let font_name = overrides.font_map.get(name_str).or(resources.font_map.get(name_str))?.clone();
         let justify = match justify_str {
             "left" => JustifyText::Left,
             "center" => JustifyText::Center,
@@ -146,17 +147,17 @@ impl ScreenLayout {
         Some((font_name, font_size, justify))
     }
 
-    fn parse_text(&mut self, name: &str, remain: &str, z: f32, colors: &mut ColorMap) -> Option<bool> {
+    fn parse_text(&mut self, name: &str, remain: &str, z: f32, resources: &ScreenResources, overrides: &ScreenResources) -> Option<bool> {
         let (font_info, remain) = remain.split_once('@')?;
         let (position_size, remain) = remain.split_once('!')?;
         let (color, default_text) = remain.split_once('|')?;
 
         let (position, size) = Self::parse_position_size(position_size, z)?;
-        let (font_name, font_size, justify) = Self::parse_font_info(font_info)?;
+        let (font_name, font_size, justify) = Self::parse_font_info(font_info, resources, overrides)?;
 
         let element = TextElement {
             default_text: default_text.to_string(),
-            color: *colors.get(color)?,
+            color: *overrides.color_map.get(color).or(resources.color_map.get(color))?,
             font_name,
             font_size,
             position,
@@ -206,41 +207,67 @@ impl ScreenLayoutManager {
     pub(crate) fn new(path: impl AsRef<Path>) -> Result<Self, std::io::Error> {
         let mut layout_map = HashMap::new();
 
+        let mut init_path = PathBuf::from(path.as_ref());
+        init_path.push("_.self");
+        let resources = Self::load_init(init_path)?;
+
         for entry in std::fs::read_dir(path)? {
             let entry = entry.map_err(fail)?.path();
             let name = entry.file_stem().ok_or(std::io::ErrorKind::Other).map_err(fail)?.to_string_lossy().to_string();
-            let layout = Self::load(&name, entry)?;
-            layout_map.insert(name, layout);
+            if name != "_" {
+                let layout = Self::load(&name, entry, &resources)?;
+                layout_map.insert(name, layout);
+            }
         }
-
-        Ok(Self {
+        let screen_layout_manager = Self {
             layout_map,
             entity_map: HashMap::new(),
-        })
+        };
+        Ok(screen_layout_manager)
     }
 
-    fn load(layout_name: &str, path: impl AsRef<Path>) -> Result<ScreenLayout, std::io::Error> {
+    fn load_init(path: impl AsRef<Path>) -> Result<ScreenResources, std::io::Error> {
+        let init_file = std::fs::read_to_string(path)?;
+
+        let base_resources = ScreenResources::default();
+        //todo: pre-populate with CSS colors?
+        
+        let mut resources = ScreenResources::default();
+        resources.color_map.insert("black".to_string(), Srgba::BLACK);
+        resources.color_map.insert("white".to_string(), Srgba::WHITE);
+
+        for (line_number, line) in init_file.lines().enumerate() {
+            let parsed = Self::parse_kind(line) //
+                .and_then(|(kind, remain)| Some((kind, Self::parse_name(remain)?)))
+                .and_then(|(kind, (name, remain))| match kind {
+                    '$' => Self::parse_resource(name, remain, &base_resources, &mut resources),
+                    _ => None,
+                });
+            if parsed.is_none() {
+                println!("[_.self] Parse error at line {}", line_number + 1);
+            }
+        }
+
+        Ok(resources)
+    }
+
+    fn load(layout_name: &str, path: impl AsRef<Path>, resources: &ScreenResources) -> Result<ScreenLayout, std::io::Error> {
         const Z_OFFSET: f32 = 0.01;
         let mut z = 0.0;
 
         let layout_file = std::fs::read_to_string(path)?;
 
-        let mut colors = HashMap::new();
-        colors.insert("black".to_string(), Srgba::BLACK);
-        colors.insert("white".to_string(), Srgba::WHITE);
+        let mut overrides = ScreenResources::default();
 
         let mut screen_layout = ScreenLayout::default();
         for (line_number, line) in layout_file.lines().enumerate() {
             let parsed = Self::parse_kind(line) //
                 .and_then(|(kind, remain)| Some((kind, Self::parse_name(remain)?)))
                 .and_then(|(kind, (name, remain))| match kind {
-                    '$' => match name {
-                        "color" => Self::parse_color(remain, &mut colors),
-                        _ => None,
-                    },
-                    '*' => screen_layout.parse_sprite(name, remain, z, &mut colors),
-                    '&' => screen_layout.parse_text(name, remain, z, &mut colors),
-                    '#' => screen_layout.parse_shape(name, remain, z, &mut colors),
+                    '$' => Self::parse_resource(name, remain, resources, &mut overrides),
+                    '*' => screen_layout.parse_sprite(name, remain, z, resources, &overrides),
+                    '&' => screen_layout.parse_text(name, remain, z, resources, &overrides),
+                    '#' => screen_layout.parse_shape(name, remain, z, resources, &overrides),
                     '/' => screen_layout.parse_layout(name, remain, z),
                     _ => None,
                 });
@@ -250,7 +277,7 @@ impl ScreenLayoutManager {
                     z += Z_OFFSET;
                 }
             } else {
-                println!("[{layout_name}.self], Parse error at line {}", line_number + 1);
+                println!("[{layout_name}.self] Parse error at line {}", line_number + 1);
             }
         }
 
@@ -267,17 +294,39 @@ impl ScreenLayoutManager {
         Some((kind, remain))
     }
 
-    fn parse_color(remain: &str, colors: &mut HashMap<String, Srgba>) -> Option<bool> {
-        let (name, remain) = remain.split_once('=')?;
+    fn parse_color_components(remain: &str) -> Option<Srgba> {
         let mut components = remain.split(',');
         let r = components.next()?.parse::<f32>().ok()?;
         let g = components.next()?.parse::<f32>().ok()?;
         let b = components.next()?.parse::<f32>().ok()?;
         let a = components.next()?.parse::<f32>().ok()?;
 
-        colors.insert(name.to_string(), Srgba::new(r, g, b, a));
+        Some(Srgba::new(r, g, b, a))
+    }
+
+    fn parse_color(remain: &str, in_resources: &ScreenResources, out_colors: &mut HashMap<String, Srgba>) -> Option<bool> {
+        let (name, remain) = remain.split_once('=')?;
+
+        let color = in_resources.color_map.get(remain).cloned().or_else(|| Self::parse_color_components(remain))?;
+
+        out_colors.insert(name.to_string(), color);
+        Some(false)
+    }
+
+    fn parse_font(remain: &str, fonts: &mut HashMap<String, String>) -> Option<bool> {
+        let (name, remain) = remain.split_once('=')?;
+
+        fonts.insert(name.to_string(), remain.to_string());
 
         Some(false)
+    }
+
+    fn parse_resource(name: &str, remain: &str, in_resources: &ScreenResources, out_resources: &mut ScreenResources) -> Option<bool> {
+        match name {
+            "color" => Self::parse_color(remain, in_resources, &mut out_resources.color_map),
+            "font" => Self::parse_font(remain, &mut out_resources.font_map),
+            _ => None,
+        }
     }
 
     fn make_shape_bundle(element: &ShapeElement, offset_z: f32, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> impl Bundle {
@@ -318,7 +367,7 @@ impl ScreenLayoutManager {
     }
 
     fn make_text_bundle(element: &TextElement, offset_z: f32, asset_server: &AssetServer) -> impl Bundle {
-        let font = asset_server.load(element.font_name);
+        let font = asset_server.load(&element.font_name);
         let translation = Vec3::new(element.position.x, element.position.y - (element.size.y / 2.0), element.position.z + offset_z);
 
         (

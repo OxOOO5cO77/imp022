@@ -1,4 +1,3 @@
-$color:red=0.545,0.0,0.0,1.0
 *border:login.622x300@650,400!white
 &title:main.32.center@662,400,600,64!white|Login
 &user:main.32.left@662,490,80,64!white|User

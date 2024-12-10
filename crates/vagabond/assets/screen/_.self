@@ -1,0 +1,13 @@
+$color:red=0.545,0.0,0.0,1.0
+$color:blue=0.0,0.0,0.545,1.0
+$color:green=0.0,0.392,0.0,1.0
+$color:yellow=0.722,0.525,0.043,1.0
+$color:silver=0.7529412,0.7529412,0.7529412,1.0
+$color:grey7=0.7,0.7,0.7,1.0
+$color:grey6=0.6,0.6,0.6,1.0
+$color:grey5=0.5,0.5,0.5,1.0
+$color:grey4=0.4,0.4,0.4,1.0
+$color:grey2=0.2,0.2,0.2,1.0
+$color:whitish=1.0,1.0,1.0,0.6
+$font:main=font/RobotoMono.ttf
+$font:code=font/PCSenior.ttf
