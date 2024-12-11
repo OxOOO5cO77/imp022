@@ -10,6 +10,7 @@ members = [
     "crates/jail",
     "crates/lookout",
     "crates/smithy",
+    "crates/undertaker",
     "crates/vagabond",
     "crates/warehouse"
 ]

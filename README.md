@@ -31,3 +31,5 @@ TODO
 ## Tools
 ### Smithy
 Smithy is the data manipulation utility.
+### Undertaker
+Undertaker is a collection of disparate tools to aid the building of Vagabond.
