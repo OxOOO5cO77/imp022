@@ -54,7 +54,7 @@ impl std::fmt::Debug for AtlasManagerError {
 
 impl AtlasManager {
     fn filter_extension(path: PathBuf) -> Option<PathBuf> {
-        path.extension().map_or(false, |ext| ext == "atlas").then_some(path)
+        path.extension().map_or(false, |ext| ext == "map").then_some(path)
     }
 
     fn load_all_atlas(&mut self, asset_server: &Res<AssetServer>, texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>) -> Result<(), AtlasManagerError> {
@@ -151,7 +151,7 @@ fn parse_file(layout_file: &str) -> Result<(String, HashMap<String, AtlasEntry>,
 
 impl Atlas {
     fn new(path: PathBuf, asset_server: &Res<AssetServer>, layouts: &mut ResMut<Assets<TextureAtlasLayout>>) -> Result<(String, Self), AtlasManagerError> {
-        let layout_path = path.with_extension("atlas");
+        let layout_path = path.with_extension("map");
         let layout_file = std::fs::read_to_string(layout_path).map_err(AtlasManagerError::Io)?;
 
         let mut components = path.components();

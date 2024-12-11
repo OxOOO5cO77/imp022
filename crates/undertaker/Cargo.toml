@@ -1,0 +1,16 @@
+[package]
+name = "undertaker"
+description = "Undertaker is the asset file utility."
+version = "0.1.0"
+edition = "2021"
+authors = ["Scott Barcik <oxooo5co77@impending.org>"]
+
+[dependencies]
+
+[[bin]]
+name = "undertaker-atlas"
+path = "src/bin/atlas.rs"
+
+[[bin]]
+name = "undertaker-selfie"
+path = "src/bin/selfie.rs"
