@@ -5,6 +5,7 @@ mod splash;
 mod gameplay;
 mod login;
 mod util;
+mod card_layout;
 
 pub(crate) struct ScreenPlugins;
 

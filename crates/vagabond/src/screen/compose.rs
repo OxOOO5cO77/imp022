@@ -1,5 +1,6 @@
 use crate::manager::{AtlasManager, DataManager, ScreenLayout, ScreenLayoutManager, WarehouseManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
+use crate::screen::card_layout::{CardLayout, CardText};
 use crate::screen::util;
 use crate::system::ui_effects::Glower;
 use crate::system::AppState;
@@ -22,8 +23,8 @@ impl Plugin for ComposePlugin {
             .add_systems(OnEnter(AppState::ComposeInit), compose_init_enter)
             .add_systems(Update, compose_init_update.run_if(in_state(AppState::ComposeInit)))
             .add_systems(OnEnter(AppState::Compose), compose_enter)
-            .add_systems(Update, (finish_player, populate_bio_ui, populate_deck_ui, commit_button_ui, compose_update).run_if(in_state(AppState::Compose)))
-            .add_systems(PostUpdate, populate_part_layouts.run_if(in_state(AppState::Compose)))
+            .add_systems(Update, (context_update, finish_player, populate_bio_ui, populate_deck_ui, commit_button_ui, compose_update).run_if(in_state(AppState::Compose)))
+            .add_systems(PostUpdate, (on_update_tooltip, populate_part_layouts).run_if(in_state(AppState::Compose)))
             .add_systems(OnExit(AppState::Compose), compose_exit);
     }
 }
@@ -57,12 +58,18 @@ fn compose_init_update(
     }
 }
 
-#[derive(Resource, Default, PartialEq)]
+#[derive(Default, PartialEq)]
 enum ComposeState {
     #[default]
     Build,
     Ready,
     Committed,
+}
+
+#[derive(Resource, Default)]
+struct ComposeContext {
+    state: ComposeState,
+    deck: Vec<VagabondCard>,
 }
 
 #[derive(Event)]
@@ -116,6 +123,11 @@ struct PlayerBioGroup;
 
 #[derive(Component)]
 struct DeckGutterGroup;
+
+#[derive(Component, Default)]
+struct CardTooltip {
+    index: Option<usize>,
+}
 
 #[derive(Component)]
 struct CardHeader {
@@ -197,6 +209,7 @@ trait PartEntityCommandsExtension {
     fn insert_empty_slot(self, slot: Slot, layout: PartLayout) -> Self;
     fn insert_filled_slot(self, slot: Slot, layout: PartLayout, part: VagabondPart) -> Self;
     fn insert_commit_button(self) -> Self;
+    fn insert_card_header(self, header: CardHeader) -> Self;
 }
 
 impl PartEntityCommandsExtension for &mut EntityCommands<'_> {
@@ -224,6 +237,12 @@ impl PartEntityCommandsExtension for &mut EntityCommands<'_> {
             .observe(on_click_commit)
             .observe(on_over_commit)
             .observe(on_out_commit)
+    }
+    fn insert_card_header(self, header: CardHeader) -> Self {
+        self //
+            .insert((header, PickingBehavior::default()))
+            .observe(on_over_header)
+            .observe(on_out_header)
     }
 }
 
@@ -320,22 +339,18 @@ fn compose_enter(
             .observe_part_drop();
     }
 
+    let tooltip = CardLayout::build(&mut commands, layout, 0, "tooltip");
+    commands.entity(tooltip).insert((CardTooltip::default(), Visibility::Hidden));
     commands.entity(layout.entity("gutter")).insert((DeckGutterGroup, Visibility::Hidden));
     for index in 0..40 {
         let slot_index = index + 1;
-        let title_string = format!("gutter/card{:02}/title", slot_index);
-        let title = commands.entity(layout.entity(&title_string)).id();
-        let cost_string = format!("gutter/card{:02}/cost", slot_index);
-        let cost = commands.entity(layout.entity(&cost_string)).id();
-        let frame_string = format!("gutter/card{:02}/frame", slot_index);
-        let frame = commands.entity(layout.entity(&frame_string)).id();
         let header = CardHeader {
             index,
-            title,
-            cost,
-            frame,
+            title: commands.entity(layout.entity(&format!("gutter/card{:02}/title", slot_index))).id(),
+            cost: commands.entity(layout.entity(&format!("gutter/card{:02}/cost", slot_index))).id(),
+            frame: commands.entity(layout.entity(&format!("gutter/card{:02}/frame", slot_index))).id(),
         };
-        commands.entity(layout.entity(&format!("gutter/card{:02}", slot_index))).insert(header);
+        commands.entity(layout.entity(&format!("gutter/card{:02}", slot_index))).insert_card_header(header);
     }
 
     commands.entity(layout.entity("commit")).insert_commit_button();
@@ -348,7 +363,7 @@ fn compose_enter(
         .id();
     commands.insert_resource(Draggable::new(draggable));
 
-    commands.insert_resource(ComposeState::default());
+    commands.insert_resource(ComposeContext::default());
 }
 
 fn on_part_drag_start(
@@ -480,13 +495,13 @@ fn on_part_drop(
 fn on_click_commit(
     //
     _event: Trigger<Pointer<Click>>,
-    mut state: ResMut<ComposeState>,
+    mut context: ResMut<ComposeContext>,
     mut send: EventWriter<FinishPlayer>,
 ) {
-    if *state != ComposeState::Ready {
+    if context.state != ComposeState::Ready {
         return;
     }
-    *state = ComposeState::Committed;
+    context.state = ComposeState::Committed;
     send.send(FinishPlayer);
 }
 
@@ -499,6 +514,55 @@ fn on_over_commit(event: Trigger<Pointer<Over>>, mut sprite_q: Query<&mut Sprite
 fn on_out_commit(event: Trigger<Pointer<Out>>, mut sprite_q: Query<&mut Sprite, With<CommitButton>>) {
     if let Ok(mut sprite) = sprite_q.get_mut(event.target) {
         sprite.color = bevy::color::palettes::css::DARK_GRAY.into();
+    }
+}
+
+fn on_over_header(
+    //
+    event: Trigger<Pointer<Over>>,
+    header_q: Query<(&Transform, &CardHeader)>,
+    mut tooltip_q: Query<(&mut Transform, &Sprite, &mut CardTooltip), Without<CardHeader>>,
+) {
+    if let Ok((header_transform, header)) = header_q.get(event.target) {
+        if let Ok((mut tooltip_transform, sprite, mut tooltip)) = tooltip_q.get_single_mut() {
+            tooltip.index = Some(header.index);
+            let size = sprite.custom_size.unwrap_or_default();
+            let new_y = header_transform.translation.y + (size.y / 2.0);
+            tooltip_transform.translation.y = new_y.clamp(-1080.0 + size.y, 0.0);
+        }
+    }
+}
+
+fn on_out_header(
+    //
+    _event: Trigger<Pointer<Out>>,
+    mut tooltip_q: Query<&mut CardTooltip>,
+) {
+    if let Ok(mut tooltip) = tooltip_q.get_single_mut() {
+        tooltip.index = None;
+    }
+}
+
+fn on_update_tooltip(
+    //
+    mut commands: Commands,
+    tooltip_q: Query<(Entity, &CardLayout, &mut CardTooltip), Changed<CardTooltip>>,
+    mut text_q: Query<&mut Text2d, With<CardText>>,
+    mut sprite_q: Query<&mut Sprite>,
+    context: Res<ComposeContext>,
+) {
+    if let Ok((entity, layout, tooltip)) = tooltip_q.get_single() {
+        let visibility = if let Some(index) = tooltip.index {
+            if let Some(card) = context.deck.get(index) {
+                layout.populate(card.clone(), &mut text_q, &mut sprite_q);
+                Visibility::Visible
+            } else {
+                Visibility::Hidden
+            }
+        } else {
+            Visibility::Hidden
+        };
+        commands.entity(entity).insert(visibility);
     }
 }
 
@@ -544,6 +608,19 @@ fn populate_part_layouts(
                 Visibility::Hidden
             };
             commands.entity(entity).insert(visibility);
+        }
+    }
+}
+
+fn context_update(
+    // bevy system
+    mut read: EventReader<PopulatePlayerUi>,
+    mut context: ResMut<ComposeContext>,
+) {
+    if let Some(event) = read.read().last() {
+        match event {
+            PopulatePlayerUi::Hide => {}
+            PopulatePlayerUi::Show(data) => context.deck = data.deck.clone(),
         }
     }
 }
@@ -643,7 +720,7 @@ fn finish_player(
     mut send: EventWriter<PopulatePlayerUi>,
     holder_q: Query<(&PartHolder, &Slot)>,
     gate: Res<GateIFace>,
-    mut state: ResMut<ComposeState>,
+    mut context: ResMut<ComposeContext>,
 ) {
     if read.read().last().is_some() {
         let mut parts = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -668,12 +745,12 @@ fn finish_player(
         }
 
         if parts.iter().all(|&o| o != 0) {
-            if *state == ComposeState::Build {
-                *state = ComposeState::Ready;
+            if context.state == ComposeState::Build {
+                context.state = ComposeState::Ready;
             }
-            gate.send_game_build(parts, *state == ComposeState::Committed);
+            gate.send_game_build(parts, context.state == ComposeState::Committed);
         } else {
-            *state = ComposeState::Build;
+            context.state = ComposeState::Build;
             send.send(PopulatePlayerUi::Hide);
         }
     }
@@ -733,6 +810,6 @@ pub fn compose_exit(
     mut commands: Commands,
     mut slm: ResMut<ScreenLayoutManager>,
 ) {
-    commands.remove_resource::<ComposeState>();
+    commands.remove_resource::<ComposeContext>();
     slm.destroy(commands, SCREEN_LAYOUT);
 }

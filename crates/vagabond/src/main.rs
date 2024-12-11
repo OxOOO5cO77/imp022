@@ -19,7 +19,6 @@ fn main() -> AppExit {
             ..default()
         }))
         .add_plugins(bevy_simple_text_input::TextInputPlugin)
-        .add_plugins(pyri_tooltip::TooltipPlugin::default())
         .add_plugins((manager::ManagerPlugins, screen::ScreenPlugins, system::SystemPlugins))
         .insert_resource(ClearColor(Color::srgb(0.0, 0.0, 0.0)))
         .init_state::<AppState>()

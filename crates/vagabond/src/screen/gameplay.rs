@@ -1,7 +1,7 @@
 use crate::manager::{AtlasManager, DataManager, ScreenLayoutManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
+use crate::screen::card_layout::{CardLayout, CardText};
 use crate::screen::compose::ComposeHandoff;
-use crate::screen::util;
 use crate::system::ui_effects::{Blinker, Glower};
 use crate::system::AppState;
 use bevy::prelude::*;
@@ -143,34 +143,6 @@ enum PlayerStateText {
     Heap,
 }
 
-#[derive(Component, Clone)]
-struct CardLayout {
-    slot: usize,
-    frame: Entity,
-    title: Entity,
-    cost: Entity,
-    delay: Entity,
-    launch: Entity,
-    run: Entity,
-}
-
-impl CardLayout {
-    fn new(slot: usize) -> Self {
-        Self {
-            slot,
-            frame: Entity::PLACEHOLDER,
-            title: Entity::PLACEHOLDER,
-            cost: Entity::PLACEHOLDER,
-            delay: Entity::PLACEHOLDER,
-            launch: Entity::PLACEHOLDER,
-            run: Entity::PLACEHOLDER,
-        }
-    }
-}
-
-#[derive(Component)]
-struct CardText;
-
 #[derive(Component)]
 struct MachineQueueItem(DelayType);
 
@@ -212,30 +184,30 @@ enum UiEvent {
 #[derive(Component)]
 struct AttributeRow(AttrKind);
 
-trait PickableRowEntityCommandsExtension {
-    fn insert_pickable_row(self, kind: AttrKind) -> Self;
-    fn insert_next_button(self) -> Self;
-    fn insert_card(self, layout: CardLayout) -> Self;
+trait PickableEntityCommandsExtension {
+    fn observe_pickable_row(self, kind: AttrKind) -> Self;
+    fn observe_next_button(self) -> Self;
+    fn observe_card(self) -> Self;
 }
 
-impl PickableRowEntityCommandsExtension for &mut EntityCommands<'_> {
-    fn insert_pickable_row(self, kind: AttrKind) -> Self {
+impl PickableEntityCommandsExtension for &mut EntityCommands<'_> {
+    fn observe_pickable_row(self, kind: AttrKind) -> Self {
         self //
             .insert((AttributeRow(kind), PickingBehavior::default()))
             .observe(on_click_attr)
             .observe(on_over_attr)
             .observe(on_out_attr)
     }
-    fn insert_next_button(self) -> Self {
+    fn observe_next_button(self) -> Self {
         self //
             .insert(PickingBehavior::default())
             .observe(on_click_next)
             .observe(on_over_next)
             .observe(on_out_next)
     }
-    fn insert_card(self, layout: CardLayout) -> Self {
+    fn observe_card(self) -> Self {
         self //
-            .insert((layout, PickingBehavior::default()))
+            .insert(PickingBehavior::default())
             .observe(on_card_drag_start)
             .observe(on_card_drag)
             .observe(on_card_drag_end)
@@ -289,12 +261,12 @@ fn gameplay_enter(
     commands.entity(layout.entity("heap")).insert(PlayerStateText::Heap);
 
     commands.entity(layout.entity("phase")).insert(PhaseText);
-    commands.entity(layout.entity("next")).insert_next_button();
+    commands.entity(layout.entity("next")).observe_next_button();
 
-    commands.entity(layout.entity("attributes/row_a")).insert_pickable_row(AttrKind::Analyze);
-    commands.entity(layout.entity("attributes/row_b")).insert_pickable_row(AttrKind::Breach);
-    commands.entity(layout.entity("attributes/row_c")).insert_pickable_row(AttrKind::Compute);
-    commands.entity(layout.entity("attributes/row_d")).insert_pickable_row(AttrKind::Disrupt);
+    commands.entity(layout.entity("attributes/row_a")).observe_pickable_row(AttrKind::Analyze);
+    commands.entity(layout.entity("attributes/row_b")).observe_pickable_row(AttrKind::Breach);
+    commands.entity(layout.entity("attributes/row_c")).observe_pickable_row(AttrKind::Compute);
+    commands.entity(layout.entity("attributes/row_d")).observe_pickable_row(AttrKind::Disrupt);
 
     const MACHINES: [(&str, MachineKind); 2] = [("local", MachineKind::Local), ("remote", MachineKind::Remote)];
 
@@ -322,14 +294,8 @@ fn gameplay_enter(
     }
 
     for card_index in 1..=5 {
-        let mut card_layout = CardLayout::new(card_index - 1);
-        card_layout.frame = commands.entity(layout.entity(&format!("card{}/frame", card_index))).id();
-        card_layout.title = commands.entity(layout.entity(&format!("card{}/title", card_index))).insert(CardText).id();
-        card_layout.cost = commands.entity(layout.entity(&format!("card{}/cost", card_index))).insert(CardText).id();
-        card_layout.delay = commands.entity(layout.entity(&format!("card{}/delay", card_index))).insert(CardText).id();
-        card_layout.launch = commands.entity(layout.entity(&format!("card{}/launch", card_index))).insert(CardText).id();
-        card_layout.run = commands.entity(layout.entity(&format!("card{}/run", card_index))).insert(CardText).id();
-        commands.entity(layout.entity(&format!("card{}", card_index))).insert_card(card_layout);
+        let built = CardLayout::build(&mut commands, layout, card_index - 1, &format!("card{card_index}"));
+        commands.entity(built).observe_card();
     }
 
     commands.remove_resource::<GameplayInitHandoff>();
@@ -389,11 +355,8 @@ fn on_click_attr(event: Trigger<Pointer<Click>>, mut send: EventWriter<UiEvent>,
     }
 }
 
-fn on_over_attr(event: Trigger<Pointer<Over>>, context: Res<GameplayContext>, mut sprite_q: Query<(&mut Sprite, &mut Transform)>) {
-    if let Ok((mut sprite, mut transform)) = sprite_q.get_mut(event.target) {
-        if transform.translation.z < 100.0 {
-            transform.translation.z += 100.0;
-        }
+fn on_over_attr(event: Trigger<Pointer<Over>>, context: Res<GameplayContext>, mut sprite_q: Query<&mut Sprite>) {
+    if let Ok(mut sprite) = sprite_q.get_mut(event.target) {
         sprite.color = if VagabondGamePhase::Pick == context.phase {
             bevy::color::palettes::basic::GREEN
         } else {
@@ -403,11 +366,8 @@ fn on_over_attr(event: Trigger<Pointer<Over>>, context: Res<GameplayContext>, mu
     }
 }
 
-fn on_out_attr(event: Trigger<Pointer<Out>>, mut sprite_q: Query<(&mut Sprite, &mut Transform)>) {
-    if let Ok((mut sprite, mut transform)) = sprite_q.get_mut(event.target) {
-        if transform.translation.z > 100.0 {
-            transform.translation.z -= 100.0;
-        }
+fn on_out_attr(event: Trigger<Pointer<Out>>, mut sprite_q: Query<&mut Sprite>) {
+    if let Ok(mut sprite) = sprite_q.get_mut(event.target) {
         sprite.color = bevy::color::palettes::css::DARK_GRAY.into();
     }
 }
@@ -640,22 +600,7 @@ fn card_ui_update(
                 let card = player_state.hand.get(layout.slot).and_then(|o| dm.convert_card(o));
 
                 let visibility = if let Some(card) = card {
-                    if let Ok(mut title_text) = text_q.get_mut(layout.title) {
-                        *title_text = card.title.into();
-                    }
-                    if let Ok(mut cost_text) = text_q.get_mut(layout.cost) {
-                        *cost_text = util::map_kind_to_cost(card.kind, card.cost).into();
-                    }
-                    if let Ok(mut launch_text) = text_q.get_mut(layout.launch) {
-                        *launch_text = card.launch_rules.into();
-                    }
-                    if let Ok(mut run_text) = text_q.get_mut(layout.run) {
-                        *run_text = card.run_rules.into();
-                    }
-
-                    if let Ok(mut frame) = sprite_q.get_mut(layout.frame) {
-                        frame.color = util::map_kind_to_color(card.kind);
-                    }
+                    layout.populate(card, &mut text_q, &mut sprite_q);
                     Visibility::Visible
                 } else {
                     Visibility::Hidden
