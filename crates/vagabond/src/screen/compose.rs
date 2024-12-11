@@ -2,7 +2,7 @@ use crate::manager::{AtlasManager, DataManager, ScreenLayout, ScreenLayoutManage
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::card_layout::{CardLayout, CardText};
 use crate::screen::util;
-use crate::system::ui_effects::Glower;
+use crate::system::ui_effects::{Glower, Hider};
 use crate::system::AppState;
 use bevy::prelude::*;
 use vagabond::data::{VagabondCard, VagabondPart};
@@ -551,18 +551,13 @@ fn on_update_tooltip(
     mut sprite_q: Query<&mut Sprite>,
     context: Res<ComposeContext>,
 ) {
-    if let Ok((entity, layout, tooltip)) = tooltip_q.get_single() {
-        let visibility = if let Some(index) = tooltip.index {
-            if let Some(card) = context.deck.get(index) {
-                layout.populate(card.clone(), &mut text_q, &mut sprite_q);
-                Visibility::Visible
-            } else {
-                Visibility::Hidden
-            }
-        } else {
-            Visibility::Hidden
+    if let Ok((e, layout, tooltip)) = tooltip_q.get_single() {
+        let vis = tooltip.index.and_then(|index| context.deck.get(index)).map(|card| layout.populate(card.clone(), &mut text_q, &mut sprite_q));
+        let mut entity = commands.entity(e);
+        match vis {
+            None => entity.insert(Hider::new(0.25)),
+            Some(_) => entity.remove::<Hider>().insert(Visibility::Visible),
         };
-        commands.entity(entity).insert(visibility);
     }
 }
 
