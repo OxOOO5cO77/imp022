@@ -1,6 +1,6 @@
 #bg:rect%361,286@0,0,0!silver
 &title:main.16.left%200,22@6,3,1!black|MACHINE
-&id:main.14.right%148,22@208,3,1!black|0123-4567-89AB-CDEF
+&id:main.12.right%148,22@208,4,1!black|0123-4567-89AB-CDEF
 #placeholder:rect%136,76@6,25,1!black
 *free_space_icon:gameplay.free_space@160,28,1!white
 &free_space:main.12.left%54,15@196,37,1!black|0000

@@ -13,7 +13,7 @@ use shared_data::build::BuildValueType;
 use shared_data::card::{DelayType, ErgType};
 use shared_data::mission::MissionNodeIdType;
 use std::cmp::{Ordering, PartialEq};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use vagabond::data::VagabondCard;
 
 const SCREEN_LAYOUT: &str = "gameplay";
@@ -22,16 +22,22 @@ const BLINKER_COUNT: f32 = 2.0;
 const BLINKER_SPEED: f32 = 24.0;
 const GLOWER_SPEED: f32 = 4.0;
 
+const PROCESS_QUEUE_SIZE: DelayType = 10;
+const HAND_SIZE: usize = 5;
+const RUNNING_PROGRAM_COUNT: usize = 4;
+const TTY_MESSAGE_COUNT: usize = 9;
+
 pub struct GameplayPlugin;
 
 impl Plugin for GameplayPlugin {
     fn build(&self, app: &mut App) {
         app //
             .add_event::<UiEvent>()
+            .add_event::<TTYMessageEvent>()
             .add_systems(OnEnter(AppState::GameplayInit), gameplay_init_enter)
             .add_systems(Update, gameplay_init_update.run_if(in_state(AppState::GameplayInit)))
             .add_systems(OnEnter(AppState::Gameplay), gameplay_enter)
-            .add_systems(Update, (gameplay_update, erg_ui_update, phase_ui_update, card_ui_update, indicator_ui_update, local_state_update, local_ui_update, roll_ui_update, remote_ui_update, machine_ui_update).run_if(in_state(AppState::Gameplay)))
+            .add_systems(Update, (gameplay_update, erg_ui_update, phase_ui_update, card_ui_update, indicator_ui_update, local_state_update, local_ui_update, roll_ui_update, remote_ui_update, machine_ui_update, tty_update).run_if(in_state(AppState::Gameplay)))
             .add_systems(PostUpdate, cleanup_indicator_post_update.run_if(in_state(AppState::Gameplay)))
             .add_systems(OnExit(AppState::Gameplay), gameplay_exit);
     }
@@ -96,6 +102,7 @@ struct GameplayContext {
     current_remote: MissionNodeIdType,
     last_state: PlayerStatePlayerView,
     hand: Vec<VagabondCard>,
+    tty: HashMap<MachineKind, VecDeque<String>>,
 }
 
 impl Default for GameplayContext {
@@ -107,6 +114,7 @@ impl Default for GameplayContext {
             current_remote: 1,
             last_state: Default::default(),
             hand: Default::default(),
+            tty: Default::default(),
         }
     }
 }
@@ -158,7 +166,7 @@ enum MachineTextKind {
 #[derive(Component)]
 struct MachineText(MachineTextKind);
 
-#[derive(Component, Copy, Clone, PartialEq)]
+#[derive(Component, Copy, Clone, Hash, Eq, PartialEq)]
 enum MachineKind {
     Local,
     Remote,
@@ -167,6 +175,36 @@ enum MachineKind {
 struct MachineInfo {
     name: String,
     id: String,
+}
+
+#[derive(Component)]
+struct TTYMessageText {
+    kind: MachineKind,
+    slot: usize,
+}
+
+impl TTYMessageText {
+    fn new(kind: MachineKind, slot: usize) -> Self {
+        Self {
+            kind,
+            slot,
+        }
+    }
+}
+
+#[derive(Event)]
+struct TTYMessageEvent {
+    kind: MachineKind,
+    message: String,
+}
+
+impl TTYMessageEvent {
+    fn new(kind: MachineKind, message: &str) -> Self {
+        Self {
+            kind,
+            message: message.to_string(),
+        }
+    }
 }
 
 #[derive(Event)]
@@ -222,6 +260,7 @@ fn gameplay_enter(
     am: Res<AtlasManager>,
     mut slm: ResMut<ScreenLayoutManager>,
     for_slm: (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>),
+    mut send_message: EventWriter<TTYMessageEvent>,
 ) {
     let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, for_slm);
 
@@ -283,19 +322,23 @@ fn gameplay_enter(
 
         commands.entity(layout.entity_or_default(&format!("{}/current_program", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::CurrentProgram)));
 
-        for queue_index in 0..10 {
+        for queue_index in 0..PROCESS_QUEUE_SIZE {
             commands.entity(layout.entity_or_default(&format!("{}/queue{}", machine_name, queue_index))).insert((*machine_kind, MachineQueueItem(queue_index)));
         }
 
-        commands.entity(layout.entity_or_default(&format!("{}/running1", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Process(0))));
-        commands.entity(layout.entity_or_default(&format!("{}/running2", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Process(1))));
-        commands.entity(layout.entity_or_default(&format!("{}/running3", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Process(2))));
-        commands.entity(layout.entity_or_default(&format!("{}/running4", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Process(3))));
+        for running_index in 0..RUNNING_PROGRAM_COUNT {
+            commands.entity(layout.entity_or_default(&format!("{}/running{}", machine_name, running_index + 1))).insert((*machine_kind, MachineText(MachineTextKind::Process(running_index))));
+        }
     }
 
-    for card_index in 1..=5 {
-        let built = CardLayout::build(&mut commands, layout, &format!("card{card_index}"), card_index - 1);
+    for card_index in 0..HAND_SIZE {
+        let built = CardLayout::build(&mut commands, layout, &format!("card{}", card_index + 1), card_index);
         commands.entity(built).observe_card();
+    }
+
+    for msg_index in 0..TTY_MESSAGE_COUNT {
+        commands.entity(layout.entity_or_default(&format!("l_tty{}", msg_index))).insert(TTYMessageText::new(MachineKind::Local, msg_index));
+        commands.entity(layout.entity_or_default(&format!("r_tty{}", msg_index))).insert(TTYMessageText::new(MachineKind::Remote, msg_index));
     }
 
     commands.remove_resource::<GameplayInitHandoff>();
@@ -305,11 +348,14 @@ fn gameplay_enter(
     recv_update_state(*initial_response, &mut send);
     send.send(UiEvent::GamePhase(VagabondGamePhase::Start));
 
-    let info = MachineInfo {
+    let local_info = MachineInfo {
         name: handoff.name.clone(),
         id: handoff.id.clone(),
     };
-    send.send(UiEvent::MachineInfoUpdate(MachineKind::Local, info));
+    send.send(UiEvent::MachineInfoUpdate(MachineKind::Local, local_info));
+
+    send_message.send(TTYMessageEvent::new(MachineKind::Local, "[000.00] Connected to 0123-4567-89AB-CDEF"));
+    send_message.send(TTYMessageEvent::new(MachineKind::Remote, &format!("[000.00] Connection from {}", handoff.id)));
 }
 
 fn on_click_next(_: Trigger<Pointer<Click>>, mut context: ResMut<GameplayContext>, gate: Res<GateIFace>) {
@@ -828,6 +874,34 @@ fn machine_ui_update(
                 }
             }
             _ => {}
+        }
+    }
+}
+
+fn tty_update(
+    // bevy system
+    mut read: EventReader<TTYMessageEvent>,
+    mut context: ResMut<GameplayContext>,
+    mut text_q: Query<(&mut Text2d, &mut TTYMessageText)>,
+) {
+    if read.is_empty() {
+        return;
+    }
+
+    for event in read.read() {
+        let queue = context.tty.entry(event.kind).or_default();
+        queue.push_front(event.message.clone());
+        if queue.len() > TTY_MESSAGE_COUNT {
+            queue.pop_back();
+        }
+    }
+
+    for (mut text, tty) in text_q.iter_mut() {
+        let queue = context.tty.entry(tty.kind).or_default();
+        if let Some(message) = queue.get(tty.slot) {
+            *text = message.clone().into();
+        } else {
+            *text = String::default().into();
         }
     }
 }
