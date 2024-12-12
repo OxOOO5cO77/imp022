@@ -1,6 +1,6 @@
 use crate::manager::{AtlasManager, DataManager, ScreenLayoutManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
-use crate::screen::card_layout::{CardLayout, CardText};
+use crate::screen::card_layout::{CardLayout, CardLayoutPiece};
 use crate::screen::compose::ComposeHandoff;
 use crate::system::ui_effects::{Blinker, Glower};
 use crate::system::AppState;
@@ -235,66 +235,66 @@ fn gameplay_enter(
 
     for (row_idx, row) in LOCAL_ATTR.iter().enumerate() {
         for (col_idx, name) in row.iter().enumerate() {
-            commands.entity(layout.entity(name)).insert(PlayerStateText::Attribute(row_idx, col_idx));
+            commands.entity(layout.entity_or_default(name)).insert(PlayerStateText::Attribute(row_idx, col_idx));
         }
     }
 
     const ROLL: [&str; 4] = ["ea", "eb", "ec", "ed"];
 
     for (roll_idx, roll) in ROLL.iter().enumerate() {
-        commands.entity(layout.entity(roll)).insert(RollText(roll_idx));
+        commands.entity(layout.entity_or_default(roll)).insert(RollText(roll_idx));
     }
 
     const REMOTE_ATTR: [&str; 4] = ["ra", "rb", "rc", "rd"];
 
     for (remote_idx, remote) in REMOTE_ATTR.iter().enumerate() {
-        commands.entity(layout.entity(remote)).insert(RemoteAttrText(remote_idx));
+        commands.entity(layout.entity_or_default(remote)).insert(RemoteAttrText(remote_idx));
     }
 
     const ERG: [&str; 4] = ["la", "lb", "lc", "ld"];
 
     for (erg_idx, erg) in ERG.iter().enumerate() {
-        commands.entity(layout.entity(erg)).insert(PlayerStateText::Erg(erg_idx));
+        commands.entity(layout.entity_or_default(erg)).insert(PlayerStateText::Erg(erg_idx));
     }
 
-    commands.entity(layout.entity("deck")).insert(PlayerStateText::Deck);
-    commands.entity(layout.entity("heap")).insert(PlayerStateText::Heap);
+    commands.entity(layout.entity_or_default("deck")).insert(PlayerStateText::Deck);
+    commands.entity(layout.entity_or_default("heap")).insert(PlayerStateText::Heap);
 
-    commands.entity(layout.entity("phase")).insert(PhaseText);
-    commands.entity(layout.entity("next")).observe_next_button();
+    commands.entity(layout.entity_or_default("phase")).insert(PhaseText);
+    commands.entity(layout.entity_or_default("next")).observe_next_button();
 
-    commands.entity(layout.entity("attributes/row_a")).observe_pickable_row(AttrKind::Analyze);
-    commands.entity(layout.entity("attributes/row_b")).observe_pickable_row(AttrKind::Breach);
-    commands.entity(layout.entity("attributes/row_c")).observe_pickable_row(AttrKind::Compute);
-    commands.entity(layout.entity("attributes/row_d")).observe_pickable_row(AttrKind::Disrupt);
+    commands.entity(layout.entity_or_default("attributes/row_a")).observe_pickable_row(AttrKind::Analyze);
+    commands.entity(layout.entity_or_default("attributes/row_b")).observe_pickable_row(AttrKind::Breach);
+    commands.entity(layout.entity_or_default("attributes/row_c")).observe_pickable_row(AttrKind::Compute);
+    commands.entity(layout.entity_or_default("attributes/row_d")).observe_pickable_row(AttrKind::Disrupt);
 
     const MACHINES: [(&str, MachineKind); 2] = [("local", MachineKind::Local), ("remote", MachineKind::Remote)];
 
     for (machine_name, machine_kind) in &MACHINES {
-        commands.entity(layout.entity(machine_name)).insert((*machine_kind, PickingBehavior::default())).observe(on_card_drop);
+        commands.entity(layout.entity_or_default(machine_name)).insert((*machine_kind, PickingBehavior::default())).observe(on_card_drop);
 
-        commands.entity(layout.entity(&format!("{}/title", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Title)));
-        commands.entity(layout.entity(&format!("{}/id", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Id)));
+        commands.entity(layout.entity_or_default(&format!("{}/title", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Title)));
+        commands.entity(layout.entity_or_default(&format!("{}/id", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Id)));
 
-        commands.entity(layout.entity(&format!("{}/free_space", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Stat(0))));
-        commands.entity(layout.entity(&format!("{}/thermal_capacity", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Stat(1))));
-        commands.entity(layout.entity(&format!("{}/system_health", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Stat(2))));
-        commands.entity(layout.entity(&format!("{}/open_ports", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Stat(3))));
+        commands.entity(layout.entity_or_default(&format!("{}/free_space", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Stat(0))));
+        commands.entity(layout.entity_or_default(&format!("{}/thermal_capacity", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Stat(1))));
+        commands.entity(layout.entity_or_default(&format!("{}/system_health", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Stat(2))));
+        commands.entity(layout.entity_or_default(&format!("{}/open_ports", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Stat(3))));
 
-        commands.entity(layout.entity(&format!("{}/current_program", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::CurrentProgram)));
+        commands.entity(layout.entity_or_default(&format!("{}/current_program", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::CurrentProgram)));
 
         for queue_index in 0..10 {
-            commands.entity(layout.entity(&format!("{}/queue{}", machine_name, queue_index))).insert((*machine_kind, MachineQueueItem(queue_index)));
+            commands.entity(layout.entity_or_default(&format!("{}/queue{}", machine_name, queue_index))).insert((*machine_kind, MachineQueueItem(queue_index)));
         }
 
-        commands.entity(layout.entity(&format!("{}/running1", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Process(0))));
-        commands.entity(layout.entity(&format!("{}/running2", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Process(1))));
-        commands.entity(layout.entity(&format!("{}/running3", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Process(2))));
-        commands.entity(layout.entity(&format!("{}/running4", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Process(3))));
+        commands.entity(layout.entity_or_default(&format!("{}/running1", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Process(0))));
+        commands.entity(layout.entity_or_default(&format!("{}/running2", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Process(1))));
+        commands.entity(layout.entity_or_default(&format!("{}/running3", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Process(2))));
+        commands.entity(layout.entity_or_default(&format!("{}/running4", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Process(3))));
     }
 
     for card_index in 1..=5 {
-        let built = CardLayout::build(&mut commands, layout, card_index - 1, &format!("card{card_index}"));
+        let built = CardLayout::build(&mut commands, layout, &format!("card{card_index}"), card_index - 1);
         commands.entity(built).observe_card();
     }
 
@@ -444,11 +444,13 @@ fn on_card_drag_start(
     if let Ok((layout, sprite, transform, tracker)) = sprite_q.get(target) {
         let card = context.hand.get(layout.slot).cloned();
         if tracker.is_none() && card.as_ref().is_none_or(|card| card.cost > context.last_state.erg[kind_to_erg_index(card.kind)]) {
-            if let Ok((mut bg_sprite, blink)) = bg_q.get_mut(layout.frame) {
-                if let Some(blink) = blink {
-                    blink.remove(&mut commands, &mut bg_sprite, layout.frame);
+            if let Some(frame) = layout.frame {
+                if let Ok((mut bg_sprite, blink)) = bg_q.get_mut(frame) {
+                    if let Some(blink) = blink {
+                        blink.remove(&mut commands, &mut bg_sprite, frame);
+                    }
+                    commands.entity(frame).insert(Blinker::new(bg_sprite.color, bevy::color::palettes::basic::RED.into(), BLINKER_COUNT, BLINKER_SPEED));
                 }
-                commands.entity(layout.frame).insert(Blinker::new(bg_sprite.color, bevy::color::palettes::basic::RED.into(), BLINKER_COUNT, BLINKER_SPEED));
             }
             return;
         }
@@ -590,7 +592,7 @@ fn card_ui_update(
     mut commands: Commands,
     mut receive: EventReader<UiEvent>,
     layout_q: Query<(Entity, &CardLayout)>,
-    mut text_q: Query<&mut Text2d, With<CardText>>,
+    mut text_q: Query<&mut Text2d, With<CardLayoutPiece>>,
     mut sprite_q: Query<&mut Sprite>,
     dm: Res<DataManager>,
 ) {

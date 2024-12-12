@@ -195,7 +195,10 @@ impl ScreenLayout {
         Some(true)
     }
 
-    pub(crate) fn entity(&self, name: &str) -> Entity {
+    pub(crate) fn get_entity(&self, name: &str) -> Option<&Entity> {
+        self.entity_map.get(name)
+    }
+    pub(crate) fn entity_or_default(&self, name: &str) -> Entity {
         *self.entity_map.get(name).unwrap_or(&Entity::PLACEHOLDER)
     }
 }
@@ -336,18 +339,20 @@ impl ScreenLayoutManager {
     fn make_shape_bundle(element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> impl Bundle {
         let handle = match element.kind {
             ShapeKind::Rect => meshes.add(Rectangle::new(element.size.x, element.size.y)),
-            ShapeKind::CapsuleX => meshes.add(Capsule2d::new(element.size.y / 2.0, element.size.x - (element.size.y / 2.0))),
+            ShapeKind::CapsuleX => meshes.add(Capsule2d::new(element.size.y / 2.0, element.size.x - element.size.y)),
         };
         let mesh = Mesh2d(handle);
         let material = MeshMaterial2d(materials.add(Color::Srgba(element.color)));
 
-        let transform = match element.kind {
-            ShapeKind::Rect => Transform::from_translation(element.position),
-            ShapeKind::CapsuleX => Transform {
-                translation: element.position + Vec3::new(element.size.y / 4.0, 0.0, 0.0),
-                rotation: Quat::from_rotation_z(PI / 2.0),
-                ..default()
-            },
+        let rotation = match element.kind {
+            ShapeKind::Rect => Quat::IDENTITY,
+            ShapeKind::CapsuleX => Quat::from_rotation_z(PI / 2.0),
+        };
+
+        let transform = Transform {
+            translation: element.position,
+            rotation,
+            scale: Vec3::ONE,
         };
 
         (mesh, material, transform)

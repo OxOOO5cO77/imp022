@@ -120,7 +120,7 @@ fn login_ui_setup(
 ) {
     let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, for_slm);
 
-    commands.entity(layout.entity("connected_icon")).insert(ConnectedIcon);
+    commands.entity(layout.entity_or_default("connected_icon")).insert(ConnectedIcon);
 
     let ui_base = Node {
         display: Display::Block,
