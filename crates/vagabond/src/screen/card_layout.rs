@@ -1,8 +1,9 @@
-use crate::manager::ScreenLayout;
+use crate::manager::{AtlasManager, ScreenLayout};
+use bevy::asset::Handle;
 use bevy::color::Color;
-use bevy::prelude::{Commands, Component, Entity, Query, Sprite, Text2d, With};
+use bevy::image::Image;
+use bevy::prelude::{Commands, Component, Entity, Query, Sprite, Text2d, TextureAtlas, With};
 use shared_data::attribute::AttributeKind;
-use shared_data::card::ErgType;
 use vagabond::data::VagabondCard;
 
 #[derive(Component)]
@@ -12,6 +13,7 @@ pub(crate) struct CardLayoutPiece;
 pub(crate) struct CardLayout {
     pub(crate) slot: usize,
     pub(crate) frame: Option<Entity>,
+    pub(crate) icon: Option<Entity>,
     pub(crate) title: Option<Entity>,
     pub(crate) cost: Option<Entity>,
     pub(crate) delay: Option<Entity>,
@@ -29,6 +31,7 @@ impl CardLayout {
         let card_layout = Self {
             slot,
             frame: Self::maybe_get_entity(commands, screen_layout, &format!("{}/frame", base_name)),
+            icon: Self::maybe_get_entity(commands, screen_layout, &format!("{}/icon", base_name)),
             title: Self::maybe_get_entity(commands, screen_layout, &format!("{}/title", base_name)),
             cost: Self::maybe_get_entity(commands, screen_layout, &format!("{}/cost", base_name)),
             delay: Self::maybe_get_entity(commands, screen_layout, &format!("{}/delay", base_name)),
@@ -46,6 +49,7 @@ impl CardLayout {
         card: VagabondCard,
         text_q: &mut Query<&mut Text2d, With<CardLayoutPiece>>,
         sprite_q: &mut Query<&mut Sprite>,
+        am: &AtlasManager,
     ) {
         if let Some(title) = self.title {
             if let Ok(mut title_text) = text_q.get_mut(title) {
@@ -54,7 +58,7 @@ impl CardLayout {
         }
         if let Some(cost) = self.cost {
             if let Ok(mut cost_text) = text_q.get_mut(cost) {
-                *cost_text = Self::map_kind_to_cost(card.kind, card.cost).into();
+                *cost_text = card.cost.to_string().into();
             }
         }
         if let Some(launch) = self.launch {
@@ -83,6 +87,14 @@ impl CardLayout {
                 frame_sprite.color = Self::map_kind_to_color(card.kind);
             }
         }
+        if let Some(icon) = self.icon {
+            if let Ok(mut icon_sprite) = sprite_q.get_mut(icon) {
+                if let Some((atlas, image)) = Self::map_kind_to_icon(card.kind, am) {
+                    icon_sprite.image = image;
+                    icon_sprite.texture_atlas = Some(atlas);
+                }
+            }
+        }
     }
 
     fn map_kind_to_color(kind: AttributeKind) -> Color {
@@ -93,14 +105,13 @@ impl CardLayout {
             AttributeKind::Disrupt => Color::srgb_u8(128, 128, 0),
         }
     }
-
-    fn map_kind_to_cost(kind: AttributeKind, cost: ErgType) -> String {
-        let letter = match kind {
-            AttributeKind::Analyze => 'A',
-            AttributeKind::Breach => 'B',
-            AttributeKind::Compute => 'C',
-            AttributeKind::Disrupt => 'D',
+    fn map_kind_to_icon(kind: AttributeKind, am: &AtlasManager) -> Option<(TextureAtlas, Handle<Image>)> {
+        let texture_name = match kind {
+            AttributeKind::Analyze => "A016",
+            AttributeKind::Breach => "B016",
+            AttributeKind::Compute => "C016",
+            AttributeKind::Disrupt => "D016",
         };
-        format!("{cost}{letter}")
+        am.get_atlas_texture("common", texture_name)
     }
 }

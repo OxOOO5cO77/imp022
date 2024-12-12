@@ -423,7 +423,7 @@ impl ScreenLayoutManager {
                     parent.spawn(shape).id()
                 }
                 Element::Sprite(e) => {
-                    if let Some(sprite) = Self::make_sprite_bundle(am, e.atlas.as_str(), e.item.as_str(), e.position, e.color) {
+                    if let Some(sprite) = Self::make_sprite_bundle(am, &e.atlas, &e.item, e.position, e.color) {
                         parent.spawn((sprite, PickingBehavior::IGNORE)).id()
                     } else {
                         continue;

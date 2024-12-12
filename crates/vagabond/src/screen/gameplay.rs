@@ -595,6 +595,7 @@ fn card_ui_update(
     mut text_q: Query<&mut Text2d, With<CardLayoutPiece>>,
     mut sprite_q: Query<&mut Sprite>,
     dm: Res<DataManager>,
+    am: Res<AtlasManager>,
 ) {
     for ui_event in receive.read() {
         if let UiEvent::PlayerState(player_state) = ui_event {
@@ -602,7 +603,7 @@ fn card_ui_update(
                 let card = player_state.hand.get(layout.slot).and_then(|o| dm.convert_card(o));
 
                 let visibility = if let Some(card) = card {
-                    layout.populate(card, &mut text_q, &mut sprite_q);
+                    layout.populate(card, &mut text_q, &mut sprite_q, &am);
                     Visibility::Visible
                 } else {
                     Visibility::Hidden

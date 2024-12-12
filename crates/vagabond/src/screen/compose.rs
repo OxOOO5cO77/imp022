@@ -537,9 +537,10 @@ fn on_update_tooltip(
     mut text_q: Query<&mut Text2d, With<CardLayoutPiece>>,
     mut sprite_q: Query<&mut Sprite>,
     context: Res<ComposeContext>,
+    am: Res<AtlasManager>,
 ) {
     if let Ok((e, layout, tooltip)) = tooltip_q.get_single() {
-        let vis = tooltip.index.and_then(|index| context.deck.get(index)).map(|card| layout.populate(card.clone(), &mut text_q, &mut sprite_q));
+        let vis = tooltip.index.and_then(|index| context.deck.get(index)).map(|card| layout.populate(card.clone(), &mut text_q, &mut sprite_q, &am));
         let mut entity = commands.entity(e);
         match vis {
             None => entity.insert(Hider::new(0.25)),
@@ -637,6 +638,7 @@ fn populate_deck_ui(
     mut text_q: Query<&mut Text2d, With<CardLayoutPiece>>,
     mut sprite_q: Query<&mut Sprite>,
     gutter_q: Query<Entity, With<DeckGutterGroup>>,
+    am: Res<AtlasManager>,
 ) {
     if let Some(event) = read.read().last() {
         let visibility = match event {
@@ -644,7 +646,7 @@ fn populate_deck_ui(
             PopulatePlayerUi::Show(data) => {
                 for (idx, card) in data.deck.iter().enumerate() {
                     if let Some(header) = header_q.iter().find(|h| h.slot == idx) {
-                        header.populate(card.clone(), &mut text_q, &mut sprite_q);
+                        header.populate(card.clone(), &mut text_q, &mut sprite_q, &am);
                     }
                 }
                 Visibility::Visible
