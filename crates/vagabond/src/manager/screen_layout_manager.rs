@@ -195,10 +195,10 @@ impl ScreenLayout {
         Some(true)
     }
 
-    pub(crate) fn get_entity(&self, name: &str) -> Option<&Entity> {
+    pub(crate) fn entity_option(&self, name: &str) -> Option<&Entity> {
         self.entity_map.get(name)
     }
-    pub(crate) fn entity_or_default(&self, name: &str) -> Entity {
+    pub(crate) fn entity(&self, name: &str) -> Entity {
         *self.entity_map.get(name).unwrap_or(&Entity::PLACEHOLDER)
     }
 }

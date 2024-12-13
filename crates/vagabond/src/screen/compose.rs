@@ -1,6 +1,6 @@
 use crate::manager::{AtlasManager, DataManager, ScreenLayout, ScreenLayoutManager, WarehouseManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
-use crate::screen::card_layout::{CardLayout, CardLayoutPiece};
+use crate::screen::card_layout::{CardLayout, CardLayoutPiece, CardTooltip};
 use crate::system::ui_effects::{Glower, Hider};
 use crate::system::AppState;
 use bevy::prelude::*;
@@ -123,11 +123,6 @@ struct PlayerBioGroup;
 #[derive(Component)]
 struct DeckGutterGroup;
 
-#[derive(Component, Default)]
-struct CardTooltip {
-    index: Option<usize>,
-}
-
 #[derive(Component)]
 enum InfoKind {
     Name,
@@ -173,22 +168,22 @@ impl Draggable {
 
 fn make_full_part_layout(commands: &mut Commands, layout: &ScreenLayout, name: &str) -> PartLayout {
     let mut part_layout = PartLayout::new();
-    let ant = commands.entity(layout.entity_or_default(&format!("{}/ant", name))).id();
-    let brd = commands.entity(layout.entity_or_default(&format!("{}/brd", name))).id();
-    let cpu = commands.entity(layout.entity_or_default(&format!("{}/cpu", name))).id();
-    let dsk = commands.entity(layout.entity_or_default(&format!("{}/dsk", name))).id();
+    let ant = commands.entity(layout.entity(&format!("{}/ant", name))).id();
+    let brd = commands.entity(layout.entity(&format!("{}/brd", name))).id();
+    let cpu = commands.entity(layout.entity(&format!("{}/cpu", name))).id();
+    let dsk = commands.entity(layout.entity(&format!("{}/dsk", name))).id();
     part_layout.build = [ant, brd, cpu, dsk];
 
-    let ins = commands.entity(layout.entity_or_default(&format!("{}/ins", name))).id();
-    let rol = commands.entity(layout.entity_or_default(&format!("{}/rol", name))).id();
-    let loc = commands.entity(layout.entity_or_default(&format!("{}/loc", name))).id();
-    let dis = commands.entity(layout.entity_or_default(&format!("{}/dis", name))).id();
+    let ins = commands.entity(layout.entity(&format!("{}/ins", name))).id();
+    let rol = commands.entity(layout.entity(&format!("{}/rol", name))).id();
+    let loc = commands.entity(layout.entity(&format!("{}/loc", name))).id();
+    let dis = commands.entity(layout.entity(&format!("{}/dis", name))).id();
     part_layout.detail = [ins, rol, loc, dis];
 
-    let a = commands.entity(layout.entity_or_default(&format!("{}/a", name))).id();
-    let b = commands.entity(layout.entity_or_default(&format!("{}/b", name))).id();
-    let c = commands.entity(layout.entity_or_default(&format!("{}/c", name))).id();
-    let d = commands.entity(layout.entity_or_default(&format!("{}/d", name))).id();
+    let a = commands.entity(layout.entity(&format!("{}/a", name))).id();
+    let b = commands.entity(layout.entity(&format!("{}/b", name))).id();
+    let c = commands.entity(layout.entity(&format!("{}/c", name))).id();
+    let d = commands.entity(layout.entity(&format!("{}/d", name))).id();
     part_layout.values = [a, b, c, d];
 
     part_layout
@@ -260,9 +255,9 @@ fn compose_enter(
 
     for (row_name, kind, row) in ATTR {
         let mut row_part_layout = PartLayout::new();
-        row_part_layout.values = row.map(|item| commands.entity(layout.entity_or_default(item)).id());
+        row_part_layout.values = row.map(|item| commands.entity(layout.entity(item)).id());
         commands //
-            .entity(layout.entity_or_default(row_name))
+            .entity(layout.entity(row_name))
             .insert_empty_slot(Slot::StatRow(kind), row_part_layout)
             .observe_part_drag()
             .observe_part_drop();
@@ -270,45 +265,45 @@ fn compose_enter(
 
     const BUILD: [&str; 4] = ["ant", "brd", "cpu", "dsk"];
     let mut build_part_layout = PartLayout::new();
-    build_part_layout.build = BUILD.map(|item| commands.entity(layout.entity_or_default(item)).id());
+    build_part_layout.build = BUILD.map(|item| commands.entity(layout.entity(item)).id());
     commands //
-        .entity(layout.entity_or_default("build"))
+        .entity(layout.entity("build"))
         .insert_empty_slot(Slot::Build, build_part_layout)
         .observe_part_drag()
         .observe_part_drop();
 
     const BUILD_VALUES: [&str; 4] = ["build_a", "build_b", "build_c", "build_d"];
     let mut build_values_part_layout = PartLayout::new();
-    build_values_part_layout.values = BUILD_VALUES.map(|item| commands.entity(layout.entity_or_default(item)).id());
+    build_values_part_layout.values = BUILD_VALUES.map(|item| commands.entity(layout.entity(item)).id());
     commands //
-        .entity(layout.entity_or_default("build_values"))
+        .entity(layout.entity("build_values"))
         .insert_empty_slot(Slot::StatRow(StatRowKind::Build), build_values_part_layout)
         .observe_part_drag()
         .observe_part_drop();
 
     const DETAIL: [&str; 4] = ["ins", "rol", "loc", "dis"];
     let mut detail_part_layout = PartLayout::new();
-    detail_part_layout.detail = DETAIL.map(|item| commands.entity(layout.entity_or_default(item)).id());
+    detail_part_layout.detail = DETAIL.map(|item| commands.entity(layout.entity(item)).id());
     commands //
-        .entity(layout.entity_or_default("detail"))
+        .entity(layout.entity("detail"))
         .insert_empty_slot(Slot::Detail, detail_part_layout)
         .observe_part_drag()
         .observe_part_drop();
 
     const DETAIL_VALUES: [&str; 4] = ["detail_a", "detail_b", "detail_c", "detail_d"];
     let mut detail_values_part_layout = PartLayout::new();
-    detail_values_part_layout.values = DETAIL_VALUES.map(|item| commands.entity(layout.entity_or_default(item)).id());
+    detail_values_part_layout.values = DETAIL_VALUES.map(|item| commands.entity(layout.entity(item)).id());
     commands //
-        .entity(layout.entity_or_default("detail_values"))
+        .entity(layout.entity("detail_values"))
         .insert_empty_slot(Slot::StatRow(StatRowKind::Detail), detail_values_part_layout)
         .observe_part_drag()
         .observe_part_drop();
 
-    commands.entity(layout.entity_or_default("bio")).insert((PlayerBioGroup, Visibility::Hidden));
-    commands.entity(layout.entity_or_default("bio/id")).insert(InfoKind::ID);
-    commands.entity(layout.entity_or_default("bio/name")).insert(InfoKind::Name);
-    commands.entity(layout.entity_or_default("bio/place")).insert(InfoKind::Birthplace);
-    commands.entity(layout.entity_or_default("bio/age")).insert(InfoKind::Age);
+    commands.entity(layout.entity("bio")).insert((PlayerBioGroup, Visibility::Hidden));
+    commands.entity(layout.entity("bio/id")).insert(InfoKind::ID);
+    commands.entity(layout.entity("bio/name")).insert(InfoKind::Name);
+    commands.entity(layout.entity("bio/place")).insert(InfoKind::Birthplace);
+    commands.entity(layout.entity("bio/age")).insert(InfoKind::Age);
 
     for (index, part) in parts.iter().enumerate() {
         let slot_index = index + 1;
@@ -317,7 +312,7 @@ fn compose_enter(
         let part_layout = make_full_part_layout(&mut commands, layout, &name);
 
         let part_entity = commands //
-            .entity(layout.entity_or_default(&name))
+            .entity(layout.entity(&name))
             .insert_filled_slot(Slot::Card, part_layout, part.clone())
             .observe_part_drag()
             .observe_part_drop()
@@ -325,14 +320,15 @@ fn compose_enter(
 
         let slot_name = format!("part{}_slot", slot_index);
         commands //
-            .entity(layout.entity_or_default(&slot_name))
+            .entity(layout.entity(&slot_name))
             .insert_empty_slot(Slot::Empty(part_entity), PartLayout::new())
             .observe_part_drop();
     }
 
     let tooltip = CardLayout::build(&mut commands, layout, "tooltip", 999);
     commands.entity(tooltip).insert((CardTooltip::default(), Visibility::Hidden));
-    commands.entity(layout.entity_or_default("gutter")).insert((DeckGutterGroup, Visibility::Hidden));
+
+    commands.entity(layout.entity("gutter")).insert((DeckGutterGroup, Visibility::Hidden));
     for index in 0..40 {
         let slot_index = index + 1;
         let base_name = format!("gutter/card{:02}", slot_index);
@@ -340,11 +336,11 @@ fn compose_enter(
         commands.entity(header).observe_card_header();
     }
 
-    commands.entity(layout.entity_or_default("commit")).observe_commit_button();
+    commands.entity(layout.entity("commit")).observe_commit_button();
 
     let draggable_layout = make_full_part_layout(&mut commands, layout, "draggable");
     let draggable = commands //
-        .entity(layout.entity_or_default("draggable"))
+        .entity(layout.entity("draggable"))
         .insert((Slot::Card, draggable_layout, PartHolder::default())) // no PickableBehavior::default()!
         .insert(Visibility::Hidden)
         .id();
@@ -509,10 +505,11 @@ fn on_over_header(
     event: Trigger<Pointer<Over>>,
     header_q: Query<(&Transform, &CardLayout), Without<CardTooltip>>,
     mut tooltip_q: Query<(&mut Transform, &Sprite, &mut CardTooltip)>,
+    context: Res<ComposeContext>,
 ) {
-    if let Ok((header_transform, header)) = header_q.get(event.target) {
+    if let Ok((header_transform, layout)) = header_q.get(event.target) {
         if let Ok((mut tooltip_transform, sprite, mut tooltip)) = tooltip_q.get_single_mut() {
-            tooltip.index = Some(header.slot);
+            tooltip.card = context.deck.get(layout.slot).cloned();
             let size = sprite.custom_size.unwrap_or_default();
             let new_y = header_transform.translation.y + (size.y / 2.0);
             tooltip_transform.translation.y = new_y.clamp(-1080.0 + size.y, 0.0);
@@ -526,7 +523,7 @@ fn on_out_header(
     mut tooltip_q: Query<&mut CardTooltip>,
 ) {
     if let Ok(mut tooltip) = tooltip_q.get_single_mut() {
-        tooltip.index = None;
+        tooltip.card = None;
     }
 }
 
@@ -536,11 +533,10 @@ fn on_update_tooltip(
     tooltip_q: Query<(Entity, &CardLayout, &mut CardTooltip), Changed<CardTooltip>>,
     mut text_q: Query<&mut Text2d, With<CardLayoutPiece>>,
     mut sprite_q: Query<&mut Sprite>,
-    context: Res<ComposeContext>,
     am: Res<AtlasManager>,
 ) {
     if let Ok((e, layout, tooltip)) = tooltip_q.get_single() {
-        let vis = tooltip.index.and_then(|index| context.deck.get(index)).map(|card| layout.populate(card.clone(), &mut text_q, &mut sprite_q, &am));
+        let vis = tooltip.card.as_ref().map(|card| layout.populate(card.clone(), &mut text_q, &mut sprite_q, &am));
         let mut entity = commands.entity(e);
         match vis {
             None => entity.insert(Hider::new(0.25)),

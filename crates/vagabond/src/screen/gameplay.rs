@@ -1,11 +1,11 @@
 use crate::manager::{AtlasManager, DataManager, ScreenLayoutManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
-use crate::screen::card_layout::{CardLayout, CardLayoutPiece};
+use crate::screen::card_layout::{CardLayout, CardLayoutPiece, CardTooltip};
 use crate::screen::compose::ComposeHandoff;
 use crate::system::ui_effects::{Blinker, Glower};
 use crate::system::AppState;
 use bevy::prelude::*;
-use hall::data::game::GameMachinePlayerView;
+use hall::data::game::{GameMachinePlayerView, GameProcessPlayerView};
 use hall::data::player::PlayerStatePlayerView;
 use hall::message::*;
 use shared_data::attribute::AttributeKind;
@@ -14,7 +14,7 @@ use shared_data::card::{DelayType, ErgType};
 use shared_data::mission::MissionNodeIdType;
 use std::cmp::{Ordering, PartialEq};
 use std::collections::{HashMap, VecDeque};
-use vagabond::data::VagabondCard;
+use vagabond::data::{VagabondCard, VagabondMachine, VagabondProcess};
 
 const SCREEN_LAYOUT: &str = "gameplay";
 
@@ -100,9 +100,11 @@ struct GameplayContext {
     attr_pick: Option<AttrKind>,
     card_picks: HashMap<CardIdxType, CardTarget>,
     current_remote: MissionNodeIdType,
-    last_state: PlayerStatePlayerView,
     hand: Vec<VagabondCard>,
     tty: HashMap<MachineKind, VecDeque<String>>,
+    cached_state: PlayerStatePlayerView,
+    cached_local: VagabondMachine,
+    cached_remote: VagabondMachine,
 }
 
 impl Default for GameplayContext {
@@ -112,9 +114,11 @@ impl Default for GameplayContext {
             attr_pick: None,
             card_picks: Default::default(),
             current_remote: 1,
-            last_state: Default::default(),
             hand: Default::default(),
             tty: Default::default(),
+            cached_state: Default::default(),
+            cached_local: Default::default(),
+            cached_remote: Default::default(),
         }
     }
 }
@@ -219,6 +223,9 @@ enum UiEvent {
     MachineStateUpdate(GameMachinePlayerView, GameMachinePlayerView),
 }
 
+#[derive(Event)]
+struct UpdateProcessTooltip;
+
 #[derive(Component)]
 struct AttributeRow(AttrKind);
 
@@ -226,6 +233,7 @@ trait PickableEntityCommandsExtension {
     fn observe_pickable_row(self, kind: AttrKind) -> Self;
     fn observe_next_button(self) -> Self;
     fn observe_card(self) -> Self;
+    fn observe_process(self) -> Self;
 }
 
 impl PickableEntityCommandsExtension for &mut EntityCommands<'_> {
@@ -249,6 +257,12 @@ impl PickableEntityCommandsExtension for &mut EntityCommands<'_> {
             .observe(on_card_drag_start)
             .observe(on_card_drag)
             .observe(on_card_drag_end)
+    }
+    fn observe_process(self) -> Self {
+        self //
+            .insert(PickingBehavior::default())
+            .observe(on_over_process)
+            .observe(on_out_process)
     }
 }
 
@@ -274,60 +288,60 @@ fn gameplay_enter(
 
     for (row_idx, row) in LOCAL_ATTR.iter().enumerate() {
         for (col_idx, name) in row.iter().enumerate() {
-            commands.entity(layout.entity_or_default(name)).insert(PlayerStateText::Attribute(row_idx, col_idx));
+            commands.entity(layout.entity(name)).insert(PlayerStateText::Attribute(row_idx, col_idx));
         }
     }
 
     const ROLL: [&str; 4] = ["ea", "eb", "ec", "ed"];
 
     for (roll_idx, roll) in ROLL.iter().enumerate() {
-        commands.entity(layout.entity_or_default(roll)).insert(RollText(roll_idx));
+        commands.entity(layout.entity(roll)).insert(RollText(roll_idx));
     }
 
     const REMOTE_ATTR: [&str; 4] = ["ra", "rb", "rc", "rd"];
 
     for (remote_idx, remote) in REMOTE_ATTR.iter().enumerate() {
-        commands.entity(layout.entity_or_default(remote)).insert(RemoteAttrText(remote_idx));
+        commands.entity(layout.entity(remote)).insert(RemoteAttrText(remote_idx));
     }
 
     const ERG: [&str; 4] = ["la", "lb", "lc", "ld"];
 
     for (erg_idx, erg) in ERG.iter().enumerate() {
-        commands.entity(layout.entity_or_default(erg)).insert(PlayerStateText::Erg(erg_idx));
+        commands.entity(layout.entity(erg)).insert(PlayerStateText::Erg(erg_idx));
     }
 
-    commands.entity(layout.entity_or_default("deck")).insert(PlayerStateText::Deck);
-    commands.entity(layout.entity_or_default("heap")).insert(PlayerStateText::Heap);
+    commands.entity(layout.entity("deck")).insert(PlayerStateText::Deck);
+    commands.entity(layout.entity("heap")).insert(PlayerStateText::Heap);
 
-    commands.entity(layout.entity_or_default("phase")).insert(PhaseText);
-    commands.entity(layout.entity_or_default("next")).observe_next_button();
+    commands.entity(layout.entity("phase")).insert(PhaseText);
+    commands.entity(layout.entity("next")).observe_next_button();
 
-    commands.entity(layout.entity_or_default("attributes/row_a")).observe_pickable_row(AttrKind::Analyze);
-    commands.entity(layout.entity_or_default("attributes/row_b")).observe_pickable_row(AttrKind::Breach);
-    commands.entity(layout.entity_or_default("attributes/row_c")).observe_pickable_row(AttrKind::Compute);
-    commands.entity(layout.entity_or_default("attributes/row_d")).observe_pickable_row(AttrKind::Disrupt);
+    commands.entity(layout.entity("attributes/row_a")).observe_pickable_row(AttrKind::Analyze);
+    commands.entity(layout.entity("attributes/row_b")).observe_pickable_row(AttrKind::Breach);
+    commands.entity(layout.entity("attributes/row_c")).observe_pickable_row(AttrKind::Compute);
+    commands.entity(layout.entity("attributes/row_d")).observe_pickable_row(AttrKind::Disrupt);
 
     const MACHINES: [(&str, MachineKind); 2] = [("local", MachineKind::Local), ("remote", MachineKind::Remote)];
 
     for (machine_name, machine_kind) in &MACHINES {
-        commands.entity(layout.entity_or_default(machine_name)).insert((*machine_kind, PickingBehavior::default())).observe(on_card_drop);
+        commands.entity(layout.entity(machine_name)).insert((*machine_kind, PickingBehavior::default())).observe(on_card_drop);
 
-        commands.entity(layout.entity_or_default(&format!("{}/title", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Title)));
-        commands.entity(layout.entity_or_default(&format!("{}/id", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Id)));
+        commands.entity(layout.entity(&format!("{}/title", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Title)));
+        commands.entity(layout.entity(&format!("{}/id", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Id)));
 
-        commands.entity(layout.entity_or_default(&format!("{}/free_space", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Stat(0))));
-        commands.entity(layout.entity_or_default(&format!("{}/thermal_capacity", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Stat(1))));
-        commands.entity(layout.entity_or_default(&format!("{}/system_health", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Stat(2))));
-        commands.entity(layout.entity_or_default(&format!("{}/open_ports", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Stat(3))));
+        commands.entity(layout.entity(&format!("{}/free_space", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Stat(0))));
+        commands.entity(layout.entity(&format!("{}/thermal_capacity", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Stat(1))));
+        commands.entity(layout.entity(&format!("{}/system_health", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Stat(2))));
+        commands.entity(layout.entity(&format!("{}/open_ports", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Stat(3))));
 
-        commands.entity(layout.entity_or_default(&format!("{}/current_program", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::CurrentProgram)));
+        commands.entity(layout.entity(&format!("{}/current_program", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::CurrentProgram)));
 
         for queue_index in 0..PROCESS_QUEUE_SIZE {
-            commands.entity(layout.entity_or_default(&format!("{}/queue{}", machine_name, queue_index))).insert((*machine_kind, MachineQueueItem(queue_index)));
+            commands.entity(layout.entity(&format!("{}/queue{}", machine_name, queue_index))).insert((*machine_kind, MachineQueueItem(queue_index))).observe_process();
         }
 
         for running_index in 0..RUNNING_PROGRAM_COUNT {
-            commands.entity(layout.entity_or_default(&format!("{}/running{}", machine_name, running_index + 1))).insert((*machine_kind, MachineText(MachineTextKind::Process(running_index))));
+            commands.entity(layout.entity(&format!("{}/running{}", machine_name, running_index + 1))).insert((*machine_kind, MachineText(MachineTextKind::Process(running_index))));
         }
     }
 
@@ -337,9 +351,12 @@ fn gameplay_enter(
     }
 
     for msg_index in 0..TTY_MESSAGE_COUNT {
-        commands.entity(layout.entity_or_default(&format!("l_tty{}", msg_index))).insert(TTYMessageText::new(MachineKind::Local, msg_index));
-        commands.entity(layout.entity_or_default(&format!("r_tty{}", msg_index))).insert(TTYMessageText::new(MachineKind::Remote, msg_index));
+        commands.entity(layout.entity(&format!("l_tty{}", msg_index))).insert(TTYMessageText::new(MachineKind::Local, msg_index));
+        commands.entity(layout.entity(&format!("r_tty{}", msg_index))).insert(TTYMessageText::new(MachineKind::Remote, msg_index));
     }
+
+    let tooltip = CardLayout::build(&mut commands, layout, "tooltip", 999);
+    commands.entity(tooltip).insert((CardTooltip::default(), Visibility::Hidden)).observe(update_process_tooltip);
 
     commands.remove_resource::<GameplayInitHandoff>();
     commands.insert_resource(GameplayContext::default());
@@ -470,7 +487,7 @@ fn kind_to_erg_index(kind: AttributeKind) -> usize {
 
 #[allow(clippy::too_many_arguments)]
 fn on_card_drag_start(
-    //
+    // bevy system
     event: Trigger<Pointer<DragStart>>,
     mut commands: Commands,
     sprite_q: Query<(&CardLayout, &mut Sprite, &mut Transform, Option<&IndicatorTracker>), With<PickingBehavior>>,
@@ -489,7 +506,7 @@ fn on_card_drag_start(
 
     if let Ok((layout, sprite, transform, tracker)) = sprite_q.get(target) {
         let card = context.hand.get(layout.slot).cloned();
-        if tracker.is_none() && card.as_ref().is_none_or(|card| card.cost > context.last_state.erg[kind_to_erg_index(card.kind)]) {
+        if tracker.is_none() && card.as_ref().is_none_or(|card| card.cost > context.cached_state.erg[kind_to_erg_index(card.kind)]) {
             if let Some(frame) = layout.frame {
                 if let Ok((mut bg_sprite, blink)) = bg_q.get_mut(frame) {
                     if let Some(blink) = blink {
@@ -511,8 +528,8 @@ fn on_card_drag_start(
                 commands.entity(target).insert(IndicatorTracker);
             } else if let Some((entity, mut indicator)) = indicator_q.iter_mut().find(|(_, i)| i.parent == target) {
                 if let Some(card) = card {
-                    context.last_state.erg[kind_to_erg_index(card.kind)] += card.cost;
-                    send.send(UiEvent::PlayerErg(context.last_state.erg));
+                    context.cached_state.erg[kind_to_erg_index(card.kind)] += card.cost;
+                    send.send(UiEvent::PlayerErg(context.cached_state.erg));
                 }
                 context.card_picks.remove(&(layout.slot as CardIdxType));
                 indicator.target = None;
@@ -524,7 +541,7 @@ fn on_card_drag_start(
 }
 
 fn on_card_drag(
-    //
+    // bevy system
     event: Trigger<Pointer<Drag>>,
     mut indicator_q: Query<(&mut Transform, &Indicator), With<IndicatorActive>>,
 ) {
@@ -540,7 +557,7 @@ fn on_card_drag(
 }
 
 fn on_card_drag_end(
-    //
+    // bevy system
     event: Trigger<Pointer<DragEnd>>,
     indicator_q: Query<Entity, With<IndicatorActive>>,
     mut commands: Commands,
@@ -552,7 +569,7 @@ fn on_card_drag_end(
 }
 
 fn on_card_drop(
-    //
+    // bevy system
     event: Trigger<Pointer<DragDrop>>,
     mut indicator_q: Query<&mut Indicator, With<IndicatorActive>>,
     mut machine_q: Query<&MachineKind>,
@@ -568,11 +585,70 @@ fn on_card_drop(
             if let Ok(layout) = layout_q.get(indicator.parent) {
                 context.add_card_pick(layout.slot, target);
                 if let Some((kind, cost)) = context.hand.get_mut(layout.slot).map(|card| (card.kind, card.cost)) {
-                    context.last_state.erg[kind_to_erg_index(kind)] -= cost;
-                    send.send(UiEvent::PlayerErg(context.last_state.erg));
+                    context.cached_state.erg[kind_to_erg_index(kind)] -= cost;
+                    send.send(UiEvent::PlayerErg(context.cached_state.erg));
                 }
             }
         }
+    }
+}
+
+fn on_over_process(
+    // bevy system
+    event: Trigger<Pointer<Over>>,
+    mut commands: Commands,
+    queue_q: Query<(&MachineKind, &MachineQueueItem)>,
+    mut tooltip_q: Query<(Entity, &mut Transform, &mut CardTooltip)>,
+    context: Res<GameplayContext>,
+) {
+    if let Ok((machine_kind, queue_item)) = queue_q.get(event.target) {
+        if let Ok((entity, mut tooltip_transform, mut tooltip)) = tooltip_q.get_single_mut() {
+            let cached = match machine_kind {
+                MachineKind::Local => &context.cached_local,
+                MachineKind::Remote => &context.cached_remote,
+            };
+            tooltip.card = cached.queue.iter().find(|(c, d)| queue_item.0 == *d).map(|(c, _)| c.card.clone());
+            let visibility = if tooltip.card.is_some() {
+                Visibility::Visible
+            } else {
+                Visibility::Hidden
+            };
+            commands.entity(entity).insert(visibility);
+            let new_position = Vec3::new(event.pointer_location.position.x, -event.pointer_location.position.y, tooltip_transform.translation.z);
+            tooltip_transform.translation = new_position;
+            commands.trigger_targets(UpdateProcessTooltip, entity);
+        }
+    }
+}
+
+fn on_out_process(
+    // bevy system
+    _event: Trigger<Pointer<Out>>,
+    mut commands: Commands,
+    mut tooltip_q: Query<(Entity, &mut CardTooltip)>,
+) {
+    if let Ok((entity, mut tooltip)) = tooltip_q.get_single_mut() {
+        commands.entity(entity).insert(Visibility::Hidden);
+        tooltip.card = None;
+    }
+}
+
+fn update_process_tooltip(
+    // bevy system
+    _event: Trigger<UpdateProcessTooltip>,
+    mut commands: Commands,
+    tooltip_q: Query<(Entity, &CardLayout, &mut CardTooltip), Changed<CardTooltip>>,
+    mut text_q: Query<&mut Text2d, With<CardLayoutPiece>>,
+    mut sprite_q: Query<&mut Sprite>,
+    am: Res<AtlasManager>,
+) {
+    if let Ok((e, layout, tooltip)) = tooltip_q.get_single() {
+        let vis = tooltip.card.as_ref().map(|card| layout.populate(card.clone(), &mut text_q, &mut sprite_q, &am));
+        let visibility = match vis {
+            None => Visibility::Hidden,
+            Some(_) => Visibility::Visible,
+        };
+        commands.entity(e).insert(visibility);
     }
 }
 
@@ -693,6 +769,23 @@ fn phase_ui_update(
     }
 }
 
+fn convert_process(process: &(GameProcessPlayerView, DelayType), dm: &DataManager) -> Option<(VagabondProcess, DelayType)> {
+    let vagabond_process = VagabondProcess {
+        card: dm.convert_card(&process.0.player_card)?,
+        priority: process.0.priority,
+        local: process.0.local,
+    };
+    Some((vagabond_process, process.1))
+}
+
+fn cache_game_machine(machine: &GameMachinePlayerView, dm: &DataManager) -> VagabondMachine {
+    VagabondMachine {
+        stats: machine.stats,
+        queue: machine.queue.iter().filter_map(|p| convert_process(p, dm)).collect(),
+        running: vec![],
+    }
+}
+
 fn local_state_update(
     // bevy system
     mut receive: EventReader<UiEvent>,
@@ -700,9 +793,16 @@ fn local_state_update(
     dm: Res<DataManager>,
 ) {
     for ui_event in receive.read() {
-        if let UiEvent::PlayerState(player_state) = ui_event {
-            context.last_state = player_state.clone();
-            context.hand = player_state.hand.iter().filter_map(|card| dm.convert_card(card)).collect::<Vec<_>>();
+        match ui_event {
+            UiEvent::PlayerState(player_state) => {
+                context.cached_state = player_state.clone();
+                context.hand = player_state.hand.iter().filter_map(|card| dm.convert_card(card)).collect::<Vec<_>>();
+            }
+            UiEvent::MachineStateUpdate(local, remote) => {
+                context.cached_local = cache_game_machine(local, &dm);
+                context.cached_remote = cache_game_machine(remote, &dm);
+            }
+            _ => {}
         }
     }
 }
@@ -844,6 +944,7 @@ fn machine_ui_update(
                     } else {
                         (remote, false)
                     };
+
                     sprite.color = if let Some(process) = machine.queue.iter().find(|(_, delay)| delay == index).map(|(item, _)| item) {
                         if process.local == player_owned {
                             bevy::color::palettes::basic::GREEN
@@ -855,7 +956,6 @@ fn machine_ui_update(
                     }
                     .into();
                 }
-
                 for (machine_component, mut text, MachineText(kind)) in text_q.iter_mut() {
                     if let MachineTextKind::Process(index) = kind {
                         let machine = if *machine_component == MachineKind::Local {

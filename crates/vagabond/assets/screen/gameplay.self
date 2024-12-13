@@ -82,3 +82,4 @@ $color:tty_new=0.0,1.0,0.0,1.0
 *card5_bg:gameplay.236x312@1094,738,0!green
 /card5:card%236,312@1094,738,1
 *map:gameplay.998x540@459,146,0!blue
+/tooltip:card%236,312@0,0,10

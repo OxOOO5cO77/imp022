@@ -12,7 +12,7 @@ use std::fmt;
 
 const QUEUE_SIZE: usize = 10;
 
-type MachineValueType = u16;
+pub type MachineValueType = u16;
 
 pub(crate) struct GameMachineContext {
     pub(crate) free_space: MachineValueType,
@@ -174,7 +174,7 @@ impl Bufferable for GameMachinePlayerView {
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
         let stats = <[MachineValueType; 4]>::pull_from(buf);
-        let queue = <Vec<(GameProcessPlayerView,DelayType)>>::pull_from(buf);
+        let queue = <Vec<(GameProcessPlayerView, DelayType)>>::pull_from(buf);
         let running = <Vec<GameProcessPlayerView>>::pull_from(buf);
         Self {
             stats,
@@ -193,7 +193,7 @@ impl GameMachinePlayerView {
     pub fn test_default() -> Self {
         Self {
             stats: [1, 2, 3, 4],
-            queue: vec![(GameProcessPlayerView::test_default(),0), (GameProcessPlayerView::test_default(),3), (GameProcessPlayerView::test_default(),5), (GameProcessPlayerView::test_default(),9)],
+            queue: vec![(GameProcessPlayerView::test_default(), 0), (GameProcessPlayerView::test_default(), 3), (GameProcessPlayerView::test_default(), 5), (GameProcessPlayerView::test_default(), 9)],
             running: vec![GameProcessPlayerView::test_default(), GameProcessPlayerView::test_default(), GameProcessPlayerView::test_default()],
         }
     }

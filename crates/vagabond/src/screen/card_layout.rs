@@ -24,7 +24,7 @@ pub(crate) struct CardLayout {
 
 impl CardLayout {
     fn maybe_get_entity(commands: &mut Commands, screen_layout: &ScreenLayout, name: &str) -> Option<Entity> {
-        screen_layout.get_entity(name).map(|entity| commands.entity(*entity)).map(|mut c| c.insert(CardLayoutPiece).id())
+        screen_layout.entity_option(name).map(|entity| commands.entity(*entity)).map(|mut c| c.insert(CardLayoutPiece).id())
     }
 
     pub(crate) fn build(commands: &mut Commands, screen_layout: &ScreenLayout, base_name: &str, slot: usize) -> Entity {
@@ -40,7 +40,7 @@ impl CardLayout {
             run: Self::maybe_get_entity(commands, screen_layout, &format!("{}/run", base_name)),
         };
 
-        commands.entity(screen_layout.entity_or_default(base_name)).insert(card_layout).id()
+        commands.entity(screen_layout.entity(base_name)).insert(card_layout).id()
     }
 
     pub(crate) fn populate(
@@ -114,4 +114,9 @@ impl CardLayout {
         };
         am.get_atlas_texture("common", texture_name)
     }
+}
+
+#[derive(Component, Default)]
+pub(crate) struct CardTooltip {
+    pub(crate) card: Option<VagabondCard>,
 }
