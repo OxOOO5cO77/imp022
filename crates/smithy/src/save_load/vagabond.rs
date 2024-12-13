@@ -1,10 +1,10 @@
+use crate::data::{DbBuild, DbCard, DbDetail};
+use crate::save_load::save_data_single;
 use shared_data::build::{CompanyType, MarketType};
 use shared_data::detail::{GeneralType, SpecificType};
 use std::collections::HashMap;
 use std::io::Error;
-use vagabond::data::{VagabondBuild, VagabondCard, VagabondDetail, VagabondMission, VagabondMissionNode};
-use crate::data::{DbBuild, DbCard, DbDetail, DbMission, DbMissionNode};
-use crate::save_load::save_data_single;
+use vagabond::data::{VagabondBuild, VagabondCard, VagabondDetail};
 
 fn make_vagabond_card(card: &DbCard) -> VagabondCard {
     VagabondCard {
@@ -56,24 +56,4 @@ pub(crate) fn output_details_for_vagabond(details: &[DbDetail], general: HashMap
     save_data_single((general, specific), "output/vagabond_details_meta.ron")?;
 
     Ok(())
-}
-
-fn make_vagabond_mission_node(mission_node_instance: &DbMissionNode) -> VagabondMissionNode {
-    VagabondMissionNode {
-        id: mission_node_instance.node_id,
-        name: mission_node_instance.name.clone(),
-    }
-}
-
-fn make_vagabond_mission(mission_instance: &DbMission) -> VagabondMission {
-    VagabondMission {
-        id: mission_instance.mission_id,
-        node: mission_instance.node.iter().map(make_vagabond_mission_node).collect(),
-        objective: vec![],
-    }
-}
-
-pub(crate) fn output_missions_for_vagabond(missions: &[DbMission]) -> Result<(), Error> {
-    let vagabond_missions = missions.iter().map(make_vagabond_mission).collect::<Vec<_>>();
-    save_data_single(vagabond_missions, "output/vagabond_missions.ron")
 }

@@ -39,7 +39,6 @@ struct DbMissionLink {
 pub(crate) struct DbMissionNode {
     pub(crate) mission_id: MissionIdType,
     pub(crate) node_id: MissionNodeIdType,
-    pub(crate) name: String,
     pub(crate) kind: MissionNodeKind,
     pub(crate) state: MissionNodeState,
     pub(crate) links: Vec<MissionNodeLink>,
@@ -114,7 +113,6 @@ fn row_to_mission_node(row: &PgRow) -> DbMissionNode {
     DbMissionNode {
         mission_id: row.get::<i32, _>("mission_id") as MissionIdType,
         node_id: row.get::<i32, _>("node_id") as MissionNodeIdType,
-        name: row.get("name"),
         kind: row.get::<DbMissionNodeKind, _>("kind").into(),
         state: row.get::<DbMissionNodeState, _>("state").into(),
         links: make_links(row.get::<Option<DbMissionLink>, _>("north"), row.get::<Option<DbMissionLink>, _>("east"), row.get::<Option<DbMissionLink>, _>("south"), row.get::<Option<DbMissionLink>, _>("west")),

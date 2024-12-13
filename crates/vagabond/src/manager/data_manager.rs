@@ -3,15 +3,13 @@ use std::path::Path;
 
 use bevy::prelude::Resource;
 use hall::data::player::{PlayerBuild, PlayerCard, PlayerDetail, PlayerPart};
-use shared_data::mission::MissionIdType;
-use vagabond::data::{VagabondBuild, VagabondCard, VagabondDetail, VagabondMission, VagabondPart};
+use vagabond::data::{VagabondBuild, VagabondCard, VagabondDetail, VagabondPart};
 
 #[derive(Resource)]
 pub(crate) struct DataManager {
     build: Vec<VagabondBuild>,
     detail: Vec<VagabondDetail>,
     card: Vec<VagabondCard>,
-    mission: Vec<VagabondMission>,
 }
 
 impl DataManager {
@@ -20,7 +18,6 @@ impl DataManager {
             build: load_data_single("assets/data/vagabond_builds.ron")?,
             detail: load_data_single("assets/data/vagabond_details.ron")?,
             card: load_data_single("assets/data/vagabond_cards.ron")?,
-            mission: load_data_single("assets/data/vagabond_missions.ron")?,
         })
     }
 
@@ -61,10 +58,6 @@ impl DataManager {
         };
         Some(part)
     }
-
-    pub(crate) fn node_name(&self, mission: MissionIdType, node: MissionIdType) -> String {
-        self.mission.iter().find(|m| m.id == mission).and_then(|m| m.node.iter().find(|n| n.id == node)).map(|n| n.name.clone()).unwrap_or("<Unknown>".to_string())
-    }
 }
 
 fn load_data_single<T, P>(source_file: P) -> Result<T, Error>
@@ -87,7 +80,6 @@ mod data_manager_test {
         assert!(!dm.card.is_empty());
         assert!(!dm.build.is_empty());
         assert!(!dm.detail.is_empty());
-        assert!(!dm.mission.is_empty());
         Ok(())
     }
 }

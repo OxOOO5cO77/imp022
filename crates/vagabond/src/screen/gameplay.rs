@@ -607,7 +607,7 @@ fn on_over_process(
                 MachineKind::Local => &context.cached_local,
                 MachineKind::Remote => &context.cached_remote,
             };
-            tooltip.card = cached.queue.iter().find(|(c, d)| queue_item.0 == *d).map(|(c, _)| c.card.clone());
+            tooltip.card = cached.queue.iter().find(|(_, d)| queue_item.0 == *d).map(|(c, _)| c.card.clone());
             let visibility = if tooltip.card.is_some() {
                 Visibility::Visible
             } else {
