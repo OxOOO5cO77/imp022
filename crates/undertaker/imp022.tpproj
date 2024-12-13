@@ -169,5 +169,5 @@ keepInputFileExtensions=false
 version=4.13.0
 fileTypeType=png
 fileTypeData={encoding:RGBA8888}
-previewBackgroundColor=ffffffff
+previewBackgroundColor=000000ff
 projectSettings={inputFiles:{}}

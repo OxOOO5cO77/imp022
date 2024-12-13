@@ -1,6 +1,7 @@
 $color:icon=0.15,0.15,0.15,1.0
 $color:tty_old=green
 $color:tty_new=0.0,1.0,0.0,1.0
+$color:phase_dim=grey2
 /attributes:attribute_block%372,368@29,26,0
 *ea_icon:common.A064@817,34,1!icon
 *ea_bg:common.064x064@817,34,2!yellow
@@ -39,7 +40,10 @@ $color:tty_new=0.0,1.0,0.0,1.0
 *ld_bg:common.064x064@29,986,2!green
 &ld:main.48.center%56,56@33,990,3!yellow|0
 *phase_bg:common.290x064@1519,986,0!grey6
-&phase:main.28.center%268,32@1530,1002,1!grey6|PHASE
+*phase_start:gameplay.start@1535,993,1!phase_dim
+*phase_pick:gameplay.pick@1605,993,1!phase_dim
+*phase_play:gameplay.play@1675,993,1!phase_dim
+*phase_draw:gameplay.draw@1745,993,1!phase_dim
 *next:common.064x064@1823,986,0!grey6
 *local_bg:gameplay.372x300@29,406,0!green
 /local:machine%361,286@35,413,1
