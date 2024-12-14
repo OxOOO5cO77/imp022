@@ -1,6 +1,7 @@
 use crate::manager::{AtlasManager, DataManager, ScreenLayout, ScreenLayoutManager, WarehouseManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
-use crate::screen::card_layout::{CardLayout, CardLayoutPiece, CardTooltip};
+use crate::screen::card_layout::{CardLayout, CardPopulateEvent};
+use crate::screen::card_tooltip::{on_update_tooltip, CardTooltip, UpdateCardTooltipEvent};
 use crate::system::ui_effects::{Glower, Hider};
 use crate::system::AppState;
 use bevy::prelude::*;
@@ -23,7 +24,7 @@ impl Plugin for ComposePlugin {
             .add_systems(Update, compose_init_update.run_if(in_state(AppState::ComposeInit)))
             .add_systems(OnEnter(AppState::Compose), compose_enter)
             .add_systems(Update, (context_update, finish_player, populate_bio_ui, populate_deck_ui, commit_button_ui, compose_update).run_if(in_state(AppState::Compose)))
-            .add_systems(PostUpdate, (on_update_tooltip, populate_part_layouts).run_if(in_state(AppState::Compose)))
+            .add_systems(PostUpdate, populate_part_layouts.run_if(in_state(AppState::Compose)))
             .add_systems(OnExit(AppState::Compose), compose_exit);
     }
 }
@@ -73,6 +74,9 @@ struct ComposeContext {
 
 #[derive(Event)]
 struct FinishPlayer;
+
+#[derive(Component)]
+struct CardHeader(usize);
 
 struct PopulatePlayerUiData {
     player_bio: PlayerBio,
@@ -195,7 +199,7 @@ trait PartEntityCommandsExtension {
     fn insert_empty_slot(self, slot: Slot, layout: PartLayout) -> Self;
     fn insert_filled_slot(self, slot: Slot, layout: PartLayout, part: VagabondPart) -> Self;
     fn observe_commit_button(self) -> Self;
-    fn observe_card_header(self) -> Self;
+    fn observe_card_header(self, index: usize) -> Self;
 }
 
 impl PartEntityCommandsExtension for &mut EntityCommands<'_> {
@@ -224,9 +228,9 @@ impl PartEntityCommandsExtension for &mut EntityCommands<'_> {
             .observe(on_over_commit)
             .observe(on_out_commit)
     }
-    fn observe_card_header(self) -> Self {
+    fn observe_card_header(self, index: usize) -> Self {
         self //
-            .insert(PickingBehavior::default())
+            .insert((CardHeader(index), PickingBehavior::default()))
             .observe(on_over_header)
             .observe(on_out_header)
     }
@@ -306,9 +310,7 @@ fn compose_enter(
     commands.entity(layout.entity("bio/age")).insert(InfoKind::Age);
 
     for (index, part) in parts.iter().enumerate() {
-        let slot_index = index + 1;
-
-        let name = format!("part{}", slot_index);
+        let name = format!("part{}", index);
         let part_layout = make_full_part_layout(&mut commands, layout, &name);
 
         let part_entity = commands //
@@ -318,22 +320,22 @@ fn compose_enter(
             .observe_part_drop()
             .id();
 
-        let slot_name = format!("part{}_slot", slot_index);
+        let slot_name = format!("part{}_slot", index);
         commands //
             .entity(layout.entity(&slot_name))
             .insert_empty_slot(Slot::Empty(part_entity), PartLayout::new())
             .observe_part_drop();
     }
 
-    let tooltip = CardLayout::build(&mut commands, layout, "tooltip", 999);
-    commands.entity(tooltip).insert((CardTooltip::default(), Visibility::Hidden));
+    let tooltip = CardLayout::build(&mut commands, layout, "tooltip");
+    let tooltip_id = commands.entity(tooltip).insert(Visibility::Hidden).observe(on_update_tooltip).id();
+    commands.insert_resource(CardTooltip(tooltip_id));
 
     commands.entity(layout.entity("gutter")).insert((DeckGutterGroup, Visibility::Hidden));
     for index in 0..40 {
-        let slot_index = index + 1;
-        let base_name = format!("gutter/card{:02}", slot_index);
-        let header = CardLayout::build(&mut commands, layout, &base_name, index);
-        commands.entity(header).observe_card_header();
+        let base_name = format!("gutter/card{:02}", index);
+        let header = CardLayout::build(&mut commands, layout, &base_name);
+        commands.entity(header).observe_card_header(index);
     }
 
     commands.entity(layout.entity("commit")).observe_commit_button();
@@ -503,16 +505,19 @@ fn on_out_commit(event: Trigger<Pointer<Out>>, mut sprite_q: Query<&mut Sprite, 
 fn on_over_header(
     //
     event: Trigger<Pointer<Over>>,
-    header_q: Query<(&Transform, &CardLayout), Without<CardTooltip>>,
-    mut tooltip_q: Query<(&mut Transform, &Sprite, &mut CardTooltip)>,
+    mut commands: Commands,
+    header_q: Query<(&Transform, &CardHeader)>,
+    tooltip_q: Query<(&Transform, &Sprite)>,
+    tooltip: Res<CardTooltip>,
     context: Res<ComposeContext>,
 ) {
-    if let Ok((header_transform, layout)) = header_q.get(event.target) {
-        if let Ok((mut tooltip_transform, sprite, mut tooltip)) = tooltip_q.get_single_mut() {
-            tooltip.card = context.deck.get(layout.slot).cloned();
-            let size = sprite.custom_size.unwrap_or_default();
-            let new_y = header_transform.translation.y + (size.y / 2.0);
-            tooltip_transform.translation.y = new_y.clamp(-1080.0 + size.y, 0.0);
+    if let Ok((header_transform, header)) = header_q.get(event.target) {
+        if let Ok((tooltip_transform, tooltip_sprite)) = tooltip_q.get(tooltip.0) {
+            let size = tooltip_sprite.custom_size.unwrap_or_default();
+            let new_y = (header_transform.translation.y + (size.y / 2.0)).clamp(-1080.0 + size.y, 0.0);
+            let position = Vec2::new(tooltip_transform.translation.x, -new_y);
+            let card = context.deck.get(header.0).cloned();
+            commands.entity(tooltip.0).remove::<Hider>().trigger(UpdateCardTooltipEvent::new(position, card));
         }
     }
 }
@@ -520,29 +525,10 @@ fn on_over_header(
 fn on_out_header(
     //
     _event: Trigger<Pointer<Out>>,
-    mut tooltip_q: Query<&mut CardTooltip>,
-) {
-    if let Ok(mut tooltip) = tooltip_q.get_single_mut() {
-        tooltip.card = None;
-    }
-}
-
-fn on_update_tooltip(
-    //
     mut commands: Commands,
-    tooltip_q: Query<(Entity, &CardLayout, &mut CardTooltip), Changed<CardTooltip>>,
-    mut text_q: Query<&mut Text2d, With<CardLayoutPiece>>,
-    mut sprite_q: Query<&mut Sprite>,
-    am: Res<AtlasManager>,
+    tooltip: Res<CardTooltip>,
 ) {
-    if let Ok((e, layout, tooltip)) = tooltip_q.get_single() {
-        let vis = tooltip.card.as_ref().map(|card| layout.populate(card.clone(), &mut text_q, &mut sprite_q, &am));
-        let mut entity = commands.entity(e);
-        match vis {
-            None => entity.insert(Hider::new(0.25)),
-            Some(_) => entity.remove::<Hider>().insert(Visibility::Visible),
-        };
-    }
+    commands.entity(tooltip.0).insert(Hider::new(0.25));
 }
 
 fn populate_part_layouts(
@@ -630,19 +616,16 @@ fn populate_deck_ui(
     // bevy system
     mut commands: Commands,
     mut read: EventReader<PopulatePlayerUi>,
-    header_q: Query<&CardLayout>,
-    mut text_q: Query<&mut Text2d, With<CardLayoutPiece>>,
-    mut sprite_q: Query<&mut Sprite>,
+    header_q: Query<(Entity, &CardHeader)>,
     gutter_q: Query<Entity, With<DeckGutterGroup>>,
-    am: Res<AtlasManager>,
 ) {
     if let Some(event) = read.read().last() {
         let visibility = match event {
             PopulatePlayerUi::Hide => Visibility::Hidden,
             PopulatePlayerUi::Show(data) => {
                 for (idx, card) in data.deck.iter().enumerate() {
-                    if let Some(header) = header_q.iter().find(|h| h.slot == idx) {
-                        header.populate(card.clone(), &mut text_q, &mut sprite_q, &am);
+                    if let Some((entity, _)) = header_q.iter().find(|(_, h)| h.0 == idx) {
+                        commands.entity(entity).trigger(CardPopulateEvent::from(card));
                     }
                 }
                 Visibility::Visible
@@ -782,6 +765,7 @@ pub fn compose_exit(
     mut commands: Commands,
     mut slm: ResMut<ScreenLayoutManager>,
 ) {
+    commands.remove_resource::<CardTooltip>();
     commands.remove_resource::<ComposeContext>();
     slm.destroy(commands, SCREEN_LAYOUT);
 }

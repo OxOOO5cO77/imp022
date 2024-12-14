@@ -1,6 +1,7 @@
 use bevy::app::{PluginGroup, PluginGroupBuilder};
 
 mod card_layout;
+mod card_tooltip;
 mod compose;
 mod gameplay;
 mod login;

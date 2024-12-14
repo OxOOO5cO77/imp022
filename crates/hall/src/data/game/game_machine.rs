@@ -147,18 +147,18 @@ impl GameMachineContext {
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameMachinePlayerView {
-    pub stats: [MachineValueType; 4],
+    pub vitals: [MachineValueType; 4],
     pub queue: Vec<(GameProcessPlayerView, DelayType)>,
     pub running: Vec<GameProcessPlayerView>,
 }
 
 impl From<&GameMachine> for GameMachinePlayerView {
     fn from(value: &GameMachine) -> Self {
-        let stats = [value.context.free_space, value.context.thermal_capacity, value.context.system_health, value.context.open_ports];
+        let vitals = [value.context.free_space, value.context.thermal_capacity, value.context.system_health, value.context.open_ports];
         let queue = value.queue.iter().enumerate().filter_map(|(idx, item)| item.as_ref().map(|item| (GameProcessPlayerView::from(item), idx as DelayType))).collect::<Vec<_>>();
         let running = value.running.iter().map(GameProcessPlayerView::from).collect::<Vec<_>>();
         Self {
-            stats,
+            vitals,
             queue,
             running,
         }
@@ -167,24 +167,24 @@ impl From<&GameMachine> for GameMachinePlayerView {
 
 impl Bufferable for GameMachinePlayerView {
     fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.stats.push_into(buf);
+        self.vitals.push_into(buf);
         self.queue.push_into(buf);
         self.running.push_into(buf);
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let stats = <[MachineValueType; 4]>::pull_from(buf);
+        let vitals = <[MachineValueType; 4]>::pull_from(buf);
         let queue = <Vec<(GameProcessPlayerView, DelayType)>>::pull_from(buf);
         let running = <Vec<GameProcessPlayerView>>::pull_from(buf);
         Self {
-            stats,
+            vitals,
             queue,
             running,
         }
     }
 
     fn size_in_buffer(&self) -> usize {
-        self.stats.size_in_buffer() + self.queue.size_in_buffer() + self.running.size_in_buffer()
+        self.vitals.size_in_buffer() + self.queue.size_in_buffer() + self.running.size_in_buffer()
     }
 }
 
@@ -192,7 +192,7 @@ impl Bufferable for GameMachinePlayerView {
 impl GameMachinePlayerView {
     pub fn test_default() -> Self {
         Self {
-            stats: [1, 2, 3, 4],
+            vitals: [1, 2, 3, 4],
             queue: vec![(GameProcessPlayerView::test_default(), 0), (GameProcessPlayerView::test_default(), 3), (GameProcessPlayerView::test_default(), 5), (GameProcessPlayerView::test_default(), 9)],
             running: vec![GameProcessPlayerView::test_default(), GameProcessPlayerView::test_default(), GameProcessPlayerView::test_default()],
         }
@@ -213,7 +213,7 @@ mod test {
         buf.push(&orig);
         let result = buf.pull::<GameMachinePlayerView>();
 
-        assert_eq!(orig.stats, result.stats);
+        assert_eq!(orig.vitals, result.vitals);
         assert_eq!(orig.queue, result.queue);
         assert_eq!(orig.running, result.running);
     }
