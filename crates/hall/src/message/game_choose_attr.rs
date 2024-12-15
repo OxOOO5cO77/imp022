@@ -2,6 +2,7 @@ use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
 use shared_data::attribute::AttributeKind;
 use shared_net::types::GameIdType;
 
+use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
 
@@ -63,6 +64,7 @@ impl From<AttrKind> for AttributeKind {
     }
 }
 
+#[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameChooseAttrRequest {
     pub game_id: GameIdType,
@@ -79,26 +81,7 @@ impl GameRequestMessage for GameChooseAttrRequest {
     }
 }
 
-impl Bufferable for GameChooseAttrRequest {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.game_id.push_into(buf);
-        self.attr.push_into(buf);
-    }
-
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let game_id = GameIdType::pull_from(buf);
-        let attr = AttrKind::pull_from(buf);
-        Self {
-            game_id,
-            attr,
-        }
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        self.game_id.size_in_buffer() + self.attr.size_in_buffer()
-    }
-}
-
+#[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameChooseAttrResponse {
     pub success: bool,
@@ -109,23 +92,6 @@ impl CommandMessage for GameChooseAttrResponse {
 }
 
 impl GameResponseMessage for GameChooseAttrResponse {}
-
-impl Bufferable for GameChooseAttrResponse {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.success.push_into(buf);
-    }
-
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let success = bool::pull_from(buf);
-        Self {
-            success,
-        }
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        self.success.size_in_buffer()
-    }
-}
 
 #[cfg(test)]
 mod test {

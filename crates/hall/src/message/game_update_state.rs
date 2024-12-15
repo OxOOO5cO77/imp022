@@ -1,10 +1,12 @@
 use crate::data::game::{GameMachine, GameMachinePlayerView, GameMission, GameMissionPlayerView, GameUser};
 use crate::data::player::PlayerStatePlayerView;
 use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
+use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::types::GameIdType;
 use shared_net::{op, VSizedBuffer};
 
+#[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameUpdateStateRequest {
     pub game_id: GameIdType,
@@ -20,23 +22,7 @@ impl GameRequestMessage for GameUpdateStateRequest {
     }
 }
 
-impl Bufferable for GameUpdateStateRequest {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.game_id.push_into(buf);
-    }
-
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let game_id = GameIdType::pull_from(buf);
-        Self {
-            game_id,
-        }
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        self.game_id.size_in_buffer()
-    }
-}
-
+#[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameUpdateStateResponse {
     pub player_state: PlayerStatePlayerView,
@@ -61,32 +47,6 @@ impl GameUpdateStateResponse {
 }
 
 impl GameResponseMessage for GameUpdateStateResponse {}
-
-impl Bufferable for GameUpdateStateResponse {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.player_state.push_into(buf);
-        self.local_machine.push_into(buf);
-        self.remote_machine.push_into(buf);
-        self.mission.push_into(buf);
-    }
-
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let player_state = PlayerStatePlayerView::pull_from(buf);
-        let local_machine = GameMachinePlayerView::pull_from(buf);
-        let remote_machine = GameMachinePlayerView::pull_from(buf);
-        let mission = GameMissionPlayerView::pull_from(buf);
-        Self {
-            player_state,
-            local_machine,
-            remote_machine,
-            mission,
-        }
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        self.player_state.size_in_buffer() + self.local_machine.size_in_buffer() + self.remote_machine.size_in_buffer() + self.mission.size_in_buffer()
-    }
-}
 
 #[cfg(test)]
 mod test {

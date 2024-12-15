@@ -1,8 +1,10 @@
+use crate::data::game::TickType;
 use crate::message::CommandMessage;
+use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
-use crate::data::game::TickType;
 
+#[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameTickMessage {
     pub tick: TickType,
@@ -10,23 +12,6 @@ pub struct GameTickMessage {
 
 impl CommandMessage for GameTickMessage {
     const COMMAND: op::Command = op::Command::GameTick;
-}
-
-impl Bufferable for GameTickMessage {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.tick.push_into(buf);
-    }
-
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let tick = TickType::pull_from(buf);
-        Self {
-            tick,
-        }
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        self.tick.size_in_buffer()
-    }
 }
 
 #[cfg(test)]

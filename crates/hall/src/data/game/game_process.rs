@@ -3,6 +3,7 @@ use crate::data::hall::hall_card::HallCard;
 use crate::data::player::PlayerCard;
 use shared_data::card::PriorityType;
 use shared_data::instruction::Instruction;
+use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 use std::cmp::Ordering;
@@ -62,7 +63,7 @@ impl GameProcess {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameProcessPlayerView {
     pub player_card: PlayerCard,
@@ -97,29 +98,6 @@ impl Ord for GameProcess {
 impl PartialOrd for GameProcess {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
-    }
-}
-
-impl Bufferable for GameProcessPlayerView {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.player_card.push_into(buf);
-        self.priority.push_into(buf);
-        self.local.push_into(buf);
-    }
-
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let player_card = PlayerCard::pull_from(buf);
-        let priority = PriorityType::pull_from(buf);
-        let local = bool::pull_from(buf);
-        Self {
-            player_card,
-            priority,
-            local,
-        }
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        self.player_card.size_in_buffer() + self.priority.size_in_buffer() + self.local.size_in_buffer()
     }
 }
 

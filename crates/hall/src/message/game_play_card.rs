@@ -1,5 +1,6 @@
 use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
 use shared_data::mission::MissionNodeIdType;
+use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::types::GameIdType;
 use shared_net::{op, VSizedBuffer};
@@ -17,6 +18,7 @@ pub enum CardTarget {
 
 pub type PicksType = Vec<(CardIdxType, CardTarget)>;
 
+#[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GamePlayCardRequest {
     pub game_id: GameIdType,
@@ -54,26 +56,7 @@ impl Bufferable for CardTarget {
     }
 }
 
-impl Bufferable for GamePlayCardRequest {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.game_id.push_into(buf);
-        self.picks.push_into(buf);
-    }
-
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let game_id = GameIdType::pull_from(buf);
-        let picks = PicksType::pull_from(buf);
-        Self {
-            game_id,
-            picks,
-        }
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        self.game_id.size_in_buffer() + self.picks.size_in_buffer()
-    }
-}
-
+#[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GamePlayCardResponse {
     pub success: [bool; 5],
@@ -84,23 +67,6 @@ impl CommandMessage for GamePlayCardResponse {
 }
 
 impl GameResponseMessage for GamePlayCardResponse {}
-
-impl Bufferable for GamePlayCardResponse {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.success.push_into(buf);
-    }
-
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let success = <[bool; 5]>::pull_from(buf);
-        Self {
-            success,
-        }
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        self.success.size_in_buffer()
-    }
-}
 
 #[cfg(test)]
 mod test {

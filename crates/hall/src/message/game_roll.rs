@@ -1,10 +1,12 @@
 use crate::message::CommandMessage;
 use shared_data::card::ErgType;
+use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
 
 type RollArray = [ErgType; 4];
 
+#[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameRollMessage {
     pub roll: RollArray,
@@ -12,23 +14,6 @@ pub struct GameRollMessage {
 
 impl CommandMessage for GameRollMessage {
     const COMMAND: op::Command = op::Command::GameRoll;
-}
-
-impl Bufferable for GameRollMessage {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.roll.push_into(buf);
-    }
-
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let roll = RollArray::pull_from(buf);
-        Self {
-            roll,
-        }
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        self.roll.size_in_buffer()
-    }
 }
 
 #[cfg(test)]

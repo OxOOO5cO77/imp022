@@ -1,8 +1,10 @@
 use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
+use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::types::GameIdType;
 use shared_net::{op, VSizedBuffer};
 
+#[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameEndGameRequest {
     pub game_id: GameIdType,
@@ -18,23 +20,7 @@ impl GameRequestMessage for GameEndGameRequest {
     }
 }
 
-impl Bufferable for GameEndGameRequest {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.game_id.push_into(buf);
-    }
-
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let game_id = GameIdType::pull_from(buf);
-        Self {
-            game_id,
-        }
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        self.game_id.size_in_buffer()
-    }
-}
-
+#[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameEndGameResponse {
     pub success: bool,
@@ -45,23 +31,6 @@ impl CommandMessage for GameEndGameResponse {
 }
 
 impl GameResponseMessage for GameEndGameResponse {}
-
-impl Bufferable for GameEndGameResponse {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.success.push_into(buf);
-    }
-
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let success = bool::pull_from(buf);
-        Self {
-            success,
-        }
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        self.success.size_in_buffer()
-    }
-}
 
 #[cfg(test)]
 mod test {

@@ -1,4 +1,5 @@
 use crate::data::hall::HallMissionObjective;
+use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 
@@ -14,7 +15,7 @@ impl From<&HallMissionObjective> for GameMissionObjective {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameMissionObjectivePlayerView {
     pub complete: bool,
@@ -25,23 +26,6 @@ impl From<&GameMissionObjective> for GameMissionObjectivePlayerView {
         Self {
             complete: value.complete,
         }
-    }
-}
-
-impl Bufferable for GameMissionObjectivePlayerView {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.complete.push_into(buf);
-    }
-
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let complete = bool::pull_from(buf);
-        Self {
-            complete,
-        }
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        self.complete.size_in_buffer()
     }
 }
 

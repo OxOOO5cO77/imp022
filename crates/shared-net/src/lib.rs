@@ -5,13 +5,15 @@ pub use server::async_server;
 use crate::op::Route;
 #[doc(inline)]
 pub use crate::sizedbuffers::VSizedBuffer;
+#[doc(inline)]
+pub use bufferable_derive;
 
 mod client;
-mod server;
 pub mod op;
-pub mod util;
+mod server;
 pub mod sizedbuffers;
 pub mod types;
+pub mod util;
 
 #[derive(Clone)]
 pub struct RoutedMessage {

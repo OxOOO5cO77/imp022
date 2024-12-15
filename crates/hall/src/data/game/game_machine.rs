@@ -6,6 +6,7 @@ use crate::data::hall::HallCard;
 use crate::data::player::PlayerCard;
 use shared_data::card::DelayType;
 use shared_data::instruction::Instruction;
+use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 use std::fmt;
@@ -145,6 +146,7 @@ impl GameMachineContext {
     }
 }
 
+#[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameMachinePlayerView {
     pub vitals: [MachineValueType; 4],
@@ -162,29 +164,6 @@ impl From<&GameMachine> for GameMachinePlayerView {
             queue,
             running,
         }
-    }
-}
-
-impl Bufferable for GameMachinePlayerView {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.vitals.push_into(buf);
-        self.queue.push_into(buf);
-        self.running.push_into(buf);
-    }
-
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let vitals = <[MachineValueType; 4]>::pull_from(buf);
-        let queue = <Vec<(GameProcessPlayerView, DelayType)>>::pull_from(buf);
-        let running = <Vec<GameProcessPlayerView>>::pull_from(buf);
-        Self {
-            vitals,
-            queue,
-            running,
-        }
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        self.vitals.size_in_buffer() + self.queue.size_in_buffer() + self.running.size_in_buffer()
     }
 }
 

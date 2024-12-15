@@ -1,0 +1,13 @@
+[package]
+name = "bufferable-derive"
+description = "#[derive(Bufferable)]"
+version = "0.1.0"
+edition = "2021"
+authors = ["Scott Barcik <oxooo5co77@impending.org>"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = { version = "1.0.37" }
+syn = { version = "2.0.90", features = ["full"] }

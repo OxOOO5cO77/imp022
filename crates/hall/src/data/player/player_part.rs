@@ -2,47 +2,22 @@ use serde::{Deserialize, Serialize};
 
 use crate::data::player::{PlayerBuild, PlayerDetail};
 use shared_data::attribute::AttributeValueType;
-use shared_net::types::SeedType;
+use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
+use shared_net::types::SeedType;
 use shared_net::VSizedBuffer;
 
 type AttributeArray = [AttributeValueType; 4];
 type BuildArray = [PlayerBuild; 4];
 type DetailArray = [PlayerDetail; 4];
 
-#[derive(Default, Clone, Copy, Serialize, Deserialize)]
+#[derive(Default, Clone, Copy, Bufferable, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq, Debug))]
 pub struct PlayerPart {
     pub seed: SeedType,
     pub values: AttributeArray,
     pub build: BuildArray,
     pub detail: DetailArray,
-}
-
-impl Bufferable for PlayerPart {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.seed.push_into(buf);
-        self.values.push_into(buf);
-        self.build.push_into(buf);
-        self.detail.push_into(buf);
-    }
-
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let seed = SeedType::pull_from(buf);
-        let values = AttributeArray::pull_from(buf);
-        let build = BuildArray::pull_from(buf);
-        let detail = DetailArray::pull_from(buf);
-        Self {
-            seed,
-            values,
-            build,
-            detail,
-        }
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        self.seed.size_in_buffer() + self.values.size_in_buffer() + self.build.size_in_buffer() + self.detail.size_in_buffer()
-    }
 }
 
 #[cfg(test)]

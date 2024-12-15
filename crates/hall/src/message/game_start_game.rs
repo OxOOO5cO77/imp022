@@ -1,7 +1,9 @@
 use crate::message::CommandMessage;
+use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
 
+#[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameStartGameMessage {
     pub success: bool,
@@ -9,23 +11,6 @@ pub struct GameStartGameMessage {
 
 impl CommandMessage for GameStartGameMessage {
     const COMMAND: op::Command = op::Command::GameStartGame;
-}
-
-impl Bufferable for GameStartGameMessage {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.success.push_into(buf);
-    }
-
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let success = bool::pull_from(buf);
-        Self {
-            success,
-        }
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        self.success.size_in_buffer()
-    }
 }
 
 #[cfg(test)]

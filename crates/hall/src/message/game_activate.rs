@@ -1,9 +1,11 @@
 use crate::data::player::PlayerPart;
 use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
+use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::types::GameIdType;
 use shared_net::{op, VSizedBuffer};
 
+#[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameActivateRequest {
     pub game_id: GameIdType,
@@ -19,25 +21,9 @@ impl GameRequestMessage for GameActivateRequest {
     }
 }
 
-impl Bufferable for GameActivateRequest {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.game_id.push_into(buf);
-    }
-
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let game_id = GameIdType::pull_from(buf);
-        Self {
-            game_id,
-        }
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        self.game_id.size_in_buffer()
-    }
-}
-
 type PartsArray = [PlayerPart; 8];
 
+#[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameActivateResponse {
     pub game_id: GameIdType,
@@ -49,26 +35,6 @@ impl CommandMessage for GameActivateResponse {
 }
 
 impl GameResponseMessage for GameActivateResponse {}
-
-impl Bufferable for GameActivateResponse {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.game_id.push_into(buf);
-        self.parts.push_into(buf);
-    }
-
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let game_id = GameIdType::pull_from(buf);
-        let parts = PartsArray::pull_from(buf);
-        Self {
-            game_id,
-            parts,
-        }
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        self.game_id.size_in_buffer() + self.parts.size_in_buffer()
-    }
-}
 
 #[cfg(test)]
 mod test {

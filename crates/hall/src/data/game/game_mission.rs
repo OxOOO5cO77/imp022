@@ -4,6 +4,7 @@ use crate::data::game::{GameMissionNodePlayerView, GameMissionObjectivePlayerVie
 use crate::data::hall::HallMission;
 use crate::data::player::PlayerMissionState;
 use shared_data::mission::{MissionIdType, MissionNodeIdType};
+use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 
@@ -30,6 +31,7 @@ impl GameMission {
     }
 }
 
+#[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameMissionPlayerView {
     pub node: GameMissionNodePlayerView,
@@ -42,26 +44,6 @@ impl GameMissionPlayerView {
             node: mission.node.iter().find(|n| n.id == mission_state.node).map(GameMissionNodePlayerView::from).unwrap(),
             objective: mission.objective.iter().map(GameMissionObjectivePlayerView::from).collect(),
         }
-    }
-}
-
-impl Bufferable for GameMissionPlayerView {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.node.push_into(buf);
-        self.objective.push_into(buf);
-    }
-
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let node = GameMissionNodePlayerView::pull_from(buf);
-        let objective = <Vec<GameMissionObjectivePlayerView>>::pull_from(buf);
-        Self {
-            node,
-            objective,
-        }
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        self.node.size_in_buffer() + self.objective.size_in_buffer()
     }
 }
 

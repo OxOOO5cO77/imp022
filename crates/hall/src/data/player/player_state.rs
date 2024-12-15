@@ -4,6 +4,7 @@ use crate::message::{CardTarget, PicksType};
 use rand::{seq::SliceRandom, Rng};
 use shared_data::attribute::{AttributeKind, AttributeValueType, Attributes};
 use shared_data::card::ErgType;
+use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
 use std::collections::{HashMap, VecDeque};
@@ -118,7 +119,7 @@ type DeckCountType = u8;
 type AttributeArrays = [[AttributeValueType; 4]; 4];
 type ErgArray = [ErgType; 4];
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct PlayerStatePlayerView {
     pub attr: AttributeArrays,
@@ -143,35 +144,6 @@ impl From<&PlayerState> for PlayerStatePlayerView {
                 *player_state.erg.get(&AttributeKind::Disrupt).unwrap_or(&0),
             ],
         }
-    }
-}
-
-impl Bufferable for PlayerStatePlayerView {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.attr.push_into(buf);
-        self.deck.push_into(buf);
-        self.heap.push_into(buf);
-        self.hand.push_into(buf);
-        self.erg.push_into(buf);
-    }
-
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let attr = AttributeArrays::pull_from(buf);
-        let deck = DeckCountType::pull_from(buf);
-        let heap = Vec::<PlayerCard>::pull_from(buf);
-        let hand = Vec::<PlayerCard>::pull_from(buf);
-        let erg = ErgArray::pull_from(buf);
-        Self {
-            attr,
-            deck,
-            heap,
-            hand,
-            erg,
-        }
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        self.attr.size_in_buffer() + self.deck.size_in_buffer() + self.heap.size_in_buffer() + self.hand.size_in_buffer() + self.erg.size_in_buffer()
     }
 }
 

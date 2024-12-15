@@ -1,7 +1,9 @@
-use shared_net::types::{AuthType, NodeType, UserIdType};
+use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
+use shared_net::types::{AuthType, NodeType, UserIdType};
 use shared_net::VSizedBuffer;
 
+#[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GateHeader {
     pub vagabond: NodeType,
@@ -16,26 +18,6 @@ impl GateHeader {
             user,
             auth,
         }
-    }
-}
-
-impl Bufferable for GateHeader {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.vagabond.push_into(buf);
-        self.user.push_into(buf);
-        self.auth.push_into(buf);
-    }
-
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        Self {
-            vagabond: NodeType::pull_from(buf),
-            user: UserIdType::pull_from(buf),
-            auth: AuthType::pull_from(buf),
-        }
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        self.vagabond.size_in_buffer() + self.user.size_in_buffer() + self.auth.size_in_buffer()
     }
 }
 

@@ -2,9 +2,11 @@ use crate::data::player::PlayerStatePlayerView;
 use crate::message::CommandMessage;
 use shared_data::attribute::AttributeValueType;
 use shared_data::card::ErgType;
+use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
 
+#[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameResourcesMessage {
     pub player_state_view: PlayerStatePlayerView,
@@ -15,32 +17,6 @@ pub struct GameResourcesMessage {
 
 impl CommandMessage for GameResourcesMessage {
     const COMMAND: op::Command = op::Command::GameResources;
-}
-
-impl Bufferable for GameResourcesMessage {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.player_state_view.push_into(buf);
-        self.remote_attr.push_into(buf);
-        self.local_erg.push_into(buf);
-        self.remote_erg.push_into(buf);
-    }
-
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let player_state_view = PlayerStatePlayerView::pull_from(buf);
-        let remote_attr = <[AttributeValueType; 4]>::pull_from(buf);
-        let local_erg = <[ErgType; 4]>::pull_from(buf);
-        let remote_erg = <[ErgType; 4]>::pull_from(buf);
-        Self {
-            player_state_view,
-            remote_attr,
-            local_erg,
-            remote_erg,
-        }
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        self.player_state_view.size_in_buffer() + self.remote_attr.size_in_buffer() + self.local_erg.size_in_buffer() + self.remote_erg.size_in_buffer()
-    }
 }
 
 #[cfg(test)]

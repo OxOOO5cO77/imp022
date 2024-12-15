@@ -6,6 +6,7 @@ edition = "2021"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 
 [dependencies]
+bufferable-derive = { version = "0.1.0", path = "bufferable-derive" }
 tokio = { version = "1.42.0", features = ["io-util", "macros", "net", "rt", "signal", "sync", "time"] }
 
 [dev-dependencies]
