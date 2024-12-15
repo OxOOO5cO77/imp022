@@ -6,11 +6,11 @@ use shared_net::op;
 
 pub(crate) fn handle_choose_attr(game: &mut GameState, bx: &mut Broadcaster) {
     let mut rng = rand::rng();
-    let (erg_roll, users, remotes) = game.split_borrow_for_resolve();
+    let (erg_roll, users, remotes, mission) = game.split_borrow_for_resolve();
     for (id, user) in users.iter_mut() {
         if let Some(player) = user.player.as_ref() {
             if let Some(kind) = user.state.resolve_kind {
-                if let Some(remote_id) = user.remote {
+                if let Some(remote_id) = mission.remote_from_node(user.mission_state.node) {
                     if let Some(remote) = remotes.get(&remote_id) {
                         let remote_attr = remote.choose_attr(&mut rng);
                         let (local_erg, remote_erg) = GameState::resolve_matchups(erg_roll, &player.attributes.get(kind), &remote_attr);

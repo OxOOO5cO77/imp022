@@ -55,7 +55,9 @@ async fn main() -> Result<(), ()> {
 }
 
 fn process_courtyard(context: HallContext, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
-    let result = match buf.pull::<op::Command>() {
+    let command = buf.pull::<op::Command>();
+
+    let result = match command {
         op::Command::GameBuild => handle_recv(&context, tx, buf, logic::recv_game_build),
         op::Command::GameActivate => handle_recv(&context, tx, buf, logic::recv_game_activate),
         op::Command::GameStartTurn => handle_recv(&context, tx, buf, logic::recv_game_start_turn),

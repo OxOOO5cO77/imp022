@@ -6,7 +6,7 @@ use crate::screen::compose::ComposeHandoff;
 use crate::system::ui_effects::{Blinker, Glower};
 use crate::system::AppState;
 use bevy::prelude::*;
-use hall::data::game::{GameMachinePlayerView, GameProcessPlayerView, TickType};
+use hall::data::game::{GameMachinePlayerView, GameProcessPlayerView, RemoteIdType, TickType};
 use hall::data::player::PlayerStatePlayerView;
 use hall::message::*;
 use shared_data::attribute::AttributeKind;
@@ -378,17 +378,27 @@ fn gameplay_enter(
     commands.insert_resource(GameplayContext::default());
 
     let initial_response = handoff.initial_response.take().unwrap();
-    recv_update_state(*initial_response, &mut send);
-    send.send(UiEvent::GamePhase(VagabondGamePhase::Start));
-
     let local_info = MachineInfo {
         name: handoff.name.clone(),
         id: handoff.id.clone(),
     };
-    send.send(UiEvent::MachineInfoUpdate(MachineKind::Local, local_info));
+    let remote_info = MachineInfo {
+        name: "<Querying DNS>".to_string(),
+        id: make_id(initial_response.mission.node.remote),
+    };
+    recv_update_state(*initial_response, &mut send);
 
-    commands.trigger(TTYMessageEvent::new(MachineKind::Local, "Connected to 0123-4567-89AB-CDEF"));
+    commands.trigger(TTYMessageEvent::new(MachineKind::Local, &format!("Connected to {}", remote_info.id)));
     commands.trigger(TTYMessageEvent::new(MachineKind::Remote, &format!("Connection from {}", handoff.id)));
+
+    send.send(UiEvent::MachineInfoUpdate(MachineKind::Local, local_info));
+    send.send(UiEvent::MachineInfoUpdate(MachineKind::Remote, remote_info));
+
+    send.send(UiEvent::GamePhase(VagabondGamePhase::Start));
+}
+
+fn make_id(remote: RemoteIdType) -> String {
+    format!("{:016X}", remote).chars().collect::<Vec<char>>().chunks(4).map(|c| c.iter().collect::<String>()).collect::<Vec<String>>().join("-")
 }
 
 fn on_click_next(_event: Trigger<Pointer<Click>>, mut context: ResMut<GameplayContext>, gate: Res<GateIFace>) {

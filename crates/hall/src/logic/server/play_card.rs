@@ -13,7 +13,10 @@ pub(crate) fn handle_play_card(game: &mut GameState, bx: &mut Broadcaster) {
             user.state.add_to_heap(card.clone());
             let played = match target {
                 CardTarget::Local => (IdType::Local(*user_id), card, IdType::Local(*user_id)),
-                CardTarget::Remote(_) => (IdType::Local(*user_id), card, IdType::Remote(user.remote.unwrap_or_default())), // todo: handle mission node -> remote conversion
+                CardTarget::Remote(node) => {
+                    let remote = game.mission.remote_from_node(node).or_else(|| game.mission.remote_from_node(user.mission_state.node)).unwrap_or_default();
+                    (IdType::Local(*user_id), card, IdType::Remote(remote))
+                }
             };
             all_played.push(played);
         }

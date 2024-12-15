@@ -1,4 +1,4 @@
-use crate::data::game::GameMachinePlayerView;
+use crate::data::game::{GameMachine, GameMachinePlayerView, GameMission, GameMissionPlayerView, GameUser};
 use crate::data::player::PlayerStatePlayerView;
 use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
 use shared_net::sizedbuffers::Bufferable;
@@ -42,10 +42,22 @@ pub struct GameUpdateStateResponse {
     pub player_state: PlayerStatePlayerView,
     pub local_machine: GameMachinePlayerView,
     pub remote_machine: GameMachinePlayerView,
+    pub mission: GameMissionPlayerView,
 }
 
 impl CommandMessage for GameUpdateStateResponse {
     const COMMAND: op::Command = op::Command::GameUpdateState;
+}
+
+impl GameUpdateStateResponse {
+    pub fn new(user: &GameUser, remote: &GameMachine, mission: &GameMission) -> Self {
+        Self {
+            player_state: PlayerStatePlayerView::from(&user.state),
+            local_machine: GameMachinePlayerView::from(&user.machine),
+            remote_machine: GameMachinePlayerView::from(remote),
+            mission: GameMissionPlayerView::new(mission, &user.mission_state),
+        }
+    }
 }
 
 impl GameResponseMessage for GameUpdateStateResponse {}
@@ -55,27 +67,30 @@ impl Bufferable for GameUpdateStateResponse {
         self.player_state.push_into(buf);
         self.local_machine.push_into(buf);
         self.remote_machine.push_into(buf);
+        self.mission.push_into(buf);
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
         let player_state = PlayerStatePlayerView::pull_from(buf);
         let local_machine = GameMachinePlayerView::pull_from(buf);
         let remote_machine = GameMachinePlayerView::pull_from(buf);
+        let mission = GameMissionPlayerView::pull_from(buf);
         Self {
             player_state,
             local_machine,
             remote_machine,
+            mission,
         }
     }
 
     fn size_in_buffer(&self) -> usize {
-        self.player_state.size_in_buffer() + self.local_machine.size_in_buffer() + self.remote_machine.size_in_buffer()
+        self.player_state.size_in_buffer() + self.local_machine.size_in_buffer() + self.remote_machine.size_in_buffer() + self.mission.size_in_buffer()
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::data::game::GameMachinePlayerView;
+    use crate::data::game::{GameMachinePlayerView, GameMissionPlayerView};
     use crate::data::player::PlayerStatePlayerView;
     use crate::message::game_update_state::GameUpdateStateResponse;
     use shared_net::sizedbuffers::Bufferable;
@@ -93,6 +108,7 @@ mod test {
             },
             local_machine: GameMachinePlayerView::test_default(),
             remote_machine: GameMachinePlayerView::test_default(),
+            mission: GameMissionPlayerView::test_default(),
         };
 
         let mut buf = VSizedBuffer::new(orig.size_in_buffer());

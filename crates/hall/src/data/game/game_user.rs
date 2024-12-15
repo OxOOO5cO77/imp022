@@ -1,6 +1,5 @@
-use crate::data::game::game_state::RemoteIdType;
 use crate::data::game::GameMachine;
-use crate::data::player::{Player, PlayerState};
+use crate::data::player::{Player, PlayerMissionState, PlayerState};
 use rand::Rng;
 use shared_net::types::{AuthType, PartType};
 
@@ -10,7 +9,7 @@ pub struct GameUser {
     pub player: Option<Player>,
     pub machine: GameMachine,
     pub state: PlayerState,
-    pub remote: Option<RemoteIdType>,
+    pub mission_state: PlayerMissionState,
 }
 
 impl GameUser {
@@ -21,7 +20,7 @@ impl GameUser {
             player: None,
             machine: GameMachine::default(),
             state: PlayerState::default(),
-            remote: None,
+            mission_state: PlayerMissionState::default(),
         }
     }
 }

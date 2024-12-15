@@ -1,3 +1,7 @@
+use crate::data::game::{GameMission, GamePhase, GameRemote, GameStage, GameUser};
+use crate::data::hall::{HallCard, HallMission};
+use crate::data::player::{PlayerCard, PlayerCommandState};
+use crate::data::util;
 use rand::prelude::IteratorRandom;
 use rand::{distr::Uniform, rngs::ThreadRng, Rng};
 use shared_data::attribute::{AttributeValueType, Attributes};
@@ -9,12 +13,7 @@ use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::iter::zip;
 
-use crate::data::game::{GamePhase, GameRemote, GameStage, GameUser};
-use crate::data::hall::HallCard;
-use crate::data::player::{PlayerCard, PlayerCommandState};
-use crate::data::util;
-
-pub type RemoteIdType = u128;
+pub type RemoteIdType = u64;
 pub type TickType = u16;
 
 type UserMapType = HashMap<UserIdType, GameUser>;
@@ -28,6 +27,7 @@ pub struct GameState {
     stage: GameStage,
     pub erg_roll: [ErgType; 4],
     pub rng: ThreadRng,
+    pub mission: GameMission,
 }
 
 #[derive(PartialEq)]
@@ -37,16 +37,20 @@ pub enum IdType {
 }
 
 impl GameState {
-    pub fn new(num_remotes: usize, mut rng: &mut impl Rng) -> Self {
-        //TODO: temp
+    pub fn new(hall_mission: HallMission, mut rng: &mut impl Rng) -> Self {
         let mut remotes = HashMap::new();
-        for i in 1..=num_remotes {
+
+        let mut mission = GameMission::from(hall_mission);
+
+        for node in mission.node.iter_mut() {
             let attributes = Attributes::from_arrays([util::pick_values(&mut rng), util::pick_values(&mut rng), util::pick_values(&mut rng), util::pick_values(&mut rng)]);
-            remotes.insert(i as RemoteIdType, GameRemote::new(attributes));
+            node.remote = rng.random();
+            remotes.insert(node.remote, GameRemote::new(attributes));
         }
 
         Self {
             remotes,
+            mission,
             ..Default::default()
         }
     }
@@ -176,8 +180,8 @@ impl GameState {
         }
     }
 
-    pub fn split_borrow_for_resolve(&mut self) -> (&[ErgType; 4], &mut UserMapType, &mut RemoteMapType) {
-        (&self.erg_roll, &mut self.users, &mut self.remotes)
+    pub fn split_borrow_for_resolve(&mut self) -> (&[ErgType; 4], &mut UserMapType, &mut RemoteMapType, &GameMission) {
+        (&self.erg_roll, &mut self.users, &mut self.remotes, &self.mission)
     }
 
     pub fn resolve_matchups(erg_roll: &[ErgType], p1: &[AttributeValueType; 4], p2: &[AttributeValueType; 4]) -> ([ErgType; 4], [ErgType; 4]) {

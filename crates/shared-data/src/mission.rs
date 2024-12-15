@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 pub type MissionIdType = u8;
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum MissionNodeKind {
     AccessPoint,
     Backend,
@@ -14,13 +14,13 @@ pub enum MissionNodeKind {
     Hardware,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum MissionNodeState {
     Unknown,
     Known,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum MissionNodeLinkDir {
     North,
     East,
@@ -28,20 +28,20 @@ pub enum MissionNodeLinkDir {
     West,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum MissionNodeLinkState {
     Closed,
     Open,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub struct MissionNodeLink {
     pub direction: MissionNodeLinkDir,
     pub target: MissionNodeIdType,
     pub state: MissionNodeLinkState,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub struct MissionNodeContent {}
 
 pub type MissionNodeIdType = u8;
