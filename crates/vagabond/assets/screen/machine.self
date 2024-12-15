@@ -1,6 +1,6 @@
 #bg:rect%360,286@0,0,0!silver
-&title:main.16.left%200,22@6,3,1!black|MACHINE
-&id:main.12.right%148,22@208,4,1!black|0123-4567-89AB-CDEF
+&title:main.16.left%348,22@6,3,1!black|MACHINE
+&id:main.12.right%348,22@6,4,1!black|0123-4567-89AB-CDEF
 #placeholder:rect%347,48@6,28,1!black
 *queue0:gameplay.queue_empty@6,84,1!white
 *queue1:gameplay.queue_empty@41,84,1!white

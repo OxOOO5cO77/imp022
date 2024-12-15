@@ -28,8 +28,8 @@ impl GameMissionNode {
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameMissionNodePlayerView {
-    id: MissionNodeIdType,
-    kind: MissionNodeKind,
+    pub id: MissionNodeIdType,
+    pub kind: MissionNodeKind,
     state: MissionNodeState,
     links: Vec<MissionNodeLink>,
     pub remote: RemoteIdType,

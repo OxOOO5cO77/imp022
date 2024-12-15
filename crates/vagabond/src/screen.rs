@@ -6,6 +6,7 @@ mod compose;
 mod gameplay;
 mod login;
 mod splash;
+mod util;
 
 pub(crate) struct ScreenPlugins;
 
