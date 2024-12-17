@@ -333,7 +333,7 @@ fn gameplay_enter(
     commands.entity(layout.entity("phase_play")).insert(PhaseIcon(VagabondGamePhase::Play));
     commands.entity(layout.entity("phase_draw")).insert(PhaseIcon(VagabondGamePhase::Draw));
 
-    commands.entity(layout.entity("next")).observe_next_button();
+    commands.entity(layout.entity("phase_bg")).observe_next_button();
 
     commands.entity(layout.entity("attributes/row_a")).observe_pickable_row(AttrKind::Analyze);
     commands.entity(layout.entity("attributes/row_b")).observe_pickable_row(AttrKind::Breach);
