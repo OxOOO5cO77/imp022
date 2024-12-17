@@ -1,7 +1,7 @@
 use bevy::asset::Asset;
 use bevy::prelude::{LinearRgba, TypePath, Vec2};
 use bevy::render::render_resource::{AsBindGroup, ShaderRef};
-use bevy::sprite::Material2d;
+use bevy::sprite::{AlphaMode2d, Material2d};
 
 const SHADER_ASSET_PATH: &str = "shader/frame_material.wgsl";
 
@@ -28,5 +28,8 @@ impl FrameMaterial {
 impl Material2d for FrameMaterial {
     fn fragment_shader() -> ShaderRef {
         SHADER_ASSET_PATH.into()
+    }
+    fn alpha_mode(&self) -> AlphaMode2d {
+        AlphaMode2d::Blend
     }
 }

@@ -8,12 +8,12 @@
 fn fragment(mesh: VertexOutput) -> @location(0) vec4f {
     let left = frame_width / material_size.x;
     let top = frame_width / material_size.y;
-    let right = (material_size.x - frame_width) / material_size.x;
-    let bottom = (material_size.y - frame_width) / material_size.y;
+    let right = 1.0 - left;
+    let bottom = 1.0 - top;
 
     if (mesh.uv.x < left || mesh.uv.x > right || mesh.uv.y < top || mesh.uv.y > bottom)  {
         return material_color;
     }
 
-    return vec4(0.0,0.0,0.0,0.0);
+    return vec4f(material_color.rgb, 0.0);
 }
