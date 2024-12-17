@@ -1,5 +1,5 @@
 #bg:rect%200,300@0,0,0!black
-*border:compose.200x300@0,0,1!green
+#border:dash_frame%200,300@0,0,1!green
 *ant_image:compose.build@11,14,2!white
 &ant:main.12.left%154,16@34,16,2!grey6|-
 *brd_image:compose.build@11,42,2!white
@@ -16,11 +16,11 @@
 *loc_image:compose.detail@174,188,2!white
 &dis:main.12.right%154,16@11,218,2!grey6|-
 *dis_image:compose.detail@174,216,2!white
-*a_bg:compose.048x048@4,246,2!grey6
+#a_bg:dash_frame%048,048@4,246,2!grey6
 &a:main.24.center%28,28@14,257,3!grey6|-
-*b_bg:compose.048x048@52,246,2!grey6
+#b_bg:dash_frame%048,048@52,246,2!grey6
 &b:main.24.center%28,28@62,257,3!grey6|-
-*c_bg:compose.048x048@100,246,2!grey6
+#c_bg:dash_frame%048,048@100,246,2!grey6
 &c:main.24.center%28,28@110,257,3!grey6|-
-*d_bg:compose.048x048@148,246,2!grey6
+#d_bg:dash_frame%048,048@148,246,2!grey6
 &d:main.24.center%28,28@158,257,3!grey6|-

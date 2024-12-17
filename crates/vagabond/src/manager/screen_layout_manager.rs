@@ -36,6 +36,7 @@ enum ShapeKind {
     Rect,
     CapsuleX,
     Frame,
+    DashFrame,
 }
 
 struct ShapeElement {
@@ -94,6 +95,7 @@ impl ScreenLayout {
             "rect" => Some(ShapeKind::Rect),
             "capsule_x" => Some(ShapeKind::CapsuleX),
             "frame" => Some(ShapeKind::Frame),
+            "dash_frame" => Some(ShapeKind::DashFrame),
             _ => None,
         }
     }
@@ -339,9 +341,9 @@ impl ScreenLayoutManager {
         }
     }
 
-    fn make_shape_bundle_frame(element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<FrameMaterial>) -> impl Bundle {
+    fn make_shape_bundle_frame(element: &ShapeElement, dash_size: f32, meshes: &mut Assets<Mesh>, materials: &mut Assets<FrameMaterial>) -> impl Bundle {
         let mesh = Mesh2d(meshes.add(Rectangle::new(element.size.x, element.size.y)));
-        let material = MeshMaterial2d(materials.add(FrameMaterial::new(LinearRgba::from(element.color), element.size)));
+        let material = MeshMaterial2d(materials.add(FrameMaterial::new(LinearRgba::from(element.color), element.size, dash_size)));
         let transform = Transform::from_translation(element.position);
 
         (mesh, material, transform)
@@ -432,7 +434,8 @@ impl ScreenLayoutManager {
                 Element::Shape(e) => match e.kind {
                     ShapeKind::Rect => parent.spawn(Self::make_shape_bundle_rect(e, meshes, materials_color)),
                     ShapeKind::CapsuleX => parent.spawn(Self::make_shape_bundle_capsule_x(e, meshes, materials_color)),
-                    ShapeKind::Frame => parent.spawn(Self::make_shape_bundle_frame(e, meshes, materials_frame)),
+                    ShapeKind::Frame => parent.spawn(Self::make_shape_bundle_frame(e, 0.0, meshes, materials_frame)),
+                    ShapeKind::DashFrame => parent.spawn(Self::make_shape_bundle_frame(e, 8.0, meshes, materials_frame)),
                 }
                 .id(),
                 Element::Sprite(e) => {

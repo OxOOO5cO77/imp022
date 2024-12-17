@@ -13,14 +13,17 @@ pub(crate) struct FrameMaterial {
     size: Vec2,
     #[uniform(2)]
     frame_width: f32,
+    #[uniform(3)]
+    dash_size: f32,
 }
 
 impl FrameMaterial {
-    pub(crate) fn new(color: LinearRgba, size: Vec2) -> Self {
+    pub(crate) fn new(color: LinearRgba, size: Vec2, dash_size: f32) -> Self {
         Self {
             color,
             size,
             frame_width: 4.0,
+            dash_size,
         }
     }
 }
