@@ -16,3 +16,6 @@ shared-net = { path = "../shared-net" }
 
 [dev-dependencies]
 httpc-test = "0.1.10"
+
+[features]
+network-tests = []
