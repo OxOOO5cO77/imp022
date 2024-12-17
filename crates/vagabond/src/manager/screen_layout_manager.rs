@@ -1,3 +1,4 @@
+use crate::gfx::FrameMaterial;
 use crate::manager::AtlasManager;
 use bevy::prelude::*;
 use bevy::sprite::{Anchor, MeshMaterial2d};
@@ -34,6 +35,7 @@ enum Element {
 enum ShapeKind {
     Rect,
     CapsuleX,
+    Frame,
 }
 
 struct ShapeElement {
@@ -91,6 +93,7 @@ impl ScreenLayout {
         match shape_kind {
             "rect" => Some(ShapeKind::Rect),
             "capsule_x" => Some(ShapeKind::CapsuleX),
+            "frame" => Some(ShapeKind::Frame),
             _ => None,
         }
     }
@@ -215,7 +218,7 @@ struct ScreenLayoutContainer {
     inherited_visibility: InheritedVisibility,
 }
 
-type BevyAssetsForBuildLayout<'a> = (&'a AssetServer, &'a mut Assets<Mesh>, &'a mut Assets<ColorMaterial>);
+type BevyAssetsForBuildLayout<'a> = (&'a AssetServer, &'a mut Assets<Mesh>, &'a mut Assets<ColorMaterial>, &'a mut Assets<FrameMaterial>);
 
 impl ScreenLayoutManager {
     pub(crate) fn new(path: impl AsRef<Path>) -> Result<Self, std::io::Error> {
@@ -336,18 +339,26 @@ impl ScreenLayoutManager {
         }
     }
 
-    fn make_shape_bundle(element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> impl Bundle {
-        let handle = match element.kind {
-            ShapeKind::Rect => meshes.add(Rectangle::new(element.size.x, element.size.y)),
-            ShapeKind::CapsuleX => meshes.add(Capsule2d::new(element.size.y / 2.0, element.size.x - element.size.y)),
-        };
-        let mesh = Mesh2d(handle);
-        let material = MeshMaterial2d(materials.add(Color::Srgba(element.color)));
+    fn make_shape_bundle_frame(element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<FrameMaterial>) -> impl Bundle {
+        let mesh = Mesh2d(meshes.add(Rectangle::new(element.size.x, element.size.y)));
+        let material = MeshMaterial2d(materials.add(FrameMaterial::new(LinearRgba::from(element.color), element.size)));
+        let transform = Transform::from_translation(element.position);
 
-        let rotation = match element.kind {
-            ShapeKind::Rect => Quat::IDENTITY,
-            ShapeKind::CapsuleX => Quat::from_rotation_z(PI / 2.0),
-        };
+        (mesh, material, transform)
+    }
+
+    fn make_shape_bundle_rect(element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> impl Bundle {
+        let mesh = Mesh2d(meshes.add(Rectangle::new(element.size.x, element.size.y)));
+        let material = MeshMaterial2d(materials.add(Color::Srgba(element.color)));
+        let transform = Transform::from_translation(element.position);
+
+        (mesh, material, transform)
+    }
+
+    fn make_shape_bundle_capsule_x(element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> impl Bundle {
+        let mesh = Mesh2d(meshes.add(Capsule2d::new(element.size.y / 2.0, element.size.x - element.size.y)));
+        let material = MeshMaterial2d(materials.add(Color::Srgba(element.color)));
+        let rotation = Quat::from_rotation_z(PI / 2.0);
 
         let transform = Transform {
             translation: element.position,
@@ -411,17 +422,19 @@ impl ScreenLayoutManager {
         }
     }
 
-    fn build_layout(&self, layout_name: &str, parent: &mut ChildBuilder, base_name: &str, am: &AtlasManager, (asset_server, meshes, materials): BevyAssetsForBuildLayout) -> Vec<(String, Entity)> {
+    fn build_layout(&self, layout_name: &str, parent: &mut ChildBuilder, base_name: &str, am: &AtlasManager, (asset_server, meshes, materials_color, materials_frame): BevyAssetsForBuildLayout) -> Vec<(String, Entity)> {
         let mut entities = Vec::new();
         let layout = self.layout_map.get(layout_name).unwrap();
 
         for (name, element) in &layout.element_map {
             let full_name = Self::make_name(base_name, name);
             let id = match element {
-                Element::Shape(e) => {
-                    let shape = Self::make_shape_bundle(e, meshes, materials);
-                    parent.spawn(shape).id()
+                Element::Shape(e) => match e.kind {
+                    ShapeKind::Rect => parent.spawn(Self::make_shape_bundle_rect(e, meshes, materials_color)),
+                    ShapeKind::CapsuleX => parent.spawn(Self::make_shape_bundle_capsule_x(e, meshes, materials_color)),
+                    ShapeKind::Frame => parent.spawn(Self::make_shape_bundle_frame(e, meshes, materials_frame)),
                 }
+                .id(),
                 Element::Sprite(e) => {
                     if let Some(sprite) = Self::make_sprite_bundle(am, &e.atlas, &e.item, e.position, e.color) {
                         parent.spawn((sprite, PickingBehavior::IGNORE)).id()
@@ -438,7 +451,7 @@ impl ScreenLayoutManager {
                     parent
                         .spawn(container)
                         .with_children(|parent| {
-                            let mut nested_entities = self.build_layout(&e.layout, parent, &full_name, am, (asset_server, meshes, materials));
+                            let mut nested_entities = self.build_layout(&e.layout, parent, &full_name, am, (asset_server, meshes, materials_color, materials_frame));
                             entities.append(&mut nested_entities);
                         })
                         .id()
@@ -450,11 +463,12 @@ impl ScreenLayoutManager {
         entities
     }
 
-    pub(crate) fn build(&mut self, commands: &mut Commands, layout_name: &str, am: &AtlasManager, (asset_server, mut meshes, mut materials): (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>)) -> &ScreenLayout {
+    #[allow(clippy::type_complexity)]
+    pub(crate) fn build(&mut self, commands: &mut Commands, layout_name: &str, am: &AtlasManager, (asset_server, mut meshes, mut materials_color, mut materials_frame): (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>, ResMut<Assets<FrameMaterial>>)) -> &ScreenLayout {
         let id = commands
             .spawn(ScreenLayoutContainer::default())
             .with_children(|parent| {
-                let entities = self.build_layout(layout_name, parent, "", am, (&asset_server, &mut meshes, &mut materials));
+                let entities = self.build_layout(layout_name, parent, "", am, (&asset_server, &mut meshes, &mut materials_color, &mut materials_frame));
                 let layout = self.layout_map.get_mut(layout_name).unwrap();
                 layout.entity_map = entities.into_iter().collect();
             })

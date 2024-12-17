@@ -1,9 +1,9 @@
-*mborder_title:gameplay.mborder_title@0,0,0!white
-*mborder_id:gameplay.mborder_id@204,0,0!white
-*mborder_image:gameplay.mborder_image@0,25,0!white
-*mborder_queue:gameplay.mborder_queue@0,77,0!white
-*mborder_running:gameplay.mborder_running@0,121,0!white
-*mborder_vitals:gameplay.mborder_vitals@254,121,0!white
+#title_frame:frame%206,28@0,0,0!white
+#id_frame:frame%156,28@204,0,0!white
+#image_frame:frame%360,55@0,25,0!white
+#queue_frame:frame%360,46@0,77,0!white
+#running_frame:frame%256,165@0,121,0!white
+#vitals_frame:frame%106,165@254,121,0!white
 &title:main.16.left%348,22@6,3,1!white|MACHINE
 &id:main.12.right%348,22@6,4,1!white|0123-4567-89AB-CDEF
 #placeholder:rect%346,41@7,32,1!black
