@@ -1,8 +1,11 @@
+use crate::gfx::FrameMaterial;
 use bevy::app::App;
 use bevy::prelude::*;
+use bevy::sprite::Material2dPlugin;
 use bevy::window::WindowResolution;
 use system::AppState;
 
+mod gfx;
 mod manager;
 mod network;
 mod screen;
@@ -19,6 +22,7 @@ fn main() -> AppExit {
             ..default()
         }))
         .add_plugins(bevy_simple_text_input::TextInputPlugin)
+        .add_plugins(Material2dPlugin::<FrameMaterial>::default())
         .add_plugins((manager::ManagerPlugins, screen::ScreenPlugins, system::SystemPlugins))
         .insert_resource(ClearColor(Color::srgb(0.0, 0.0, 0.0)))
         .init_state::<AppState>()

@@ -1,3 +1,9 @@
+use crate::gfx::FrameMaterial;
+use crate::manager::{AtlasManager, NetworkManager, ScreenLayoutManager};
+use crate::network::client_drawbridge;
+use crate::network::client_drawbridge::{AuthInfo, DrawbridgeClient, DrawbridgeIFace};
+use crate::network::client_gate::{GateClient, GateCommand, GateIFace};
+use crate::system::AppState;
 use bevy::prelude::*;
 use bevy::ui::FocusPolicy;
 use bevy_simple_text_input::{TextInput, TextInputInactive, TextInputSettings, TextInputSubmitEvent, TextInputTextColor, TextInputTextFont, TextInputValue};
@@ -5,12 +11,6 @@ use shared_net::types::AuthType;
 use std::env;
 use std::mem::discriminant;
 use tokio::sync::mpsc;
-
-use crate::manager::{AtlasManager, NetworkManager, ScreenLayoutManager};
-use crate::network::client_drawbridge;
-use crate::network::client_drawbridge::{AuthInfo, DrawbridgeClient, DrawbridgeIFace};
-use crate::network::client_gate::{GateClient, GateCommand, GateIFace};
-use crate::system::AppState;
 
 const SCREEN_LAYOUT: &str = "login";
 
@@ -110,13 +110,14 @@ fn textedit_bundle(left: f32, top: f32, width: f32, height: f32, mask_character:
     )
 }
 
+#[allow(clippy::type_complexity)]
 fn login_ui_setup(
     // bevy system
     mut commands: Commands,
     drawbridge: Res<DrawbridgeIFace>,
     am: Res<AtlasManager>,
     mut slm: ResMut<ScreenLayoutManager>,
-    for_slm: (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>),
+    for_slm: (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>, ResMut<Assets<FrameMaterial>>),
 ) {
     let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, for_slm);
 

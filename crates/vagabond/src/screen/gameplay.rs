@@ -1,3 +1,4 @@
+use crate::gfx::FrameMaterial;
 use crate::manager::{AtlasManager, DataManager, ScreenLayoutManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::card_layout::{CardLayout, CardPopulateEvent};
@@ -280,6 +281,7 @@ impl PickableEntityCommandsExtension for &mut EntityCommands<'_> {
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn gameplay_enter(
     // bevy system
     mut commands: Commands,
@@ -287,7 +289,7 @@ fn gameplay_enter(
     mut send: EventWriter<UiEvent>,
     am: Res<AtlasManager>,
     mut slm: ResMut<ScreenLayoutManager>,
-    for_slm: (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>),
+    for_slm: (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>, ResMut<Assets<FrameMaterial>>),
 ) {
     let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, for_slm);
 

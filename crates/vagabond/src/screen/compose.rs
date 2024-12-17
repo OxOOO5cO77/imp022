@@ -1,3 +1,4 @@
+use crate::gfx::FrameMaterial;
 use crate::manager::{AtlasManager, DataManager, ScreenLayout, ScreenLayoutManager, WarehouseManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::card_layout::{CardLayout, CardPopulateEvent};
@@ -236,13 +237,14 @@ impl PartEntityCommandsExtension for &mut EntityCommands<'_> {
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn compose_enter(
     // bevy system
     mut commands: Commands,
     init_handoff: Res<ComposeInitHandoff>,
     am: Res<AtlasManager>,
     mut slm: ResMut<ScreenLayoutManager>,
-    for_slm: (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>),
+    for_slm: (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>, ResMut<Assets<FrameMaterial>>),
 ) {
     let parts = init_handoff.parts.clone();
     commands.remove_resource::<ComposeInitHandoff>();
