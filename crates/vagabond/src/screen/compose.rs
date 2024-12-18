@@ -499,7 +499,7 @@ fn on_over_commit(
     event: Trigger<Pointer<Over>>,
     mut commands: Commands,
 ) {
-    commands.entity(event.target).trigger(SetColorEvent::from(bevy::color::palettes::basic::RED));
+    commands.entity(event.target).trigger(SetColorEvent::new(event.target, bevy::color::palettes::basic::RED));
 }
 
 fn on_over_header(

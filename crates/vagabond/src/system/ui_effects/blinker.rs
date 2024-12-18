@@ -36,7 +36,7 @@ impl Blinker {
     }
 
     pub(crate) fn remove(&self, commands: &mut Commands, entity: Entity) {
-        commands.entity(entity).remove::<Blinker>().trigger(SetColorEvent::from(self.original));
+        commands.entity(entity).remove::<Blinker>().trigger(SetColorEvent::new(entity, self.original));
     }
 }
 
@@ -46,10 +46,10 @@ fn blinker_update(
     mut blinker_q: Query<(Entity, &mut Blinker)>,
     time: Res<Time>,
 ) {
-    for (e, mut blink) in blinker_q.iter_mut() {
+    for (entity, mut blink) in blinker_q.iter_mut() {
         blink.delta_time += time.delta().as_secs_f32();
         if blink.delta_time > blink.target_time {
-            blink.remove(&mut commands, e);
+            blink.remove(&mut commands, entity);
             return;
         }
 
@@ -57,6 +57,6 @@ fn blinker_update(
         let t = (ops::sin(x) + 1.0) / 2.0;
 
         let color = blink.source.mix(&blink.target, t);
-        commands.entity(e).trigger(SetColorEvent::from(color));
+        commands.entity(entity).trigger(SetColorEvent::new(entity, color));
     }
 }

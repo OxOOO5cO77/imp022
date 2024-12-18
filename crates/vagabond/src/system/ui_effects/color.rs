@@ -2,7 +2,7 @@ use crate::gfx::FrameMaterial;
 use bevy::app::{App, Plugin};
 use bevy::asset::Assets;
 use bevy::color::Srgba;
-use bevy::prelude::{Component, Event, MeshMaterial2d, Query, ResMut, Sprite, Trigger};
+use bevy::prelude::{Component, Entity, Event, MeshMaterial2d, Query, ResMut, Sprite, Trigger};
 
 pub(crate) struct ColorPlugin;
 
@@ -16,12 +16,14 @@ impl Plugin for ColorPlugin {
 
 #[derive(Event)]
 pub(crate) struct SetColorEvent {
+    pub target: Entity,
     pub color: Srgba,
 }
 
-impl From<Srgba> for SetColorEvent {
-    fn from(color: Srgba) -> Self {
+impl SetColorEvent {
+    pub(crate) fn new(target: Entity, color: Srgba) -> Self {
         Self {
+            target,
             color,
         }
     }
@@ -33,7 +35,7 @@ fn on_color_update_material(
     material_q: Query<&MeshMaterial2d<FrameMaterial>>,
     mut materials: ResMut<Assets<FrameMaterial>>,
 ) {
-    if let Ok(material) = material_q.get(event.entity()) {
+    if let Ok(material) = material_q.get(event.target) {
         if let Some(instance) = materials.get_mut(&material.0) {
             instance.color = event.color.into();
         }

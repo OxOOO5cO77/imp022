@@ -433,7 +433,7 @@ fn on_over_next(
             VagabondGamePhase::Wait(WaitKind::All) => bevy::color::palettes::basic::YELLOW,
             _ => source_color.color,
         };
-        commands.entity(event.target).trigger(SetColorEvent::from(color));
+        commands.entity(event.target).trigger(SetColorEvent::new(event.target, color));
     }
 }
 
@@ -461,7 +461,7 @@ fn on_over_attr(
         } else {
             source_color.color
         };
-        commands.entity(event.target).trigger(SetColorEvent::from(color));
+        commands.entity(event.target).trigger(SetColorEvent::new(event.target, color));
     }
 }
 
@@ -798,7 +798,6 @@ fn local_state_update(
     }
 }
 
-#[allow(clippy::type_complexity)]
 fn local_ui_update(
     // bevy system
     mut commands: Commands,

@@ -29,7 +29,7 @@ impl Glower {
     }
 
     pub(crate) fn remove(&self, commands: &mut Commands, entity: Entity) {
-        commands.entity(entity).remove::<Glower>().trigger(SetColorEvent::from(self.source));
+        commands.entity(entity).remove::<Glower>().trigger(SetColorEvent::new(entity, self.source));
     }
 }
 
@@ -42,6 +42,6 @@ fn glower_update(
     for (entity, glow) in mesh_q.iter_mut() {
         let t = (ops::sin(time.elapsed_secs() * glow.speed) + 1.0) / 2.0;
         let color = glow.source.mix(&glow.target, t);
-        commands.entity(entity).trigger(SetColorEvent::from(color));
+        commands.entity(entity).trigger(SetColorEvent::new(entity, color));
     }
 }

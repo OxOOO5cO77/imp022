@@ -58,6 +58,6 @@ pub(crate) fn on_out_generic(
     color_q: Query<&UiFxTrackedColor>,
 ) {
     if let Ok(source_color) = color_q.get(event.target) {
-        commands.entity(event.target).trigger(SetColorEvent::from(source_color.color));
+        commands.entity(event.target).trigger(SetColorEvent::new(event.target, source_color.color));
     }
 }
