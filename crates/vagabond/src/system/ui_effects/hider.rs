@@ -1,4 +1,14 @@
+use bevy::app::{App, Plugin, Update};
 use bevy::prelude::{Commands, Component, Entity, Query, Res, Time, Visibility};
+
+pub(crate) struct HiderPlugin;
+
+impl Plugin for HiderPlugin {
+    fn build(&self, app: &mut App) {
+        app //
+            .add_systems(Update, hider_update);
+    }
+}
 
 #[derive(Component)]
 pub(crate) struct Hider {
@@ -15,7 +25,7 @@ impl Hider {
     }
 }
 
-pub(crate) fn hider_update(
+fn hider_update(
     //
     mut commands: Commands,
     mut hider_q: Query<(Entity, &mut Hider)>,

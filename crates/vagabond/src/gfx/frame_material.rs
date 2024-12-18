@@ -8,7 +8,7 @@ const SHADER_ASSET_PATH: &str = "shader/frame_material.wgsl";
 #[derive(Asset, TypePath, AsBindGroup, Clone)]
 pub(crate) struct FrameMaterial {
     #[uniform(0)]
-    color: LinearRgba,
+    pub(crate) color: LinearRgba,
     #[uniform(1)]
     size: Vec2,
     #[uniform(2)]

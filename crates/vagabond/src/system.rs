@@ -1,4 +1,4 @@
-use crate::system::ui_effects::UiEffectsPlugin;
+use crate::system::ui_effects::UiEffectsPlugins;
 use bevy::app::{PluginGroup, PluginGroupBuilder};
 
 mod app_state;
@@ -11,6 +11,6 @@ pub(super) struct SystemPlugins;
 impl PluginGroup for SystemPlugins {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>() //
-            .add(UiEffectsPlugin)
+            .add_group(UiEffectsPlugins)
     }
 }

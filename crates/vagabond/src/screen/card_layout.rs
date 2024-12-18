@@ -1,4 +1,5 @@
 use crate::manager::{AtlasManager, ScreenLayout};
+use crate::system::ui_effects::UiFxTrackedColor;
 use bevy::color::Color;
 use bevy::prelude::{Commands, Component, Entity, Event, Query, Res, Sprite, Text2d, Trigger, Visibility, With};
 use shared_data::attribute::AttributeKind;
@@ -79,8 +80,12 @@ impl CardLayout {
                 layout.run.map(|run| text_q.get_mut(run).map(|mut run_text| *run_text = card.run_rules.clone().into()));
                 layout.delay.map(|delay| text_q.get_mut(delay).map(|mut delay_text| *delay_text = card.delay.to_string().into()));
                 layout.priority.map(|priority| text_q.get_mut(priority).map(|mut priority_text| *priority_text = card.priority.to_string().into()));
-                layout.frame.map(|frame| sprite_q.get_mut(frame).map(|mut frame_sprite| frame_sprite.color = Self::map_kind_to_color(card.kind)));
                 layout.icon.map(|icon| sprite_q.get_mut(icon).map(|mut icon_sprite| Self::map_kind_to_icon(&mut icon_sprite, card.kind, &am)));
+                layout.frame.map(|frame| {
+                    let color = Self::map_kind_to_color(card.kind);
+                    commands.entity(frame).insert(UiFxTrackedColor::from(color.to_srgba()));
+                    sprite_q.get_mut(frame).map(|mut frame_sprite| frame_sprite.color = color)
+                });
 
                 commands.entity(target).insert(Visibility::Visible);
             }

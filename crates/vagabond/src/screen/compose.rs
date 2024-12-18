@@ -3,7 +3,8 @@ use crate::manager::{AtlasManager, DataManager, ScreenLayout, ScreenLayoutManage
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::card_layout::{CardLayout, CardPopulateEvent};
 use crate::screen::card_tooltip::{on_update_tooltip, CardTooltip, UpdateCardTooltipEvent};
-use crate::system::ui_effects::{Glower, Hider};
+use crate::screen::util::on_out_generic;
+use crate::system::ui_effects::{Glower, Hider, SetColorEvent, UiFxTrackedColor};
 use crate::system::AppState;
 use bevy::prelude::*;
 use vagabond::data::{VagabondCard, VagabondPart};
@@ -227,7 +228,7 @@ impl PartEntityCommandsExtension for &mut EntityCommands<'_> {
             .insert((CommitButton, PickingBehavior::default()))
             .observe(on_click_commit)
             .observe(on_over_commit)
-            .observe(on_out_commit)
+            .observe(on_out_generic)
     }
     fn observe_card_header(self, index: usize) -> Self {
         self //
@@ -357,7 +358,7 @@ fn on_part_drag_start(
     //
     event: Trigger<Pointer<DragStart>>,
     mut commands: Commands,
-    mut holder_q: Query<(Entity, &Sprite, &Slot, &mut PartHolder)>,
+    mut holder_q: Query<(Entity, Option<&UiFxTrackedColor>, &Slot, &mut PartHolder)>,
     mut draggable: ResMut<Draggable>,
 ) {
     if let Ok([(_, _, _, mut holder), (_, _, _, mut drag_holder)]) = holder_q.get_many_mut([event.target, draggable.drag]) {
@@ -373,17 +374,18 @@ fn on_part_drag_start(
         commands.entity(event.target).insert(PickingBehavior::IGNORE);
     }
 
-    for (entity, sprite, slot, holder) in &holder_q {
+    for (entity, source_color, slot, holder) in &holder_q {
         if entity != draggable.drag {
             let glow = match slot {
                 Slot::Card => continue,
                 Slot::Empty(_) => Srgba::new(0.7, 0.7, 0.0, 1.0),
                 _ if holder.part.is_none() => Srgba::new(0.0, 1.0, 0.0, 1.0),
                 _ => Srgba::new(0.8, 0.8, 0.8, 1.0),
+            };
+            if let Some(color) = source_color {
+                let glower = Glower::new(color.color, glow, GLOWER_DROP_TARGET_SPEED);
+                commands.entity(entity).insert(glower);
             }
-            .into();
-            let glower = Glower::new(sprite.color, glow, GLOWER_DROP_TARGET_SPEED);
-            commands.entity(entity).insert(glower);
         }
     }
 }
@@ -410,7 +412,7 @@ fn on_part_drag_end(
     mut commands: Commands,
     mut holder_q: Query<(&mut PartHolder, &Slot)>,
     mut draggable: ResMut<Draggable>,
-    mut glower_q: Query<(Entity, &mut Sprite, &Glower), Without<CommitButton>>,
+    mut glower_q: Query<(Entity, &Glower), Without<CommitButton>>,
 ) {
     if !draggable.active {
         return;
@@ -426,8 +428,8 @@ fn on_part_drag_end(
     draggable.active = false;
     commands.entity(event.target).insert(PickingBehavior::default());
 
-    for (entity, mut sprite, glower) in glower_q.iter_mut() {
-        glower.remove(&mut commands, &mut sprite, entity);
+    for (entity, glower) in glower_q.iter_mut() {
+        glower.remove(&mut commands, entity);
     }
 }
 
@@ -492,16 +494,12 @@ fn on_click_commit(
     send.send(FinishPlayer);
 }
 
-fn on_over_commit(event: Trigger<Pointer<Over>>, mut sprite_q: Query<&mut Sprite, With<CommitButton>>) {
-    if let Ok(mut sprite) = sprite_q.get_mut(event.target) {
-        sprite.color = bevy::color::palettes::basic::RED.into();
-    }
-}
-
-fn on_out_commit(event: Trigger<Pointer<Out>>, mut sprite_q: Query<&mut Sprite, With<CommitButton>>) {
-    if let Ok(mut sprite) = sprite_q.get_mut(event.target) {
-        sprite.color = bevy::color::palettes::css::DARK_GRAY.into();
-    }
+fn on_over_commit(
+    //
+    event: Trigger<Pointer<Over>>,
+    mut commands: Commands,
+) {
+    commands.entity(event.target).trigger(SetColorEvent::from(bevy::color::palettes::basic::RED));
 }
 
 fn on_over_header(
@@ -596,18 +594,18 @@ fn commit_button_ui(
     // bevy system
     mut commands: Commands,
     mut read: EventReader<PopulatePlayerUi>,
-    mut glower_q: Query<(Entity, &mut Sprite, Option<&Glower>), With<CommitButton>>,
+    mut glower_q: Query<(Entity, &UiFxTrackedColor, Option<&Glower>), With<CommitButton>>,
 ) {
     if let Some(event) = read.read().last() {
-        if let Ok((entity, mut sprite, glower)) = glower_q.get_single_mut() {
+        if let Ok((entity, source_color, glower)) = glower_q.get_single_mut() {
             match event {
                 PopulatePlayerUi::Hide => {
                     if let Some(glower) = glower {
-                        glower.remove(&mut commands, &mut sprite, entity);
+                        glower.remove(&mut commands, entity);
                     }
                 }
                 PopulatePlayerUi::Show(_) => {
-                    commands.entity(entity).insert(Glower::new(sprite.color, bevy::color::palettes::basic::GREEN.into(), GLOWER_COMMIT_SPEED));
+                    commands.entity(entity).insert(Glower::new(source_color.color, bevy::color::palettes::basic::GREEN, GLOWER_COMMIT_SPEED));
                 }
             };
         }

@@ -1,33 +1,47 @@
-use bevy::prelude::{ops, Color, Commands, Component, Entity, Mix, Query, Res, Sprite, Time};
+use crate::system::ui_effects::SetColorEvent;
+use bevy::app::{App, Plugin, Update};
+use bevy::color::Srgba;
+use bevy::prelude::{ops, Commands, Component, Entity, Mix, Query, Res, Time};
+
+pub(crate) struct GlowerPlugin;
+
+impl Plugin for GlowerPlugin {
+    fn build(&self, app: &mut App) {
+        app //
+            .add_systems(Update, glower_update);
+    }
+}
 
 #[derive(Component)]
 pub(crate) struct Glower {
-    source: Color,
-    target: Color,
+    source: Srgba,
+    target: Srgba,
     speed: f32,
 }
 
 impl Glower {
-    pub(crate) fn new(source: Color, target: Color, speed: f32) -> Self {
+    pub(crate) fn new(source: Srgba, target: Srgba, speed: f32) -> Self {
         Self {
             source,
             target,
             speed,
         }
     }
-    pub(crate) fn remove(&self, commands: &mut Commands, sprite: &mut Sprite, entity: Entity) {
-        sprite.color = self.source;
-        commands.entity(entity).remove::<Glower>();
+
+    pub(crate) fn remove(&self, commands: &mut Commands, entity: Entity) {
+        commands.entity(entity).remove::<Glower>().trigger(SetColorEvent::from(self.source));
     }
 }
 
-pub(crate) fn glower_update(
+fn glower_update(
     //
-    mut glower_q: Query<(&mut Sprite, &mut Glower)>,
+    mut commands: Commands,
     time: Res<Time>,
+    mut mesh_q: Query<(Entity, &Glower)>,
 ) {
-    for (mut sprite, glow) in glower_q.iter_mut() {
+    for (entity, glow) in mesh_q.iter_mut() {
         let t = (ops::sin(time.elapsed_secs() * glow.speed) + 1.0) / 2.0;
-        sprite.color = glow.source.mix(&glow.target, t);
+        let color = glow.source.mix(&glow.target, t);
+        commands.entity(entity).trigger(SetColorEvent::from(color));
     }
 }

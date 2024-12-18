@@ -4,8 +4,8 @@ use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::card_layout::{CardLayout, CardPopulateEvent};
 use crate::screen::card_tooltip::{on_update_tooltip, CardTooltip, UpdateCardTooltipEvent};
 use crate::screen::compose::ComposeHandoff;
-use crate::screen::util::GameMissionNodePlayerViewExt;
-use crate::system::ui_effects::{Blinker, Glower};
+use crate::screen::util::{on_out_generic, GameMissionNodePlayerViewExt};
+use crate::system::ui_effects::{Blinker, Glower, SetColorEvent, UiFxTrackedColor};
 use crate::system::AppState;
 use bevy::prelude::*;
 use hall::data::game::{GameMachinePlayerView, GameProcessPlayerView, TickType};
@@ -251,14 +251,14 @@ impl PickableEntityCommandsExtension for &mut EntityCommands<'_> {
             .insert((AttributeRow(kind), PickingBehavior::default()))
             .observe(on_click_attr)
             .observe(on_over_attr)
-            .observe(on_out_attr)
+            .observe(on_out_generic)
     }
     fn observe_next_button(self) -> Self {
         self //
             .insert(PickingBehavior::default())
             .observe(on_click_next)
             .observe(on_over_next)
-            .observe(on_out_next)
+            .observe(on_out_generic)
     }
     fn observe_hand_card(self, hand_index: usize) -> Self {
         self //
@@ -413,9 +413,15 @@ fn on_click_next(_event: Trigger<Pointer<Click>>, mut context: ResMut<GameplayCo
     }
 }
 
-fn on_over_next(event: Trigger<Pointer<Over>>, context: Res<GameplayContext>, mut sprite_q: Query<&mut Sprite>) {
-    if let Ok(mut sprite) = sprite_q.get_mut(event.target) {
-        sprite.color = match context.phase {
+fn on_over_next(
+    //
+    event: Trigger<Pointer<Over>>,
+    mut commands: Commands,
+    context: Res<GameplayContext>,
+    color_q: Query<&UiFxTrackedColor>,
+) {
+    if let Ok(source_color) = color_q.get(event.target) {
+        let color = match context.phase {
             VagabondGamePhase::Pick => {
                 if context.attr_pick.is_some() {
                     bevy::color::palettes::basic::GREEN
@@ -425,38 +431,37 @@ fn on_over_next(event: Trigger<Pointer<Over>>, context: Res<GameplayContext>, mu
             }
             VagabondGamePhase::Wait(WaitKind::One) => bevy::color::palettes::basic::RED,
             VagabondGamePhase::Wait(WaitKind::All) => bevy::color::palettes::basic::YELLOW,
-            _ => bevy::color::palettes::basic::GREEN,
-        }
-        .into();
+            _ => source_color.color,
+        };
+        commands.entity(event.target).trigger(SetColorEvent::from(color));
     }
 }
 
-fn on_out_next(event: Trigger<Pointer<Out>>, mut sprite_q: Query<&mut Sprite>) {
-    if let Ok(mut sprite) = sprite_q.get_mut(event.target) {
-        sprite.color = bevy::color::palettes::css::DARK_GRAY.into();
-    }
-}
-
-fn on_click_attr(event: Trigger<Pointer<Click>>, mut send: EventWriter<UiEvent>, attr_q: Query<&AttributeRow>) {
+fn on_click_attr(
+    //
+    event: Trigger<Pointer<Click>>,
+    mut send: EventWriter<UiEvent>,
+    attr_q: Query<&AttributeRow>,
+) {
     if let Ok(AttributeRow(kind)) = attr_q.get(event.target) {
         send.send(UiEvent::ChooseAttr(Some(*kind)));
     }
 }
 
-fn on_over_attr(event: Trigger<Pointer<Over>>, context: Res<GameplayContext>, mut sprite_q: Query<&mut Sprite>) {
-    if let Ok(mut sprite) = sprite_q.get_mut(event.target) {
-        sprite.color = if VagabondGamePhase::Pick == context.phase {
+fn on_over_attr(
+    //
+    event: Trigger<Pointer<Over>>,
+    mut commands: Commands,
+    context: Res<GameplayContext>,
+    color_q: Query<&UiFxTrackedColor>,
+) {
+    if let Ok(source_color) = color_q.get(event.target) {
+        let color = if VagabondGamePhase::Pick == context.phase {
             bevy::color::palettes::basic::GREEN
         } else {
-            bevy::color::palettes::css::SILVER
-        }
-        .into();
-    }
-}
-
-fn on_out_attr(event: Trigger<Pointer<Out>>, mut sprite_q: Query<&mut Sprite>) {
-    if let Ok(mut sprite) = sprite_q.get_mut(event.target) {
-        sprite.color = bevy::color::palettes::css::DARK_GRAY.into();
+            source_color.color
+        };
+        commands.entity(event.target).trigger(SetColorEvent::from(color));
     }
 }
 
@@ -485,6 +490,7 @@ fn make_indicator_bundle(parent: Entity, translation: Vec3, offset: Vec2, mut me
         Mesh2d(meshes.add(Rectangle::new(16.0, 1.0))),
         MeshMaterial2d(materials.add(ColorMaterial::from(Color::Srgba(Srgba::new(0.0, 0.75, 0.0, 0.35))))),
         Transform::from_translation(translation),
+        PickingBehavior::IGNORE,
     )
 }
 
@@ -516,7 +522,7 @@ fn on_card_drag_start(
     event: Trigger<Pointer<DragStart>>,
     mut commands: Commands,
     sprite_q: Query<(&CardLayout, &mut Sprite, &mut Transform, &HandCard, Option<&IndicatorTracker>), With<PickingBehavior>>,
-    mut bg_q: Query<(&mut Sprite, Option<&Blinker>), Without<CardLayout>>,
+    bg_q: Query<(&UiFxTrackedColor, Option<&Blinker>), Without<CardLayout>>,
     mut indicator_q: Query<(Entity, &mut Indicator)>,
     mut context: ResMut<GameplayContext>,
     meshes: ResMut<Assets<Mesh>>,
@@ -533,11 +539,11 @@ fn on_card_drag_start(
         let card = context.hand.get(hand.0).cloned();
         if tracker.is_none() && card.as_ref().is_none_or(|card| card.cost > context.cached_state.erg[kind_to_erg_index(card.kind)]) {
             if let Some(frame) = layout.frame {
-                if let Ok((mut bg_sprite, blink)) = bg_q.get_mut(frame) {
+                if let Ok((source_color, blink)) = bg_q.get(frame) {
                     if let Some(blink) = blink {
-                        blink.remove(&mut commands, &mut bg_sprite, frame);
+                        blink.remove(&mut commands, frame);
                     }
-                    commands.entity(frame).insert(Blinker::new(bg_sprite.color, bevy::color::palettes::basic::RED.into(), BLINKER_COUNT, BLINKER_SPEED));
+                    commands.entity(frame).insert(Blinker::new(source_color.color, bevy::color::palettes::basic::RED, BLINKER_COUNT, BLINKER_SPEED));
                 }
             }
             return;
@@ -792,12 +798,13 @@ fn local_state_update(
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn local_ui_update(
     // bevy system
     mut commands: Commands,
     mut receive: EventReader<UiEvent>,
     mut text_q: Query<(&mut Text2d, &mut TextColor, &PlayerStateText)>,
-    mut row_q: Query<(Entity, &mut Sprite, Option<&Glower>), With<AttributeRow>>,
+    mut row_q: Query<(Entity, &UiFxTrackedColor, Option<&Glower>), With<AttributeRow>>,
     mut context: ResMut<GameplayContext>,
 ) {
     for ui_event in receive.read() {
@@ -818,13 +825,14 @@ fn local_ui_update(
                 }
 
                 if kind.is_none() {
-                    for (entity, sprite, _) in row_q.iter() {
-                        commands.entity(entity).insert(Glower::new(sprite.color, Srgba::new(0.0, 1.0, 0.0, 1.0).into(), GLOWER_SPEED));
+                    for (entity, source_color, _) in row_q.iter() {
+                        let color = source_color.color;
+                        commands.entity(entity).insert(Glower::new(color, Srgba::new(0.0, 1.0, 0.0, 1.0), GLOWER_SPEED));
                     }
                 } else {
-                    for (entity, mut sprite, glower) in row_q.iter_mut() {
+                    for (entity, _, glower) in row_q.iter_mut() {
                         if let Some(glower) = glower {
-                            glower.remove(&mut commands, &mut sprite, entity);
+                            glower.remove(&mut commands, entity);
                         }
                     }
                 }

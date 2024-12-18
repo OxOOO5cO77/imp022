@@ -1,20 +1,23 @@
-use bevy::app::{App, Plugin, Update};
+use bevy::app::{PluginGroup, PluginGroupBuilder};
 
 mod blinker;
+mod color;
 mod glower;
 mod hider;
 
 pub(crate) use blinker::Blinker;
+pub(crate) use color::{SetColorEvent, UiFxTrackedColor};
 pub(crate) use glower::Glower;
 pub(crate) use hider::Hider;
 
-pub(crate) struct UiEffectsPlugin;
+pub(crate) struct UiEffectsPlugins;
 
-impl Plugin for UiEffectsPlugin {
-    fn build(&self, app: &mut App) {
-        app //
-            .add_systems(Update, blinker::blinker_update)
-            .add_systems(Update, glower::glower_update)
-            .add_systems(Update, hider::hider_update);
+impl PluginGroup for UiEffectsPlugins {
+    fn build(self) -> PluginGroupBuilder {
+        PluginGroupBuilder::start::<Self>() //
+            .add(blinker::BlinkerPlugin)
+            .add(glower::GlowerPlugin)
+            .add(hider::HiderPlugin)
+            .add(color::ColorPlugin)
     }
 }

@@ -21,6 +21,7 @@ fn main() -> AppExit {
             }),
             ..default()
         }))
+        .add_plugins(MeshPickingPlugin)
         .add_plugins(bevy_simple_text_input::TextInputPlugin)
         .add_plugins(Material2dPlugin::<FrameMaterial>::default())
         .add_plugins((manager::ManagerPlugins, screen::ScreenPlugins, system::SystemPlugins))

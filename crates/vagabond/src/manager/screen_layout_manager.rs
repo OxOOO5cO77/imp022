@@ -1,5 +1,6 @@
 use crate::gfx::FrameMaterial;
 use crate::manager::AtlasManager;
+use crate::system::ui_effects::UiFxTrackedColor;
 use bevy::prelude::*;
 use bevy::sprite::{Anchor, MeshMaterial2d};
 use bevy::text::TextBounds;
@@ -346,7 +347,7 @@ impl ScreenLayoutManager {
         let material = MeshMaterial2d(materials.add(FrameMaterial::new(LinearRgba::from(element.color), element.size, dash_size)));
         let transform = Transform::from_translation(element.position);
 
-        (mesh, material, transform)
+        (mesh, material, transform, UiFxTrackedColor::from(element.color), PickingBehavior::IGNORE)
     }
 
     fn make_shape_bundle_rect(element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> impl Bundle {
@@ -354,7 +355,7 @@ impl ScreenLayoutManager {
         let material = MeshMaterial2d(materials.add(Color::Srgba(element.color)));
         let transform = Transform::from_translation(element.position);
 
-        (mesh, material, transform)
+        (mesh, material, transform, UiFxTrackedColor::from(element.color), PickingBehavior::IGNORE)
     }
 
     fn make_shape_bundle_capsule_x(element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> impl Bundle {
@@ -368,7 +369,7 @@ impl ScreenLayoutManager {
             scale: Vec3::ONE,
         };
 
-        (mesh, material, transform)
+        (mesh, material, transform, UiFxTrackedColor::from(element.color), PickingBehavior::IGNORE)
     }
 
     fn make_sprite_bundle(am: &AtlasManager, atlas_name: &str, texture_name: &str, translation: Vec3, color: Srgba) -> Option<impl Bundle> {
@@ -384,7 +385,7 @@ impl ScreenLayoutManager {
             },
             Transform::from_translation(translation),
         );
-        Some(sprite)
+        Some((sprite, UiFxTrackedColor::from(color), PickingBehavior::IGNORE))
     }
 
     fn make_text_bundle(element: &TextElement, asset_server: &AssetServer) -> impl Bundle {
@@ -440,7 +441,7 @@ impl ScreenLayoutManager {
                 .id(),
                 Element::Sprite(e) => {
                     if let Some(sprite) = Self::make_sprite_bundle(am, &e.atlas, &e.item, e.position, e.color) {
-                        parent.spawn((sprite, PickingBehavior::IGNORE)).id()
+                        parent.spawn(sprite).id()
                     } else {
                         continue;
                     }

@@ -1,6 +1,6 @@
 $color:attribute=grey6
 $color:attribute_bg=grey4
-*row_a:common.372x080@0,0,0!attribute
+#row_a:dash_frame%372,080@0,0,0!attribute
 *a:common.A064@6,12,1!attribute
 #aa_bg:dash_frame%064,064@75,8,1!attribute_bg
 &aa:main.48.center%56,56@79,12,2!attribute|-
@@ -10,7 +10,7 @@ $color:attribute_bg=grey4
 &ac:main.48.center%56,56@229,12,2!attribute|-
 #ad_bg:dash_frame%064,064@300,8,1!attribute_bg
 &ad:main.48.center%56,56@304,12,2!attribute|-
-*row_b:common.372x080@0,96,0!attribute
+#row_b:dash_frame%372,080@0,96,0!attribute
 *b:common.B064@6,108,1!attribute
 #ba_bg:dash_frame%064,064@75,104,1!attribute_bg
 &ba:main.48.center%56,56@79,108,2!attribute|-
@@ -20,7 +20,7 @@ $color:attribute_bg=grey4
 &bc:main.48.center%56,56@229,108,2!attribute|-
 #bd_bg:dash_frame%064,064@300,104,1!attribute_bg
 &bd:main.48.center%56,56@304,108,2!attribute|-
-*row_c:common.372x080@0,192,0!attribute
+#row_c:dash_frame%372,080@0,192,0!attribute
 *c:common.C064@6,204,1!attribute
 #ca_bg:dash_frame%064,064@75,200,1!attribute_bg
 &ca:main.48.center%56,56@79,204,2!attribute|-
@@ -30,7 +30,7 @@ $color:attribute_bg=grey4
 &cc:main.48.center%56,56@229,204,2!attribute|-
 #cd_bg:dash_frame%064,064@300,200,1!attribute_bg
 &cd:main.48.center%56,56@304,204,2!attribute|-
-*row_d:common.372x080@0,288,0!attribute
+#row_d:dash_frame%372,080@0,288,0!attribute
 *d:common.D064@6,300,1!attribute
 #da_bg:dash_frame%064,064@75,296,1!attribute_bg
 &da:main.48.center%56,56@79,300,2!attribute|-

@@ -1,3 +1,5 @@
+use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor};
+use bevy::prelude::{Commands, Out, Pointer, Query, Trigger};
 use hall::data::game::GameMissionNodePlayerView;
 use shared_data::mission::MissionNodeKind;
 
@@ -46,5 +48,16 @@ impl GameMissionNodePlayerViewExt for GameMissionNodePlayerView {
             remain >>= 5;
         }
         format!("{:0<15}", output).chars().collect::<Vec<char>>().chunks(3).map(|c| c.iter().collect::<String>()).collect::<Vec<String>>().join(":")
+    }
+}
+
+pub(crate) fn on_out_generic(
+    //
+    event: Trigger<Pointer<Out>>,
+    mut commands: Commands,
+    color_q: Query<&UiFxTrackedColor>,
+) {
+    if let Ok(source_color) = color_q.get(event.target) {
+        commands.entity(event.target).trigger(SetColorEvent::from(source_color.color));
     }
 }
