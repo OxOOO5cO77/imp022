@@ -1,5 +1,5 @@
 use crate::data::player::PlayerStatePlayerView;
-use crate::message::CommandMessage;
+use crate::message::{AttrKind, CommandMessage};
 use shared_data::attribute::AttributeValueType;
 use shared_data::card::ErgType;
 use shared_net::bufferable_derive::Bufferable;
@@ -13,6 +13,7 @@ pub struct GameResourcesMessage {
     pub remote_attr: [AttributeValueType; 4],
     pub local_erg: [ErgType; 4],
     pub remote_erg: [ErgType; 4],
+    pub remote_kind: AttrKind,
 }
 
 impl CommandMessage for GameResourcesMessage {
@@ -23,6 +24,7 @@ impl CommandMessage for GameResourcesMessage {
 mod test {
     use crate::data::player::PlayerStatePlayerView;
     use crate::message::game_resources::GameResourcesMessage;
+    use crate::message::AttrKind;
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
 
@@ -33,6 +35,7 @@ mod test {
             remote_attr: [4, 5, 6, 5],
             local_erg: [0, 6, 0, 2],
             remote_erg: [5, 0, 1, 0],
+            remote_kind: AttrKind::Compute,
         };
 
         let mut buf = VSizedBuffer::new(orig.size_in_buffer());

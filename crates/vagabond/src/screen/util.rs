@@ -1,6 +1,8 @@
+use crate::manager::AtlasManager;
 use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor};
-use bevy::prelude::{Commands, Out, Pointer, Query, Trigger};
+use bevy::prelude::{Commands, Out, Pointer, Query, Sprite, Trigger};
 use hall::data::game::GameMissionNodePlayerView;
+use shared_data::attribute::AttributeKind;
 use shared_data::mission::MissionNodeKind;
 
 pub(crate) trait GameMissionNodePlayerViewExt {
@@ -59,5 +61,31 @@ pub(crate) fn on_out_generic(
 ) {
     if let Ok(source_color) = color_q.get(event.target) {
         commands.entity(event.target).trigger(SetColorEvent::new(event.target, source_color.color));
+    }
+}
+
+pub(crate) enum KindIconSize {
+    Small,
+    //    Medium,
+    Large,
+}
+
+pub(crate) fn replace_kind_icon(sprite: &mut Sprite, kind: AttributeKind, kind_icon_size: KindIconSize, am: &AtlasManager) {
+    let texture_letter = match kind {
+        AttributeKind::Analyze => 'A',
+        AttributeKind::Breach => 'B',
+        AttributeKind::Compute => 'C',
+        AttributeKind::Disrupt => 'D',
+    };
+
+    let texture_name = match kind_icon_size {
+        KindIconSize::Small => format!("{}016", texture_letter),
+        //        KindIconSize::Medium => format!("{}048", texture_letter),
+        KindIconSize::Large => format!("{}064", texture_letter),
+    };
+
+    if let Some((atlas, image)) = am.get_atlas_texture("common", &texture_name) {
+        sprite.image = image;
+        sprite.texture_atlas = Some(atlas);
     }
 }

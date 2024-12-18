@@ -4,7 +4,8 @@ use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::card_layout::{CardLayout, CardPopulateEvent};
 use crate::screen::card_tooltip::{on_update_tooltip, CardTooltip, UpdateCardTooltipEvent};
 use crate::screen::compose::ComposeHandoff;
-use crate::screen::util::{on_out_generic, GameMissionNodePlayerViewExt};
+use crate::screen::util;
+use crate::screen::util::{GameMissionNodePlayerViewExt, KindIconSize};
 use crate::system::ui_effects::{Blinker, Glower, SetColorEvent, UiFxTrackedColor};
 use crate::system::AppState;
 use bevy::prelude::*;
@@ -152,6 +153,9 @@ struct PhaseIcon(VagabondGamePhase);
 struct RemoteAttrText(usize);
 
 #[derive(Component)]
+struct RemoteAttrIcon;
+
+#[derive(Component)]
 struct RollText(usize);
 
 #[derive(Component)]
@@ -226,7 +230,7 @@ enum UiEvent {
     ChooseAttr(Option<AttrKind>),
     Roll([ErgType; 4]),
     PlayerErg([ErgType; 4]),
-    Resources([ErgType; 4], [ErgType; 4], [BuildValueType; 4]),
+    Resources([ErgType; 4], [ErgType; 4], [BuildValueType; 4], AttributeKind),
     MachineInfoUpdate(MachineKind, MachineInfo),
     MachineStateUpdate(GameMachinePlayerView, GameMachinePlayerView),
 }
@@ -251,14 +255,14 @@ impl PickableEntityCommandsExtension for &mut EntityCommands<'_> {
             .insert((AttributeRow(kind), PickingBehavior::default()))
             .observe(on_click_attr)
             .observe(on_over_attr)
-            .observe(on_out_generic)
+            .observe(util::on_out_generic)
     }
     fn observe_next_button(self) -> Self {
         self //
             .insert(PickingBehavior::default())
             .observe(on_click_next)
             .observe(on_over_next)
-            .observe(on_out_generic)
+            .observe(util::on_out_generic)
     }
     fn observe_hand_card(self, hand_index: usize) -> Self {
         self //
@@ -318,6 +322,7 @@ fn gameplay_enter(
     for (remote_idx, remote) in REMOTE_ATTR.iter().enumerate() {
         commands.entity(layout.entity(remote)).insert(RemoteAttrText(remote_idx));
     }
+    commands.entity(layout.entity("r_icon")).insert((RemoteAttrIcon, Visibility::Hidden));
 
     const ERG: [&str; 4] = ["la", "lb", "lc", "ld"];
 
@@ -693,7 +698,7 @@ fn roll_ui_update(
                     *color = bevy::color::palettes::basic::GRAY.into();
                 }
             }
-            UiEvent::Resources(local_erg, remote_erg, _) => {
+            UiEvent::Resources(local_erg, remote_erg, _, _) => {
                 for (_, mut color, RollText(index)) in roll_q.iter_mut() {
                     *color = match local_erg[*index].cmp(&remote_erg[*index]) {
                         Ordering::Less => bevy::color::palettes::basic::RED,
@@ -859,21 +864,31 @@ fn local_ui_update(
 
 fn remote_ui_update(
     // bevy system
+    mut commands: Commands,
     mut receive: EventReader<UiEvent>,
     mut text_q: Query<(&mut Text2d, &mut TextColor, &RemoteAttrText)>,
+    mut icon_q: Query<(Entity, &mut Sprite), With<RemoteAttrIcon>>,
+    am: Res<AtlasManager>,
 ) {
     for ui_event in receive.read() {
         match ui_event {
             UiEvent::Roll(_) => {
                 for (mut attr_text, mut color, RemoteAttrText(_)) in text_q.iter_mut() {
-                    *attr_text = "?".into();
+                    *attr_text = "-".into();
                     *color = bevy::color::palettes::basic::GRAY.into();
                 }
+                if let Ok((entity, _)) = icon_q.get_single() {
+                    commands.entity(entity).insert(Visibility::Hidden);
+                }
             }
-            UiEvent::Resources(_, _, remote_attr) => {
+            UiEvent::Resources(_, _, remote_attr, remote_kind) => {
                 for (mut attr_text, mut color, RemoteAttrText(index)) in text_q.iter_mut() {
                     *attr_text = remote_attr[*index].to_string().into();
                     *color = bevy::color::palettes::basic::RED.into();
+                }
+                if let Ok((entity, mut sprite)) = icon_q.get_single_mut() {
+                    util::replace_kind_icon(&mut sprite, *remote_kind, KindIconSize::Large, &am);
+                    commands.entity(entity).insert(Visibility::Visible);
                 }
             }
             _ => {}
@@ -1024,7 +1039,7 @@ fn recv_resources(mut commands: Commands, response: GameResourcesMessage, send: 
     commands.trigger(TTYMessageEvent::new(MachineKind::Local, "PLAY CARDS"));
     send.send(UiEvent::PlayerErg(response.player_state_view.erg));
     send.send(UiEvent::PlayerState(response.player_state_view));
-    send.send(UiEvent::Resources(response.local_erg, response.remote_erg, response.remote_attr));
+    send.send(UiEvent::Resources(response.local_erg, response.remote_erg, response.remote_attr, response.remote_kind.into()));
     Some(VagabondGamePhase::Play)
 }
 

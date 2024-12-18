@@ -22,9 +22,9 @@ impl GameRemote {
         self.chosen_attr = None;
     }
 
-    pub fn choose_attr(&self, mut rng: &mut impl Rng) -> [AttributeValueType; 4] {
+    pub fn choose_attr(&self, mut rng: &mut impl Rng) -> ([AttributeValueType; 4], AttributeKind) {
         const ATTR: [AttributeKind; 4] = [AttributeKind::Analyze, AttributeKind::Breach, AttributeKind::Compute, AttributeKind::Disrupt];
         let kind = self.chosen_attr.unwrap_or_else(|| *ATTR.choose(&mut rng).unwrap());
-        self.attributes.get(kind)
+        (self.attributes.get(kind), kind)
     }
 }

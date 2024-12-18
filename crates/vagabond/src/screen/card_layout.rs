@@ -1,4 +1,6 @@
 use crate::manager::{AtlasManager, ScreenLayout};
+use crate::screen::util;
+use crate::screen::util::KindIconSize;
 use crate::system::ui_effects::UiFxTrackedColor;
 use bevy::color::Color;
 use bevy::prelude::{Commands, Component, Entity, Event, Query, Res, Sprite, Text2d, Trigger, Visibility, With};
@@ -80,7 +82,7 @@ impl CardLayout {
                 layout.run.map(|run| text_q.get_mut(run).map(|mut run_text| *run_text = card.run_rules.clone().into()));
                 layout.delay.map(|delay| text_q.get_mut(delay).map(|mut delay_text| *delay_text = card.delay.to_string().into()));
                 layout.priority.map(|priority| text_q.get_mut(priority).map(|mut priority_text| *priority_text = card.priority.to_string().into()));
-                layout.icon.map(|icon| sprite_q.get_mut(icon).map(|mut icon_sprite| Self::map_kind_to_icon(&mut icon_sprite, card.kind, &am)));
+                layout.icon.map(|icon| sprite_q.get_mut(icon).map(|mut icon_sprite| util::replace_kind_icon(&mut icon_sprite, card.kind, KindIconSize::Small, &am)));
                 layout.frame.map(|frame| {
                     let color = Self::map_kind_to_color(card.kind);
                     commands.entity(frame).insert(UiFxTrackedColor::from(color.to_srgba()));
@@ -101,18 +103,6 @@ impl CardLayout {
             AttributeKind::Breach => Color::srgb_u8(0, 128, 0),
             AttributeKind::Compute => Color::srgb_u8(0, 0, 128),
             AttributeKind::Disrupt => Color::srgb_u8(128, 128, 0),
-        }
-    }
-    fn map_kind_to_icon(sprite: &mut Sprite, kind: AttributeKind, am: &AtlasManager) {
-        let texture_name = match kind {
-            AttributeKind::Analyze => "A016",
-            AttributeKind::Breach => "B016",
-            AttributeKind::Compute => "C016",
-            AttributeKind::Disrupt => "D016",
-        };
-        if let Some((atlas, image)) = am.get_atlas_texture("common", texture_name) {
-            sprite.image = image;
-            sprite.texture_atlas = Some(atlas);
         }
     }
 }
