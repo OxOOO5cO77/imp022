@@ -621,7 +621,10 @@ fn populate_deck_ui(
 ) {
     if let Some(event) = read.read().last() {
         let visibility = match event {
-            PopulatePlayerUi::Hide => Visibility::Hidden,
+            PopulatePlayerUi::Hide => {
+                commands.trigger_targets(CardPopulateEvent::default(), header_q.iter().map(|(e, _)| e).collect::<Vec<_>>());
+                Visibility::Hidden
+            }
             PopulatePlayerUi::Show(data) => {
                 for (idx, card) in data.deck.iter().enumerate() {
                     if let Some((entity, _)) = header_q.iter().find(|(_, h)| h.0 == idx) {

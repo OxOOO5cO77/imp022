@@ -8,7 +8,7 @@ use vagabond::data::VagabondCard;
 #[derive(Component)]
 pub(crate) struct CardLayoutPiece;
 
-#[derive(Event)]
+#[derive(Event, Default)]
 pub(crate) struct CardPopulateEvent {
     pub(crate) card: Option<VagabondCard>,
 }
