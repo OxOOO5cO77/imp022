@@ -1,5 +1,5 @@
+use crate::data::core::AttributeValueType;
 use rand::Rng;
-use shared_data::attribute::AttributeValueType;
 
 pub fn pick_values(rng: &mut impl Rng) -> [AttributeValueType; 4] {
     let v1 = rng.random_range(1..=9);

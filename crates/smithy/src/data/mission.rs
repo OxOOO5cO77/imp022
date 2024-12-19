@@ -1,4 +1,4 @@
-use shared_data::mission::{MissionIdType, MissionNodeIdType, MissionNodeKind, MissionNodeLink, MissionNodeLinkDir, MissionNodeLinkState, MissionNodeState};
+use hall::data::core::{MissionIdType, MissionNodeIdType, MissionNodeKind, MissionNodeLink, MissionNodeLinkDir, MissionNodeLinkState, MissionNodeState};
 use sqlx::postgres::PgRow;
 use sqlx::{Pool, Postgres, Row};
 

@@ -1,9 +1,8 @@
+use crate::data::core::{AttributeKind, AttributeValueType, Attributes, ErgType};
 use crate::data::hall::HallCard;
 use crate::data::player::PlayerCard;
 use crate::message::{CardTarget, PicksType};
 use rand::{seq::SliceRandom, Rng};
-use shared_data::attribute::{AttributeKind, AttributeValueType, Attributes};
-use shared_data::card::ErgType;
 use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};
@@ -149,9 +148,9 @@ impl From<&PlayerState> for PlayerStatePlayerView {
 
 #[cfg(test)]
 mod test {
+    use crate::data::core::Rarity;
     use crate::data::player::player_card::PlayerCard;
     use crate::data::player::player_state::PlayerStatePlayerView;
-    use shared_data::card::Rarity;
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
 

@@ -1,6 +1,5 @@
+use hall::data::core::{Build, BuildNumberType};
 use serde::{Deserialize, Serialize};
-
-use shared_data::build::{Build, BuildNumberType};
 
 #[derive(Default, Clone, Serialize, Deserialize)]
 pub struct VagabondBuild {

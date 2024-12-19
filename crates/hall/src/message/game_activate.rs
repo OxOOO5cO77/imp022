@@ -38,15 +38,13 @@ impl GameResponseMessage for GameActivateResponse {}
 
 #[cfg(test)]
 mod test {
-    use shared_data::build::Build;
-    use shared_data::detail::Detail;
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
-
+    use crate::data::core::{Build, Detail};
     use crate::data::player::PlayerBuild;
     use crate::data::player::PlayerDetail;
     use crate::data::player::PlayerPart;
     use crate::message::game_activate::{GameActivateRequest, GameActivateResponse};
+    use shared_net::sizedbuffers::Bufferable;
+    use shared_net::VSizedBuffer;
 
     #[test]
     fn test_request() {

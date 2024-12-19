@@ -1,5 +1,5 @@
+use crate::data::core::{MissionNodeIdType, MissionNodeState};
 use crate::data::game::GameMission;
-use shared_data::mission::{MissionNodeIdType, MissionNodeState};
 use std::collections::HashMap;
 
 #[derive(Default)]

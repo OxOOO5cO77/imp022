@@ -1,10 +1,8 @@
 use std::mem::discriminant;
 
-use serde::{Deserialize, Serialize};
-
+use crate::data::core::{CardSlot, Detail, DetailNumberType, GeneralType, SpecificType};
 use crate::data::player::PlayerDetail;
-use shared_data::card::CardSlot;
-use shared_data::detail::{Detail, DetailNumberType, GeneralType, SpecificType};
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HallDetail {

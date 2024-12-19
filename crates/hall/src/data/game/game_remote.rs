@@ -1,7 +1,7 @@
+use crate::data::core::{AttributeKind, AttributeValueType, Attributes};
 use crate::data::game::GameMachine;
 use rand::prelude::IndexedRandom;
 use rand::Rng;
-use shared_data::attribute::{AttributeKind, AttributeValueType, Attributes};
 
 pub struct GameRemote {
     pub attributes: Attributes,

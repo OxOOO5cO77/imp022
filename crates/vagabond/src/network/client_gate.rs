@@ -1,14 +1,14 @@
 use bevy::prelude::Resource;
+use hall::data::core::AttributeKind;
+use hall::message::*;
+use shared_net::sizedbuffers::Bufferable;
+use shared_net::types::{AuthType, GameIdType, PartType};
+use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 use std::collections::HashMap;
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
-
-use hall::message::*;
-use shared_net::sizedbuffers::Bufferable;
-use shared_net::types::{AuthType, GameIdType, PartType};
-use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 
 pub(crate) enum GateCommand {
     Hello,
@@ -159,7 +159,7 @@ impl GateIFace {
         self.send_request(request)
     }
 
-    pub fn send_game_choose_attr(&self, kind: Option<AttrKind>) -> bool {
+    pub fn send_game_choose_attr(&self, kind: Option<AttributeKind>) -> bool {
         if let Some(attr) = kind {
             let request = GameChooseAttrRequest {
                 game_id: self.game_id,

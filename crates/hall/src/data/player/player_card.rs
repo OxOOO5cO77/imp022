@@ -2,9 +2,8 @@ use std::mem::size_of;
 
 use serde::{Deserialize, Serialize};
 
+use crate::data::core::{CardNumberType, Rarity, SetType};
 use crate::data::hall::HallCard;
-use shared_data::card;
-use shared_data::card::Rarity;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 
@@ -14,8 +13,8 @@ pub type PackedCardType = u16;
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct PlayerCard {
     pub rarity: Rarity,
-    pub number: card::CardNumberType,
-    pub set: card::SetType,
+    pub number: CardNumberType,
+    pub set: SetType,
 }
 
 const BITS_FOR_NUMBER: PackedCardType = 8;
@@ -48,8 +47,8 @@ impl PlayerCard {
         let unpacked_set = (packed >> SHIFT_FOR_SET) & MASK_FOR_SET;
         let unpacked_rarity = (packed >> SHIFT_FOR_RARITY) & MASK_FOR_RARITY;
         Self {
-            number: unpacked_number as card::CardNumberType,
-            set: unpacked_set as card::SetType,
+            number: unpacked_number as CardNumberType,
+            set: unpacked_set as SetType,
             rarity: match unpacked_rarity {
                 1 => Rarity::Uncommon,
                 2 => Rarity::Rare,
@@ -89,8 +88,8 @@ impl Bufferable for PlayerCard {
 
 #[cfg(test)]
 mod test {
+    use crate::data::core::Rarity;
     use crate::data::player::player_card::PlayerCard;
-    use shared_data::card::Rarity;
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
 

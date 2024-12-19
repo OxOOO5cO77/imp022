@@ -1,7 +1,7 @@
-pub mod hall_build;
-pub mod hall_card;
-pub mod hall_detail;
-pub mod hall_mission;
+mod hall_build;
+mod hall_card;
+mod hall_detail;
+mod hall_mission;
 
 pub use hall_build::HallBuild;
 pub use hall_card::HallCard;

@@ -1,9 +1,9 @@
+use crate::data::{DbBuild, DbCard, DbDetail, DbMission, DbMissionNode};
 use crate::save_load::save_data_single;
+use hall::data::core::{Instruction, InstructionValueType};
+use hall::data::hall::{HallBuild, HallCard, HallDetail, HallMission, HallMissionNode};
 use std::io::Error;
 use std::str::Chars;
-use hall::data::hall::{HallBuild, HallCard, HallDetail, HallMission, HallMissionNode};
-use shared_data::instruction::{Instruction, InstructionValueType};
-use crate::data::{DbBuild, DbCard, DbDetail, DbMission, DbMissionNode};
 
 fn make_hall_card(card: &DbCard) -> HallCard {
     HallCard {
@@ -46,9 +46,8 @@ pub fn process_code(c: char, chars: &mut Chars) -> Option<Instruction> {
     }
 }
 
-
 fn parse_rules(rules: &str) -> Vec<Instruction> {
-    let mut result= vec![];
+    let mut result = vec![];
     let mut chars = rules.chars();
     while let Some(c) = chars.next() {
         if let Some(instruction) = process_code(c, &mut chars) {

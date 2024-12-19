@@ -1,5 +1,5 @@
+use crate::data::core::Attributes;
 use serde::{Deserialize, Serialize};
-use shared_data::attribute::Attributes;
 use shared_net::types::SeedType;
 use std::collections::VecDeque;
 

@@ -1,12 +1,10 @@
 use std::io::{Error, ErrorKind};
 use std::path::Path;
 
+use hall::data::core::{Build, CardSlot, Detail};
 use hall::data::hall::{HallBuild, HallCard, HallDetail, HallMission};
 use hall::data::player::PlayerCard;
 use rand::prelude::*;
-use shared_data::build::Build;
-use shared_data::card::CardSlot;
-use shared_data::detail::Detail;
 
 pub(crate) struct DataManager {
     build: Vec<HallBuild>,
@@ -26,12 +24,24 @@ impl DataManager {
     }
 
     pub(crate) fn pick_build(&self, rng: &mut impl Rng) -> [HallBuild; 4] {
-        let build = [self.build.iter().filter(|o| o.is(Build::ANT)).choose(rng).unwrap().clone(), self.build.iter().filter(|o| o.is(Build::BRD)).choose(rng).unwrap().clone(), self.build.iter().filter(|o| o.is(Build::CPU)).choose(rng).unwrap().clone(), self.build.iter().filter(|o| o.is(Build::DSK)).choose(rng).unwrap().clone()];
+        let build = [
+            //
+            self.build.iter().filter(|o| o.is(Build::ANT)).choose(rng).unwrap().clone(),
+            self.build.iter().filter(|o| o.is(Build::BRD)).choose(rng).unwrap().clone(),
+            self.build.iter().filter(|o| o.is(Build::CPU)).choose(rng).unwrap().clone(),
+            self.build.iter().filter(|o| o.is(Build::DSK)).choose(rng).unwrap().clone(),
+        ];
         build
     }
 
     pub(crate) fn pick_detail(&self, rng: &mut impl Rng) -> [HallDetail; 4] {
-        let detail = [self.detail.iter().filter(|o| o.is(Detail::Institution)).choose(rng).unwrap().clone(), self.detail.iter().filter(|o| o.is(Detail::Role)).choose(rng).unwrap().clone(), self.detail.iter().filter(|o| o.is(Detail::Location)).choose(rng).unwrap().clone(), self.detail.iter().filter(|o| o.is(Detail::Distro)).choose(rng).unwrap().clone()];
+        let detail = [
+            //
+            self.detail.iter().filter(|o| o.is(Detail::Institution)).choose(rng).unwrap().clone(),
+            self.detail.iter().filter(|o| o.is(Detail::Role)).choose(rng).unwrap().clone(),
+            self.detail.iter().filter(|o| o.is(Detail::Location)).choose(rng).unwrap().clone(),
+            self.detail.iter().filter(|o| o.is(Detail::Distro)).choose(rng).unwrap().clone(),
+        ];
         detail
     }
 

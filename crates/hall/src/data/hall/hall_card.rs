@@ -1,9 +1,6 @@
-use serde::{Deserialize, Serialize};
-
+use crate::data::core::{AttributeKind, CardNumberType, CardSlot, DelayType, ErgType, Instruction, PriorityType, Rarity, SetType, Slot};
 use crate::data::player::PlayerCard;
-use shared_data::attribute::AttributeKind;
-use shared_data::card::*;
-use shared_data::instruction::Instruction;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HallCard {

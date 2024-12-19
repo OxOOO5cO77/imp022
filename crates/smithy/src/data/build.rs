@@ -1,10 +1,8 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use crate::data::shared::extract_cards;
+use hall::data::core::{Build, BuildNumberType, CardSlot, CompanyType, GeneralType, MarketType, SpecificType};
 use serde::Deserialize;
-use shared_data::card::CardSlot;
-use shared_data::build::{Build, CompanyType, MarketType, BuildNumberType};
-use shared_data::detail::{GeneralType, SpecificType};
 use sqlx::postgres::PgRow;
 use sqlx::{Pool, Postgres, Row};
 use std::collections::HashMap;
@@ -47,23 +45,11 @@ fn row_to_build(row: &PgRow) -> DbBuild {
 pub(crate) async fn process_build(pool: &Pool<Postgres>) -> Result<(Vec<DbBuild>, HashMap<CompanyType, String>, HashMap<MarketType, String>), sqlx::Error> {
     let rows = sqlx::query("SELECT * FROM build").fetch_all(pool).await?;
 
-    let builds = rows
-        .iter()
-        .map(row_to_build)
-        .collect::<Vec<DbBuild>>()
-        ;
+    let builds = rows.iter().map(row_to_build).collect::<Vec<DbBuild>>();
     let company_rows = sqlx::query("SELECT id,name FROM \"build/company\"").fetch_all(pool).await?;
-    let company = company_rows
-        .iter()
-        .map(|row| (row.get::<i32, _>("id") as GeneralType, row.get("name")))
-        .collect::<HashMap<CompanyType, String>>()
-        ;
+    let company = company_rows.iter().map(|row| (row.get::<i32, _>("id") as GeneralType, row.get("name"))).collect::<HashMap<CompanyType, String>>();
     let market_rows = sqlx::query("SELECT id,name FROM \"build/market\"").fetch_all(pool).await?;
-    let market = market_rows
-        .iter()
-        .map(|row| (row.get::<i32, _>("id") as SpecificType, row.get("name")))
-        .collect::<HashMap<MarketType, String>>()
-        ;
+    let market = market_rows.iter().map(|row| (row.get::<i32, _>("id") as SpecificType, row.get("name"))).collect::<HashMap<MarketType, String>>();
 
     Ok((builds, company, market))
 }

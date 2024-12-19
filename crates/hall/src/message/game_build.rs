@@ -39,13 +39,12 @@ impl GameResponseMessage for GameBuildResponse {}
 
 #[cfg(test)]
 mod test {
-    use shared_data::card;
-    use shared_data::card::Rarity::Legendary;
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
-
+    use crate::data::core::CardNumberType;
+    use crate::data::core::Rarity::Legendary;
     use crate::data::player::PlayerCard;
     use crate::message::game_build::{GameBuildRequest, GameBuildResponse};
+    use shared_net::sizedbuffers::Bufferable;
+    use shared_net::VSizedBuffer;
 
     pub const CARD_COUNT: usize = 40;
 
@@ -74,7 +73,7 @@ mod test {
         for i in 0..CARD_COUNT {
             orig.deck.push(PlayerCard {
                 rarity: Legendary,
-                number: i as card::CardNumberType,
+                number: i as CardNumberType,
                 set: 1,
             });
         }

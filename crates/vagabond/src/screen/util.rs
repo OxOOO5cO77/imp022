@@ -1,9 +1,8 @@
 use crate::manager::AtlasManager;
 use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor};
 use bevy::prelude::{Commands, Out, Pointer, Query, Sprite, Trigger};
+use hall::data::core::{AttributeKind, MissionNodeKind};
 use hall::data::game::GameMissionNodePlayerView;
-use shared_data::attribute::AttributeKind;
-use shared_data::mission::MissionNodeKind;
 
 pub(crate) trait GameMissionNodePlayerViewExt {
     fn as_str(&self) -> &'static str;

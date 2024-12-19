@@ -1,6 +1,5 @@
+use hall::data::core::{Detail, DetailNumberType};
 use serde::{Deserialize, Serialize};
-
-use shared_data::detail::{Detail, DetailNumberType};
 
 #[derive(Default, Clone, Serialize, Deserialize)]
 pub struct VagabondDetail {

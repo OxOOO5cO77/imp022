@@ -1,11 +1,10 @@
+use crate::data::core::{AttributeValueType, Attributes, ErgType};
 use crate::data::game::{GameMission, GamePhase, GameRemote, GameStage, GameUser};
 use crate::data::hall::{HallCard, HallMission};
 use crate::data::player::{PlayerCard, PlayerCommandState};
 use crate::data::util;
 use rand::prelude::IteratorRandom;
 use rand::{distr::Uniform, rngs::ThreadRng, Rng};
-use shared_data::attribute::{AttributeValueType, Attributes};
-use shared_data::card::ErgType;
 use shared_net::op;
 use shared_net::types::{AuthType, UserIdType};
 use std::cmp::Ordering;
@@ -221,8 +220,8 @@ impl GameState {
 
 #[cfg(test)]
 mod test {
+    use crate::data::core::ErgType;
     use crate::data::game::GameState;
-    use shared_data::card::ErgType;
 
     #[test]
     fn test_resolve_1() {

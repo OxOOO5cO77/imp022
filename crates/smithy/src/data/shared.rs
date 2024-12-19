@@ -1,5 +1,4 @@
-use shared_data::card::{CardSlot, Rarity, Set, SetType, Slot};
-use shared_data::build::BuildNumberType;
+use hall::data::core::{BuildNumberType, CardSlot, Rarity, Set, SetType, Slot};
 use sqlx::postgres::PgRow;
 use sqlx::Row;
 
@@ -36,7 +35,11 @@ impl DbCardSlot {
         CardSlot(
             Set(self.set as SetType),
             self.rarity.to_rarity(),
-            if self.number == 0 { Slot::Any } else { Slot::Number(self.number as BuildNumberType) },
+            if self.number == 0 {
+                Slot::Any
+            } else {
+                Slot::Number(self.number as BuildNumberType)
+            },
         )
     }
 }

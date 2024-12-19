@@ -1,5 +1,5 @@
+use crate::data::core::{MissionIdType, MissionNodeContent, MissionNodeIdType, MissionNodeKind, MissionNodeLink, MissionNodeState};
 use serde::{Deserialize, Serialize};
-use shared_data::mission::{MissionIdType, MissionNodeContent, MissionNodeIdType, MissionNodeKind, MissionNodeLink, MissionNodeState};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HallMissionNode {

@@ -1,5 +1,5 @@
+use crate::data::core::ErgType;
 use crate::message::CommandMessage;
-use shared_data::card::ErgType;
 use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::{op, VSizedBuffer};

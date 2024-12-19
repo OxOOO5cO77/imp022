@@ -2,11 +2,11 @@ use std::collections::VecDeque;
 use std::iter::zip;
 
 use crate::manager::data_manager::DataManager;
+use hall::data::core::{AttributeValueType, Attributes};
 use hall::data::hall::{HallBuild, HallDetail};
 use hall::data::player::{Player, PlayerBuild, PlayerCard, PlayerDetail, PlayerPart};
 use hall::data::util;
 use rand::prelude::*;
-use shared_data::attribute::{AttributeValueType, Attributes};
 use shared_net::types::{PartType, SeedType};
 
 #[derive(Clone)]

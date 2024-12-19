@@ -4,7 +4,7 @@ use crate::screen::util::KindIconSize;
 use crate::system::ui_effects::UiFxTrackedColor;
 use bevy::color::Color;
 use bevy::prelude::{Commands, Component, Entity, Event, Query, Res, Sprite, Text2d, Trigger, Visibility, With};
-use shared_data::attribute::AttributeKind;
+use hall::data::core::AttributeKind;
 use vagabond::data::VagabondCard;
 
 #[derive(Component)]

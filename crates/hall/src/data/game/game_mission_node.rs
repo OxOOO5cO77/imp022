@@ -1,6 +1,6 @@
+use crate::data::core::{MissionNodeContent, MissionNodeIdType, MissionNodeKind, MissionNodeLink, MissionNodeLinkDir, MissionNodeLinkState, MissionNodeState};
 use crate::data::game::RemoteIdType;
 use crate::data::hall::HallMissionNode;
-use shared_data::mission::{MissionNodeContent, MissionNodeIdType, MissionNodeKind, MissionNodeLink, MissionNodeLinkDir, MissionNodeLinkState, MissionNodeState};
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 

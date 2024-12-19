@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::data::core::AttributeValueType;
 use crate::data::player::{PlayerBuild, PlayerDetail};
-use shared_data::attribute::AttributeValueType;
 use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::types::SeedType;
@@ -22,14 +22,12 @@ pub struct PlayerPart {
 
 #[cfg(test)]
 mod test {
-    use shared_data::build::Build;
-    use shared_data::detail::Detail;
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
-
+    use crate::data::core::{Build, Detail};
     use crate::data::player::player_build::PlayerBuild;
     use crate::data::player::player_detail::PlayerDetail;
     use crate::data::player::player_part::PlayerPart;
+    use shared_net::sizedbuffers::Bufferable;
+    use shared_net::VSizedBuffer;
 
     #[test]
     fn test_player_part() {

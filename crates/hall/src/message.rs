@@ -14,7 +14,7 @@ mod game_update_state;
 
 pub use game_activate::{GameActivateRequest, GameActivateResponse};
 pub use game_build::{GameBuildRequest, GameBuildResponse};
-pub use game_choose_attr::{AttrKind, GameChooseAttrRequest, GameChooseAttrResponse};
+pub use game_choose_attr::{GameChooseAttrRequest, GameChooseAttrResponse};
 pub use game_end_game::{GameEndGameRequest, GameEndGameResponse};
 pub use game_end_turn::{GameEndTurnRequest, GameEndTurnResponse};
 pub use game_play_card::{CardIdxType, CardTarget, GamePlayCardRequest, GamePlayCardResponse, PicksType};
@@ -39,5 +39,4 @@ pub trait GameRequestMessage: CommandMessage {
     fn game_id(&self) -> GameIdType;
 }
 
-pub trait GameResponseMessage: CommandMessage {
-}
+pub trait GameResponseMessage: CommandMessage {}

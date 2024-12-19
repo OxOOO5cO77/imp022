@@ -1,9 +1,9 @@
+use crate::data::core::{MissionIdType, MissionNodeIdType};
 use crate::data::game::game_mission_node::GameMissionNode;
 use crate::data::game::game_mission_objective::GameMissionObjective;
 use crate::data::game::{GameMissionNodePlayerView, GameMissionObjectivePlayerView, RemoteIdType};
 use crate::data::hall::HallMission;
 use crate::data::player::PlayerMissionState;
-use shared_data::mission::{MissionIdType, MissionNodeIdType};
 use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;

@@ -1,7 +1,6 @@
 use crate::data::{DbBuild, DbCard, DbDetail};
 use crate::save_load::save_data_single;
-use shared_data::build::{CompanyType, MarketType};
-use shared_data::detail::{GeneralType, SpecificType};
+use hall::data::core::{CompanyType, GeneralType, MarketType, SpecificType};
 use std::collections::HashMap;
 use std::io::Error;
 use vagabond::data::{VagabondBuild, VagabondCard, VagabondDetail};
@@ -37,7 +36,7 @@ fn make_vagabond_build(build_instance: &DbBuild) -> VagabondBuild {
 pub(crate) fn output_builds_for_vagabond(builds: &[DbBuild], company: HashMap<CompanyType, String>, market: HashMap<MarketType, String>) -> Result<(), Error> {
     let vagabond_builds = builds.iter().map(make_vagabond_build).collect::<Vec<_>>();
     save_data_single(vagabond_builds, "output/vagabond_builds.ron")?;
-    save_data_single((company, market), "output/vagabond_details_meta.ron")?;
+    save_data_single((company, market), "output/vagabond_builds_meta.ron")?;
 
     Ok(())
 }

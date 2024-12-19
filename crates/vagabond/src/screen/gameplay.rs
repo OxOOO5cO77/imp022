@@ -9,13 +9,10 @@ use crate::screen::util::{GameMissionNodePlayerViewExt, KindIconSize};
 use crate::system::ui_effects::{Blinker, Glower, SetColorEvent, UiFxTrackedColor};
 use crate::system::AppState;
 use bevy::prelude::*;
+use hall::data::core::{AttributeKind, BuildValueType, DelayType, ErgType, MissionNodeIdType};
 use hall::data::game::{GameMachinePlayerView, GameProcessPlayerView, TickType};
 use hall::data::player::PlayerStatePlayerView;
 use hall::message::*;
-use shared_data::attribute::AttributeKind;
-use shared_data::build::BuildValueType;
-use shared_data::card::{DelayType, ErgType};
-use shared_data::mission::MissionNodeIdType;
 use std::cmp::{Ordering, PartialEq};
 use std::collections::{HashMap, VecDeque};
 use vagabond::data::{VagabondCard, VagabondMachine, VagabondProcess};
@@ -102,7 +99,7 @@ enum VagabondGamePhase {
 struct GameplayContext {
     tick: TickType,
     phase: VagabondGamePhase,
-    attr_pick: Option<AttrKind>,
+    attr_pick: Option<AttributeKind>,
     card_picks: HashMap<CardIdxType, CardTarget>,
     current_remote: MissionNodeIdType,
     hand: Vec<VagabondCard>,
@@ -227,7 +224,7 @@ impl TTYMessageEvent {
 enum UiEvent {
     GamePhase(VagabondGamePhase),
     PlayerState(PlayerStatePlayerView),
-    ChooseAttr(Option<AttrKind>),
+    ChooseAttr(Option<AttributeKind>),
     Roll([ErgType; 4]),
     PlayerErg([ErgType; 4]),
     Resources([ErgType; 4], [ErgType; 4], [BuildValueType; 4], AttributeKind),
@@ -236,13 +233,13 @@ enum UiEvent {
 }
 
 #[derive(Component)]
-struct AttributeRow(AttrKind);
+struct AttributeRow(AttributeKind);
 
 #[derive(Component)]
 struct HandCard(usize);
 
 trait PickableEntityCommandsExtension {
-    fn observe_pickable_row(self, kind: AttrKind) -> Self;
+    fn observe_pickable_row(self, kind: AttributeKind) -> Self;
     fn observe_next_button(self) -> Self;
     fn observe_hand_card(self, hand_index: usize) -> Self;
     fn observe_process(self, kind: MachineKind, queue_index: DelayType) -> Self;
@@ -250,7 +247,7 @@ trait PickableEntityCommandsExtension {
 }
 
 impl PickableEntityCommandsExtension for &mut EntityCommands<'_> {
-    fn observe_pickable_row(self, kind: AttrKind) -> Self {
+    fn observe_pickable_row(self, kind: AttributeKind) -> Self {
         self //
             .insert((AttributeRow(kind), PickingBehavior::default()))
             .observe(on_click_attr)
@@ -340,10 +337,10 @@ fn gameplay_enter(
 
     commands.entity(layout.entity("phase_bg")).observe_next_button();
 
-    commands.entity(layout.entity("attributes/row_a")).observe_pickable_row(AttrKind::Analyze);
-    commands.entity(layout.entity("attributes/row_b")).observe_pickable_row(AttrKind::Breach);
-    commands.entity(layout.entity("attributes/row_c")).observe_pickable_row(AttrKind::Compute);
-    commands.entity(layout.entity("attributes/row_d")).observe_pickable_row(AttrKind::Disrupt);
+    commands.entity(layout.entity("attributes/row_a")).observe_pickable_row(AttributeKind::Analyze);
+    commands.entity(layout.entity("attributes/row_b")).observe_pickable_row(AttributeKind::Breach);
+    commands.entity(layout.entity("attributes/row_c")).observe_pickable_row(AttributeKind::Compute);
+    commands.entity(layout.entity("attributes/row_d")).observe_pickable_row(AttributeKind::Disrupt);
 
     const MACHINES: [(&str, MachineKind); 2] = [("local", MachineKind::Local), ("remote", MachineKind::Remote)];
 
@@ -676,12 +673,12 @@ fn cleanup_indicator_post_update(
     }
 }
 
-fn map_kind_to_row(kind: AttrKind) -> usize {
+fn map_kind_to_row(kind: AttributeKind) -> usize {
     match kind {
-        AttrKind::Analyze => 0,
-        AttrKind::Breach => 1,
-        AttrKind::Compute => 2,
-        AttrKind::Disrupt => 3,
+        AttributeKind::Analyze => 0,
+        AttributeKind::Breach => 1,
+        AttributeKind::Compute => 2,
+        AttributeKind::Disrupt => 3,
     }
 }
 

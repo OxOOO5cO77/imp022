@@ -1,8 +1,7 @@
+use crate::data::core::{Instruction, PriorityType};
 use crate::data::game::game_machine::GameMachineContext;
-use crate::data::hall::hall_card::HallCard;
+use crate::data::hall::HallCard;
 use crate::data::player::PlayerCard;
-use shared_data::card::PriorityType;
-use shared_data::instruction::Instruction;
 use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
@@ -106,7 +105,7 @@ impl GameProcessPlayerView {
     pub fn test_default() -> Self {
         Self {
             player_card: PlayerCard {
-                rarity: shared_data::card::Rarity::Legendary,
+                rarity: crate::data::core::Rarity::Legendary,
                 number: 123,
                 set: 2,
             },

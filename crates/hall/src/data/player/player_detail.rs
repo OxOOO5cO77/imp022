@@ -1,7 +1,7 @@
 use std::mem::size_of;
 
+use crate::data::core::{Detail, DetailNumberType, DetailValueType, GeneralType, SpecificType};
 use serde::{Deserialize, Serialize};
-use shared_data::detail::{Detail, DetailNumberType, DetailValueType, GeneralType, SpecificType};
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 
@@ -95,11 +95,10 @@ impl Bufferable for PlayerDetail {
 
 #[cfg(test)]
 mod test {
-    use shared_data::detail::Detail;
+    use crate::data::core::Detail;
+    use crate::data::player::player_detail::PlayerDetail;
     use shared_net::sizedbuffers::Bufferable;
     use shared_net::VSizedBuffer;
-
-    use crate::data::player::player_detail::PlayerDetail;
 
     #[test]
     fn test_player_detail() {

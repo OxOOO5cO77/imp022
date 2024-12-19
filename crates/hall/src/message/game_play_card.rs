@@ -1,5 +1,5 @@
+use crate::data::core::MissionNodeIdType;
 use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
-use shared_data::mission::MissionNodeIdType;
 use shared_net::bufferable_derive::Bufferable;
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::types::GameIdType;
