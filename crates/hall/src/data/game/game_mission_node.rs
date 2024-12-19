@@ -79,74 +79,35 @@ const MASK_FOR_LINK: PackedMissionType = (1 << BITS_FOR_LINK) - 1;
 
 impl GameMissionNodePlayerView {
     fn pack_kind(kind: MissionNodeKind) -> PackedMissionType {
-        match kind {
-            MissionNodeKind::AccessPoint => 0,
-            MissionNodeKind::Backend => 1,
-            MissionNodeKind::Control => 2,
-            MissionNodeKind::Database => 3,
-            MissionNodeKind::Engine => 4,
-            MissionNodeKind::Frontend => 5,
-            MissionNodeKind::Gateway => 6,
-            MissionNodeKind::Hardware => 7,
-        }
+        let kind: u8 = kind.into();
+        kind as PackedMissionType
     }
     fn unpack_kind(packed: PackedMissionType) -> MissionNodeKind {
-        match packed {
-            0 => MissionNodeKind::AccessPoint,
-            1 => MissionNodeKind::Backend,
-            2 => MissionNodeKind::Control,
-            3 => MissionNodeKind::Database,
-            4 => MissionNodeKind::Engine,
-            5 => MissionNodeKind::Frontend,
-            6 => MissionNodeKind::Gateway,
-            7 => MissionNodeKind::Hardware,
-            _ => MissionNodeKind::AccessPoint,
-        }
+        (packed as u8).into()
     }
 
     fn pack_state(state: MissionNodeState) -> PackedMissionType {
-        match state {
-            MissionNodeState::Unknown => 0,
-            MissionNodeState::Known => 1,
-        }
+        let state: u8 = state.into();
+        state as PackedMissionType
     }
     fn unpack_state(packed: PackedMissionType) -> MissionNodeState {
-        match packed {
-            0 => MissionNodeState::Unknown,
-            1 => MissionNodeState::Known,
-            _ => MissionNodeState::Unknown,
-        }
+        (packed as u8).into()
     }
 
     fn pack_link_dir(dir: MissionNodeLinkDir) -> PackedMissionType {
-        match dir {
-            MissionNodeLinkDir::North => 0,
-            MissionNodeLinkDir::East => 1,
-            MissionNodeLinkDir::South => 2,
-            MissionNodeLinkDir::West => 3,
-        }
+        let dir: u8 = dir.into();
+        dir as PackedMissionType
     }
     fn unpack_link_dir(packed: PackedMissionType) -> MissionNodeLinkDir {
-        match packed {
-            0 => MissionNodeLinkDir::North,
-            1 => MissionNodeLinkDir::East,
-            2 => MissionNodeLinkDir::South,
-            3 => MissionNodeLinkDir::West,
-            _ => MissionNodeLinkDir::North,
-        }
+        (packed as u8).into()
     }
+
     fn pack_link_state(state: MissionNodeLinkState) -> PackedMissionType {
-        match state {
-            MissionNodeLinkState::Closed => 0,
-            MissionNodeLinkState::Open => 1,
-        }
+        let state: u8 = state.into();
+        state as PackedMissionType
     }
     fn unpack_link_state(packed: PackedMissionType) -> MissionNodeLinkState {
-        match packed {
-            0 => MissionNodeLinkState::Closed,
-            1 => MissionNodeLinkState::Open,
-            _ => MissionNodeLinkState::Closed,
-        }
+        (packed as u8).into()
     }
 
     fn pack_link(link: &MissionNodeLink) -> PackedMissionType {

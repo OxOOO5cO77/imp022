@@ -1,36 +1,47 @@
+use num_enum::{FromPrimitive, IntoPrimitive};
 use std::fmt;
 use std::mem::size_of;
-
 #[cfg(test)]
 use strum_macros::EnumIter;
 
 use crate::sizedbuffers::Bufferable;
+use crate::types::NodeType;
 use crate::VSizedBuffer;
 
-#[derive(Clone,PartialEq)]
+type RouteType = u8;
+
+#[derive(Clone, PartialEq)]
 pub enum Route {
     None,
     Local,
-    One(u8),
+    One(NodeType),
     Any(Flavor),
     All(Flavor),
+}
+
+impl Route {
+    const REPR_NONE: RouteType = 0;
+    const REPR_LOCAL: RouteType = 1;
+    const REPR_ONE: RouteType = 2;
+    const REPR_ANY: RouteType = 3;
+    const REPR_ALL: RouteType = 4;
 }
 
 impl Bufferable for Route {
     fn push_into(&self, buf: &mut VSizedBuffer) {
         match *self {
-            Route::None => 0_u8.push_into(buf),
-            Route::Local => 1_u8.push_into(buf),
+            Route::None => Self::REPR_NONE.push_into(buf),
+            Route::Local => Self::REPR_LOCAL.push_into(buf),
             Route::One(destination) => {
-                2_u8.push_into(buf);
+                Self::REPR_ONE.push_into(buf);
                 destination.push_into(buf);
             }
             Route::Any(flavor) => {
-                3_u8.push_into(buf);
+                Self::REPR_ANY.push_into(buf);
                 flavor.push_into(buf);
             }
             Route::All(flavor) => {
-                4_u8.push_into(buf);
+                Self::REPR_ALL.push_into(buf);
                 flavor.push_into(buf);
             }
         }
@@ -39,21 +50,21 @@ impl Bufferable for Route {
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
         let route = u8::pull_from(buf);
         match route {
-            1 => Route::Local,
-            2 => Route::One(u8::pull_from(buf)),
-            3 => Route::Any(Flavor::pull_from(buf)),
-            4 => Route::All(Flavor::pull_from(buf)),
-            _ => Route::None
+            Self::REPR_LOCAL => Route::Local,
+            Self::REPR_ONE => Route::One(u8::pull_from(buf)),
+            Self::REPR_ANY => Route::Any(Flavor::pull_from(buf)),
+            Self::REPR_ALL => Route::All(Flavor::pull_from(buf)),
+            _ => Route::None,
         }
     }
 
     fn size_in_buffer(&self) -> usize {
         match *self {
-            Route::None => size_of::<u8>(),
-            Route::Local => size_of::<u8>(),
-            Route::One(_) => size_of::<u8>() + size_of::<u8>(),
-            Route::Any(_) => size_of::<u8>() + size_of::<u8>(),
-            Route::All(_) => size_of::<u8>() + size_of::<u8>(),
+            Route::None => size_of::<RouteType>(),
+            Route::Local => size_of::<RouteType>(),
+            Route::One(one) => size_of::<RouteType>() + one.size_in_buffer(),
+            Route::Any(any) => size_of::<RouteType>() + any.size_in_buffer(),
+            Route::All(all) => size_of::<RouteType>() + all.size_in_buffer(),
         }
     }
 }
@@ -70,10 +81,13 @@ impl fmt::Debug for Route {
     }
 }
 
+type FlavorType = u8;
+
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, FromPrimitive, IntoPrimitive)]
 #[cfg_attr(test, derive(EnumIter))]
 pub enum Flavor {
+    #[num_enum(default)]
     NoOp = 0,
     Archive = 1,
     Bazaar = 2,
@@ -90,36 +104,27 @@ pub enum Flavor {
 
 impl Bufferable for Flavor {
     fn push_into(&self, buf: &mut VSizedBuffer) {
-        (*self as u8).push_into(buf);
+        let flavor: FlavorType = (*self).into();
+        flavor.push_into(buf);
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let flavor = u8::pull_from(buf);
-        match flavor {
-            c if c == Flavor::Archive as u8 => Flavor::Archive,
-            c if c == Flavor::Bazaar as u8 => Flavor::Bazaar,
-            c if c == Flavor::Courtyard as u8 => Flavor::Courtyard,
-            c if c == Flavor::Drawbridge as u8 => Flavor::Drawbridge,
-            c if c == Flavor::Forum as u8 => Flavor::Forum,
-            c if c == Flavor::Gate as u8 => Flavor::Gate,
-            c if c == Flavor::Hall as u8 => Flavor::Hall,
-            c if c == Flavor::Jail as u8 => Flavor::Jail,
-            c if c == Flavor::Lookout as u8 => Flavor::Lookout,
-            c if c == Flavor::Vagabond as u8 => Flavor::Vagabond,
-            c if c == Flavor::Warehouse as u8 => Flavor::Warehouse,
-            _ => Flavor::NoOp
-        }
+        let flavor = FlavorType::pull_from(buf);
+        flavor.into()
     }
 
     fn size_in_buffer(&self) -> usize {
-        size_of::<u8>()
+        size_of::<FlavorType>()
     }
 }
 
+type CommandType = u8;
+
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, FromPrimitive, IntoPrimitive)]
 #[cfg_attr(test, derive(EnumIter))]
 pub enum Command {
+    #[num_enum(default)]
     NoOp,
     Register,
     Authorize,
@@ -146,41 +151,17 @@ pub enum Command {
 
 impl Bufferable for Command {
     fn push_into(&self, buf: &mut VSizedBuffer) {
-        (*self as u8).push_into(buf);
+        let command: CommandType = (*self).into();
+        command.push_into(buf);
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let command = u8::pull_from(buf);
-        match command {
-            c if c == Command::Register as u8 => Command::Register,
-            c if c == Command::Authorize as u8 => Command::Authorize,
-            c if c == Command::Hello as u8 => Command::Hello,
-            c if c == Command::UserAttr as u8 => Command::UserAttr,
-            c if c == Command::Chat as u8 => Command::Chat,
-            c if c == Command::DM as u8 => Command::DM,
-            c if c == Command::InvGen as u8 => Command::InvGen,
-            c if c == Command::InvList as u8 => Command::InvList,
-            c if c == Command::GameActivate as u8 => Command::GameActivate,
-            c if c == Command::GameBuild as u8 => Command::GameBuild,
-            c if c == Command::GameStartGame as u8 => Command::GameStartGame,
-            c if c == Command::GameStartTurn as u8 => Command::GameStartTurn,
-            c if c == Command::GameRoll as u8 => Command::GameRoll,
-            c if c == Command::GameChooseAttr as u8 => Command::GameChooseAttr,
-            c if c == Command::GameResources as u8 => Command::GameResources,
-            c if c == Command::GamePlayCard as u8 => Command::GamePlayCard,
-            c if c == Command::GameResolveCards as u8 => Command::GameResolveCards,
-            c if c == Command::GameEndTurn as u8 => Command::GameEndTurn,
-            c if c == Command::GameTick as u8 => Command::GameTick,
-            c if c == Command::GameUpdateState as u8 => Command::GameUpdateState,
-            c if c == Command::GameEndGame as u8 => Command::GameEndGame,
-            c if c == Command::GamePlayCard as u8 => Command::GamePlayCard,
-            c if c == Command::GameEndGame as u8 => Command::GameEndGame,
-            _ => Command::NoOp
-        }
+        let command = CommandType::pull_from(buf);
+        command.into()
     }
 
     fn size_in_buffer(&self) -> usize {
-        size_of::<u8>()
+        size_of::<CommandType>()
     }
 }
 
@@ -189,8 +170,8 @@ mod test {
     mod test_vsizedbuffer {
         use strum::IntoEnumIterator;
 
-        use crate::op::{Command, Route};
         use crate::op::Flavor;
+        use crate::op::{Command, Route};
         use crate::VSizedBuffer;
 
         #[test]

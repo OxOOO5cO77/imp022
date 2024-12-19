@@ -1,8 +1,12 @@
+use num_enum::{FromPrimitive, IntoPrimitive};
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 
 #[cfg(test)]
 use strum_macros::EnumIter;
+
+type GameStageType = u8;
+type GamePhaseType = u8;
 
 #[repr(u8)]
 #[derive(Default, Clone, Copy, PartialEq)]
@@ -16,7 +20,7 @@ pub enum GameStage {
 }
 
 #[repr(u8)]
-#[derive(Default, Clone, Copy, PartialEq)]
+#[derive(Default, Clone, Copy, PartialEq, FromPrimitive, IntoPrimitive)]
 #[cfg_attr(test, derive(Debug, EnumIter))]
 pub enum GamePhase {
     #[default]
@@ -26,34 +30,41 @@ pub enum GamePhase {
     TurnEnd,
 }
 
+impl GameStage {
+    const REPR_IDLE: GameStageType = 0;
+    const REPR_BUILDING: GameStageType = 1;
+    const REPR_RUNNING: GameStageType = 2;
+    const REPR_END: GameStageType = 3;
+}
+
 impl Bufferable for GameStage {
     fn push_into(&self, buf: &mut VSizedBuffer) {
         match self {
-            GameStage::Idle => 0u8.push_into(buf),
-            GameStage::Building => 1u8.push_into(buf),
+            GameStage::Idle => Self::REPR_IDLE.push_into(buf),
+            GameStage::Building => Self::REPR_BUILDING.push_into(buf),
             GameStage::Running(phase) => {
-                2u8.push_into(buf);
+                Self::REPR_RUNNING.push_into(buf);
                 phase.push_into(buf);
             }
-            GameStage::End => 3u8.push_into(buf),
+            GameStage::End => Self::REPR_END.push_into(buf),
         }
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
         match u8::pull_from(buf) {
-            0 => GameStage::Idle,
-            1 => GameStage::Building,
-            2 => {
+            Self::REPR_IDLE => GameStage::Idle,
+            Self::REPR_BUILDING => GameStage::Building,
+            Self::REPR_RUNNING => {
                 let phase = GamePhase::pull_from(buf);
                 GameStage::Running(phase)
             }
-            3 => GameStage::End,
+            Self::REPR_END => GameStage::End,
             _ => GameStage::Idle,
         }
     }
 
     fn size_in_buffer(&self) -> usize {
-        0u8.size_in_buffer()
+        size_of::<GameStageType>()
             + match self {
                 GameStage::Running(phase) => phase.size_in_buffer(),
                 _ => 0,
@@ -63,27 +74,17 @@ impl Bufferable for GameStage {
 
 impl Bufferable for GamePhase {
     fn push_into(&self, buf: &mut VSizedBuffer) {
-        match self {
-            GamePhase::TurnStart => 0u8,
-            GamePhase::ChooseAttr => 1,
-            GamePhase::CardPlay => 2,
-            GamePhase::TurnEnd => 3,
-        }
-        .push_into(buf);
+        let game_phase: GamePhaseType = (*self).into();
+        game_phase.push_into(buf);
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        match u8::pull_from(buf) {
-            0 => GamePhase::TurnStart,
-            1 => GamePhase::ChooseAttr,
-            2 => GamePhase::CardPlay,
-            3 => GamePhase::TurnEnd,
-            _ => GamePhase::TurnStart,
-        }
+        let game_phase = GamePhaseType::pull_from(buf);
+        game_phase.into()
     }
 
     fn size_in_buffer(&self) -> usize {
-        0u8.size_in_buffer()
+        size_of::<GamePhaseType>()
     }
 }
 

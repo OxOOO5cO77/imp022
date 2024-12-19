@@ -1,11 +1,15 @@
+use num_enum::{FromPrimitive, IntoPrimitive};
 use serde::{Deserialize, Serialize};
 use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 
 pub type AttributeValueType = u8;
+type AttributeKindType = u8;
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, Hash, PartialEq, Eq)]
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, FromPrimitive, IntoPrimitive)]
 pub enum AttributeKind {
+    #[num_enum(default)]
     Analyze,
     Breach,
     Compute,
@@ -72,28 +76,17 @@ impl Attributes {
 
 impl Bufferable for AttributeKind {
     fn push_into(&self, buf: &mut VSizedBuffer) {
-        match self {
-            AttributeKind::Analyze => 1u8,
-            AttributeKind::Breach => 2,
-            AttributeKind::Compute => 3,
-            AttributeKind::Disrupt => 4,
-        }
-        .push_into(buf);
+        let attribute_kind: AttributeKindType = (*self).into();
+        attribute_kind.push_into(buf);
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let value = u8::pull_from(buf);
-        match value {
-            1 => AttributeKind::Analyze,
-            2 => AttributeKind::Breach,
-            3 => AttributeKind::Compute,
-            4 => AttributeKind::Disrupt,
-            _ => AttributeKind::Analyze,
-        }
+        let attribute_kind = AttributeKindType::pull_from(buf);
+        attribute_kind.into()
     }
 
     fn size_in_buffer(&self) -> usize {
-        size_of::<u8>()
+        size_of::<AttributeKindType>()
     }
 }
 
