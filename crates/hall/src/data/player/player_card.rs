@@ -31,12 +31,8 @@ const MASK_FOR_RARITY: PackedCardType = (1 << BITS_FOR_RARITY) - 1;
 
 impl PlayerCard {
     fn pack(&self) -> PackedCardType {
-        let packed_rarity = match self.rarity {
-            Rarity::Common => 0,
-            Rarity::Uncommon => 1,
-            Rarity::Rare => 2,
-            Rarity::Legendary => 3,
-        } as PackedCardType;
+        let rarity: u8 = self.rarity.into();
+        let packed_rarity = rarity as PackedCardType;
         let packed_set = self.set as PackedCardType;
         let packed_number = self.number as PackedCardType;
         (packed_rarity << SHIFT_FOR_RARITY) | (packed_set << SHIFT_FOR_SET) | (packed_number << SHIFT_FOR_NUMBER)
@@ -45,16 +41,11 @@ impl PlayerCard {
     fn unpack(packed: PackedCardType) -> Self {
         let unpacked_number = (packed >> SHIFT_FOR_NUMBER) & MASK_FOR_NUMBER;
         let unpacked_set = (packed >> SHIFT_FOR_SET) & MASK_FOR_SET;
-        let unpacked_rarity = (packed >> SHIFT_FOR_RARITY) & MASK_FOR_RARITY;
+        let unpacked_rarity = ((packed >> SHIFT_FOR_RARITY) & MASK_FOR_RARITY) as u8;
         Self {
             number: unpacked_number as CardNumberType,
             set: unpacked_set as SetType,
-            rarity: match unpacked_rarity {
-                1 => Rarity::Uncommon,
-                2 => Rarity::Rare,
-                3 => Rarity::Legendary,
-                _ => Rarity::Common,
-            },
+            rarity: unpacked_rarity.into(),
         }
     }
     pub fn size_in_bytes() -> usize {

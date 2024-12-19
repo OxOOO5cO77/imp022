@@ -25,16 +25,8 @@ impl GameMissionNodePlayerViewExt for GameMissionNodePlayerView {
     }
 
     fn kind_value(&self) -> usize {
-        match self.kind {
-            MissionNodeKind::AccessPoint => 1,
-            MissionNodeKind::Backend => 2,
-            MissionNodeKind::Control => 3,
-            MissionNodeKind::Database => 4,
-            MissionNodeKind::Engine => 5,
-            MissionNodeKind::Frontend => 6,
-            MissionNodeKind::Gateway => 7,
-            MissionNodeKind::Hardware => 8,
-        }
+        let kind: u8 = self.kind.into();
+        kind as usize
     }
 
     fn make_id(&self) -> String {

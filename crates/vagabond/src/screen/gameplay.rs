@@ -509,13 +509,9 @@ fn indicator_ui_update(mut commands: Commands, mut receive: EventReader<UiEvent>
     }
 }
 
-fn kind_to_erg_index(kind: AttributeKind) -> usize {
-    match kind {
-        AttributeKind::Analyze => 0,
-        AttributeKind::Breach => 1,
-        AttributeKind::Compute => 2,
-        AttributeKind::Disrupt => 3,
-    }
+fn map_kind_to_index(kind: AttributeKind) -> usize {
+    let kind: u8 = kind.into();
+    kind as usize
 }
 
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
@@ -539,7 +535,7 @@ fn on_card_drag_start(
 
     if let Ok((layout, sprite, transform, hand, tracker)) = sprite_q.get(target) {
         let card = context.hand.get(hand.0).cloned();
-        if tracker.is_none() && card.as_ref().is_none_or(|card| card.cost > context.cached_state.erg[kind_to_erg_index(card.kind)]) {
+        if tracker.is_none() && card.as_ref().is_none_or(|card| card.cost > context.cached_state.erg[map_kind_to_index(card.kind)]) {
             if let Some(frame) = layout.frame {
                 if let Ok((source_color, blink)) = bg_q.get(frame) {
                     if let Some(blink) = blink {
@@ -561,7 +557,7 @@ fn on_card_drag_start(
                 commands.entity(target).insert(IndicatorTracker);
             } else if let Some((entity, mut indicator)) = indicator_q.iter_mut().find(|(_, i)| i.parent == target) {
                 if let Some(card) = card {
-                    context.cached_state.erg[kind_to_erg_index(card.kind)] += card.cost;
+                    context.cached_state.erg[map_kind_to_index(card.kind)] += card.cost;
                     send.send(UiEvent::PlayerErg(context.cached_state.erg));
                 }
                 context.card_picks.remove(&(hand.0 as CardIdxType));
@@ -618,7 +614,7 @@ fn on_card_drop(
             if let Ok(hand) = hand_q.get(indicator.parent) {
                 context.add_card_pick(hand.0, target);
                 if let Some((kind, cost)) = context.hand.get_mut(hand.0).map(|card| (card.kind, card.cost)) {
-                    context.cached_state.erg[kind_to_erg_index(kind)] -= cost;
+                    context.cached_state.erg[map_kind_to_index(kind)] -= cost;
                     send.send(UiEvent::PlayerErg(context.cached_state.erg));
                 }
             }
@@ -670,15 +666,6 @@ fn cleanup_indicator_post_update(
                 cleanup_indicator(&mut commands, entity, indicator.parent);
             }
         }
-    }
-}
-
-fn map_kind_to_row(kind: AttributeKind) -> usize {
-    match kind {
-        AttributeKind::Analyze => 0,
-        AttributeKind::Breach => 1,
-        AttributeKind::Compute => 2,
-        AttributeKind::Disrupt => 3,
     }
 }
 
@@ -841,7 +828,7 @@ fn local_ui_update(
                 for (_, mut color, state_text) in text_q.iter_mut() {
                     if let PlayerStateText::Attribute(row, _) = state_text {
                         *color = if let Some(kind) = kind {
-                            if *row == map_kind_to_row(*kind) {
+                            if *row == map_kind_to_index(*kind) {
                                 context.attr_pick = Some(*kind);
                                 bevy::color::palettes::basic::GREEN
                             } else {
@@ -1036,7 +1023,7 @@ fn recv_resources(mut commands: Commands, response: GameResourcesMessage, send: 
     commands.trigger(TTYMessageEvent::new(MachineKind::Local, "PLAY CARDS"));
     send.send(UiEvent::PlayerErg(response.player_state_view.erg));
     send.send(UiEvent::PlayerState(response.player_state_view));
-    send.send(UiEvent::Resources(response.local_erg, response.remote_erg, response.remote_attr, response.remote_kind.into()));
+    send.send(UiEvent::Resources(response.local_erg, response.remote_erg, response.remote_attr, response.remote_kind));
     Some(VagabondGamePhase::Play)
 }
 

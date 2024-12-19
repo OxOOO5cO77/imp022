@@ -1,9 +1,12 @@
+use num_enum::{FromPrimitive, IntoPrimitive};
 use serde::{Deserialize, Serialize};
 
 pub type MissionIdType = u8;
 
-#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug, FromPrimitive, IntoPrimitive)]
 pub enum MissionNodeKind {
+    #[num_enum(default)]
     AccessPoint,
     Backend,
     Control,
@@ -14,22 +17,28 @@ pub enum MissionNodeKind {
     Hardware,
 }
 
-#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug, FromPrimitive, IntoPrimitive)]
 pub enum MissionNodeState {
+    #[num_enum(default)]
     Unknown,
     Known,
 }
 
-#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug, FromPrimitive, IntoPrimitive)]
 pub enum MissionNodeLinkDir {
+    #[num_enum(default)]
     North,
     East,
     South,
     West,
 }
 
-#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug, FromPrimitive, IntoPrimitive)]
 pub enum MissionNodeLinkState {
+    #[num_enum(default)]
     Closed,
     Open,
 }
