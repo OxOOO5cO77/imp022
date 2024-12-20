@@ -1,6 +1,6 @@
 use crate::gfx::FrameMaterial;
 use crate::manager::AtlasManager;
-use crate::system::ui_effects::UiFxTrackedColor;
+use crate::system::ui_effects::{UiFxTrackedColor, UiFxTrackedSize};
 use bevy::prelude::*;
 use bevy::sprite::{Anchor, MeshMaterial2d};
 use bevy::text::TextBounds;
@@ -51,6 +51,7 @@ struct SpriteElement {
     atlas: String,
     item: String,
     position: Vec3,
+    size: Vec2,
     color: Srgba,
 }
 
@@ -125,14 +126,16 @@ impl ScreenLayout {
     }
 
     fn parse_sprite(&mut self, name: &str, remain: &str, resources: &ScreenResources, overrides: &ScreenResources) -> Option<bool> {
-        let (atlas_item, remain) = remain.split_once('@')?;
-        let (atlas, item) = atlas_item.split_once('.')?;
+        let (atlas_item, remain) = remain.split_once('%')?;
+        let (size_str, remain) = remain.split_once("@")?;
         let (position, color) = remain.split_once("!")?;
+        let (atlas, item) = atlas_item.split_once('.')?;
 
         let element = SpriteElement {
             atlas: atlas.to_string(),
             item: item.to_string(),
             position: Self::parse_position(position)?,
+            size: Self::parse_size(size_str)?,
             color: *overrides.color_map.get(color).or(resources.color_map.get(color))?,
         };
 
@@ -347,7 +350,7 @@ impl ScreenLayoutManager {
         let material = MeshMaterial2d(materials.add(FrameMaterial::new(LinearRgba::from(element.color), element.size, dash_size)));
         let transform = Transform::from_translation(element.position);
 
-        (mesh, material, transform, UiFxTrackedColor::from(element.color), PickingBehavior::IGNORE)
+        (mesh, material, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::IGNORE)
     }
 
     fn make_shape_bundle_rect(element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> impl Bundle {
@@ -355,7 +358,7 @@ impl ScreenLayoutManager {
         let material = MeshMaterial2d(materials.add(Color::Srgba(element.color)));
         let transform = Transform::from_translation(element.position);
 
-        (mesh, material, transform, UiFxTrackedColor::from(element.color), PickingBehavior::IGNORE)
+        (mesh, material, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::IGNORE)
     }
 
     fn make_shape_bundle_capsule_x(element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> impl Bundle {
@@ -369,23 +372,23 @@ impl ScreenLayoutManager {
             scale: Vec3::ONE,
         };
 
-        (mesh, material, transform, UiFxTrackedColor::from(element.color), PickingBehavior::IGNORE)
+        (mesh, material, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::IGNORE)
     }
 
-    fn make_sprite_bundle(am: &AtlasManager, atlas_name: &str, texture_name: &str, translation: Vec3, color: Srgba) -> Option<impl Bundle> {
-        let (atlas, image) = am.get_atlas_texture(atlas_name, texture_name)?;
+    fn make_sprite_bundle(element: &SpriteElement, am: &AtlasManager) -> Option<impl Bundle> {
+        let (atlas, image) = am.get_atlas_texture(&element.atlas, &element.item)?;
 
         let sprite = (
             Sprite {
-                color: Color::Srgba(color),
+                color: Color::Srgba(element.color),
                 anchor: Anchor::TopLeft,
                 image,
                 texture_atlas: Some(atlas),
                 ..default()
             },
-            Transform::from_translation(translation),
+            Transform::from_translation(element.position),
         );
-        Some((sprite, UiFxTrackedColor::from(color), PickingBehavior::IGNORE))
+        Some((sprite, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::IGNORE))
     }
 
     fn make_text_bundle(element: &TextElement, asset_server: &AssetServer) -> impl Bundle {
@@ -413,6 +416,7 @@ impl ScreenLayoutManager {
                 ..default()
             },
             Transform::from_translation(element.position),
+            UiFxTrackedSize::from(element.size),
             PickingBehavior::IGNORE,
         )
     }
@@ -440,7 +444,7 @@ impl ScreenLayoutManager {
                 }
                 .id(),
                 Element::Sprite(e) => {
-                    if let Some(sprite) = Self::make_sprite_bundle(am, &e.atlas, &e.item, e.position, e.color) {
+                    if let Some(sprite) = Self::make_sprite_bundle(e, am) {
                         parent.spawn(sprite).id()
                     } else {
                         continue;

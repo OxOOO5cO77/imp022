@@ -4,7 +4,7 @@ use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::card_layout::{CardLayout, CardPopulateEvent};
 use crate::screen::card_tooltip::{on_update_tooltip, CardTooltip, UpdateCardTooltipEvent};
 use crate::screen::util::on_out_generic;
-use crate::system::ui_effects::{Glower, Hider, SetColorEvent, UiFxTrackedColor};
+use crate::system::ui_effects::{Glower, Hider, SetColorEvent, TextTip, UiFxTrackedColor, UiFxTrackedSize};
 use crate::system::AppState;
 use bevy::prelude::*;
 use vagabond::data::{VagabondCard, VagabondPart};
@@ -251,6 +251,12 @@ fn compose_enter(
     commands.remove_resource::<ComposeInitHandoff>();
 
     let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, for_slm);
+
+    let container = commands.entity(layout.entity("text_tip")).insert_text_tip_container(layout.entity("text_tip/text")).id();
+    commands.entity(layout.entity("attributes/a")).insert_text_tip(container, "Analyze");
+    commands.entity(layout.entity("attributes/b")).insert_text_tip(container, "Breach");
+    commands.entity(layout.entity("attributes/c")).insert_text_tip(container, "Compute");
+    commands.entity(layout.entity("attributes/d")).insert_text_tip(container, "Disrupt");
 
     const ATTR: [(&str, StatRowKind, [&str; 4]); 4] = [
         //
@@ -507,14 +513,13 @@ fn on_over_header(
     event: Trigger<Pointer<Over>>,
     mut commands: Commands,
     header_q: Query<(&Transform, &CardHeader)>,
-    tooltip_q: Query<(&Transform, &Sprite)>,
+    tooltip_q: Query<(&Transform, &UiFxTrackedSize)>,
     tooltip: Res<CardTooltip>,
     context: Res<ComposeContext>,
 ) {
     if let Ok((header_transform, header)) = header_q.get(event.target) {
-        if let Ok((tooltip_transform, tooltip_sprite)) = tooltip_q.get(tooltip.0) {
-            let size = tooltip_sprite.custom_size.unwrap_or_default();
-            let new_y = (header_transform.translation.y + (size.y / 2.0)).clamp(-1080.0 + size.y, 0.0);
+        if let Ok((tooltip_transform, tooltip_size)) = tooltip_q.get(tooltip.0) {
+            let new_y = (header_transform.translation.y + (tooltip_size.y / 2.0)).clamp(-1080.0 + tooltip_size.y, 0.0);
             let position = Vec2::new(tooltip_transform.translation.x, -new_y);
             let card = context.deck.get(header.0).cloned();
             commands.entity(tooltip.0).remove::<Hider>().trigger(UpdateCardTooltipEvent::new(position, card));
@@ -528,7 +533,7 @@ fn on_out_header(
     mut commands: Commands,
     tooltip: Res<CardTooltip>,
 ) {
-    commands.entity(tooltip.0).insert(Hider::new(0.25));
+    commands.entity(tooltip.0).insert(Hider::new(0.25, Visibility::Hidden));
 }
 
 fn populate_part_layouts(

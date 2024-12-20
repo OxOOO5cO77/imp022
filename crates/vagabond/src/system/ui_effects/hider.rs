@@ -14,13 +14,15 @@ impl Plugin for HiderPlugin {
 pub(crate) struct Hider {
     delta_time: f32,
     duration: f32,
+    state: Visibility,
 }
 
 impl Hider {
-    pub(crate) fn new(duration: f32) -> Self {
+    pub(crate) fn new(duration: f32, state: Visibility) -> Self {
         Self {
             delta_time: 0.0,
             duration,
+            state,
         }
     }
 }
@@ -34,7 +36,7 @@ fn hider_update(
     for (e, mut hide) in hider_q.iter_mut() {
         hide.delta_time += time.delta().as_secs_f32();
         if hide.delta_time > hide.duration {
-            commands.entity(e).remove::<Hider>().insert(Visibility::Hidden);
+            commands.entity(e).remove::<Hider>().insert(hide.state);
         }
     }
 }

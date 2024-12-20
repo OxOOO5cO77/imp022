@@ -138,7 +138,7 @@ fn login_ui_setup(
         password: Entity::PLACEHOLDER,
     };
     commands //
-        .spawn((LoginScreen, ui_base))
+        .spawn((LoginScreen, ui_base, PickingBehavior::IGNORE))
         .with_children(|parent| {
             tracker.username = parent.spawn(textedit_bundle(768.0, 500.0, 475.0, 44.0, None, true, &drawbridge.username)).id();
             tracker.password = parent.spawn(textedit_bundle(768.0, 560.0, 475.0, 44.0, Some('*'), false, &drawbridge.password)).id();

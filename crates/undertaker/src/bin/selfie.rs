@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::env;
 use std::io::ErrorKind;
 
@@ -22,23 +23,28 @@ fn main() -> Result<(), std::io::Error> {
 
     let mut max_extents = Extents::default();
 
+    let mut type_map = HashMap::new();
+
     for line in layout_file.lines() {
         let mut chars = line.chars();
         let (kind, remain) = (chars.next().ok_or(ErrorKind::Other)?, chars.as_str());
-        let extents = match kind {
-            '&' => parse_text_or_shape(remain),
-            '#' => parse_text_or_shape(remain),
-            '/' => parse_layout(remain),
-            _ => continue,
-        };
+        let extents = parse_extents(remain);
 
         if let Some(extents) = extents {
             max_extents.extend(extents);
         }
+
+        let entry = type_map.entry(kind).or_insert(0);
+        *entry += 1;
     }
 
-    println!("[{}] {}x{}", filename, max_extents.right, max_extents.bottom);
-
+    print!("[{}] {}x{}: ", filename, max_extents.right, max_extents.bottom);
+    print!(" {} defines", type_map.get(&'$').unwrap_or(&0));
+    print!(" {} layouts", type_map.get(&'/').unwrap_or(&0));
+    print!(" {} shapes", type_map.get(&'#').unwrap_or(&0));
+    print!(" {} images", type_map.get(&'*').unwrap_or(&0));
+    print!(" {} text", type_map.get(&'&').unwrap_or(&0));
+    println!();
     Ok(())
 }
 
@@ -59,16 +65,10 @@ fn make_extents(size: &str, pos: &str) -> Option<Extents> {
     Some(extents)
 }
 
-fn parse_text_or_shape(remain: &str) -> Option<Extents> {
+fn parse_extents(remain: &str) -> Option<Extents> {
     let (at_left, at_right) = remain.split_once('@')?;
     let (_, size) = at_left.split_once('%')?;
-    let (pos, _) = at_right.split_once('!')?;
-
-    make_extents(size, pos)
-}
-fn parse_layout(remain: &str) -> Option<Extents> {
-    let (at_left, pos) = remain.split_once('@')?;
-    let (_, size) = at_left.split_once('%')?;
+    let (pos, _) = at_right.split_once('!').unwrap_or((at_right, ""));
 
     make_extents(size, pos)
 }

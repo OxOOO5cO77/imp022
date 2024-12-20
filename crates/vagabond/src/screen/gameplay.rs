@@ -6,7 +6,7 @@ use crate::screen::card_tooltip::{on_update_tooltip, CardTooltip, UpdateCardTool
 use crate::screen::compose::ComposeHandoff;
 use crate::screen::util;
 use crate::screen::util::{GameMissionNodePlayerViewExt, KindIconSize};
-use crate::system::ui_effects::{Blinker, Glower, SetColorEvent, UiFxTrackedColor};
+use crate::system::ui_effects::{Blinker, Glower, SetColorEvent, TextTip, UiFxTrackedColor};
 use crate::system::AppState;
 use bevy::prelude::*;
 use hall::data::core::{AttributeKind, BuildValueType, DelayType, ErgType, MissionNodeIdType};
@@ -294,6 +294,12 @@ fn gameplay_enter(
 ) {
     let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, for_slm);
 
+    let container = commands.entity(layout.entity("text_tip")).insert_text_tip_container(layout.entity("text_tip/text")).id();
+    commands.entity(layout.entity("attributes/a")).insert_text_tip(container, "Analyze");
+    commands.entity(layout.entity("attributes/b")).insert_text_tip(container, "Breach");
+    commands.entity(layout.entity("attributes/c")).insert_text_tip(container, "Compute");
+    commands.entity(layout.entity("attributes/d")).insert_text_tip(container, "Disrupt");
+
     const LOCAL_ATTR: [[&str; 4]; 4] = [
         //
         ["attributes/aa", "attributes/ab", "attributes/ac", "attributes/ad"],
@@ -330,12 +336,12 @@ fn gameplay_enter(
     commands.entity(layout.entity("deck")).insert(PlayerStateText::Deck);
     commands.entity(layout.entity("heap")).insert(PlayerStateText::Heap);
 
-    commands.entity(layout.entity("phase_start")).insert(PhaseIcon(VagabondGamePhase::Start));
-    commands.entity(layout.entity("phase_pick")).insert(PhaseIcon(VagabondGamePhase::Pick));
-    commands.entity(layout.entity("phase_play")).insert(PhaseIcon(VagabondGamePhase::Play));
-    commands.entity(layout.entity("phase_draw")).insert(PhaseIcon(VagabondGamePhase::Draw));
+    commands.entity(layout.entity("phase_start")).insert(PhaseIcon(VagabondGamePhase::Start)).insert_text_tip(container, "Start");
+    commands.entity(layout.entity("phase_pick")).insert(PhaseIcon(VagabondGamePhase::Pick)).insert_text_tip(container, "Pick");
+    commands.entity(layout.entity("phase_play")).insert(PhaseIcon(VagabondGamePhase::Play)).insert_text_tip(container, "Play");
+    commands.entity(layout.entity("phase_draw")).insert(PhaseIcon(VagabondGamePhase::Draw)).insert_text_tip(container, "Draw");
 
-    commands.entity(layout.entity("phase_bg")).observe_next_button();
+    commands.entity(layout.entity("next")).observe_next_button();
 
     commands.entity(layout.entity("attributes/row_a")).observe_pickable_row(AttributeKind::Analyze);
     commands.entity(layout.entity("attributes/row_b")).observe_pickable_row(AttributeKind::Breach);

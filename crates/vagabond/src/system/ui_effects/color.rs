@@ -54,7 +54,7 @@ fn on_color_update_sprite(
 
 #[derive(Component)]
 pub(crate) struct UiFxTrackedColor {
-    pub color: Srgba,
+    pub(crate) color: Srgba,
 }
 
 impl From<Srgba> for UiFxTrackedColor {
