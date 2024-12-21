@@ -4,6 +4,8 @@ use crate::system::ui_effects::{UiFxTrackedColor, UiFxTrackedSize};
 use bevy::prelude::*;
 use bevy::sprite::{Anchor, MeshMaterial2d};
 use bevy::text::TextBounds;
+use bevy::ui::FocusPolicy;
+use bevy_simple_text_input::{TextInput, TextInputInactive, TextInputSettings, TextInputTextColor, TextInputTextFont};
 use std::collections::HashMap;
 use std::f32::consts::PI;
 use std::path::{Path, PathBuf};
@@ -11,7 +13,8 @@ use std::path::{Path, PathBuf};
 #[derive(Resource)]
 pub(crate) struct ScreenLayoutManager {
     layout_map: HashMap<String, ScreenLayout>,
-    entity_map: HashMap<String, Entity>,
+    base_entity_map: HashMap<String, Entity>,
+    ui_entity_map: HashMap<String, Entity>,
 }
 
 #[derive(Default)]
@@ -24,6 +27,7 @@ struct ScreenResources {
 pub(crate) struct ScreenLayout {
     element_map: HashMap<String, Element>,
     entity_map: HashMap<String, Entity>,
+    has_ui: bool,
 }
 
 enum Element {
@@ -31,6 +35,7 @@ enum Element {
     Sprite(SpriteElement),
     Text(TextElement),
     Layout(LayoutElement),
+    UiInputBox(UiInputBoxElement),
 }
 
 enum ShapeKind {
@@ -71,41 +76,46 @@ struct LayoutElement {
     size: Vec2,
 }
 
+struct UiInputBoxElement {
+    text_element: TextElement,
+    password: bool,
+}
+
 impl ScreenLayout {
-    fn parse_size(rect: &str) -> Option<Vec2> {
+    fn parse_size(rect: &str) -> Result<Vec2, String> {
         let mut components = rect.split(",");
 
-        let w = components.next()?.parse::<f32>().ok()?;
-        let h = components.next()?.parse::<f32>().ok()?;
+        let w = components.next().and_then(|width| width.parse::<f32>().ok()).ok_or_else(|| format!("size: {rect}"))?;
+        let h = components.next().and_then(|height| height.parse::<f32>().ok()).ok_or_else(|| format!("size: {rect}"))?;
 
-        Some(Vec2::new(w, h))
+        Ok(Vec2::new(w, h))
     }
 
-    fn parse_position(position: &str) -> Option<Vec3> {
+    fn parse_position(position: &str) -> Result<Vec3, String> {
         const Z_FACTOR: f32 = 0.01;
         let mut components = position.split(",");
 
-        let x = components.next()?.parse::<f32>().ok()?;
-        let y = components.next()?.parse::<f32>().ok()?;
-        let z = components.next()?.parse::<f32>().ok()?;
+        let x = components.next().and_then(|c| c.parse::<f32>().ok()).ok_or_else(|| format!("position: {position}"))?;
+        let y = components.next().and_then(|c| c.parse::<f32>().ok()).ok_or_else(|| format!("position: {position}"))?;
+        let z = components.next().and_then(|c| c.parse::<f32>().ok()).ok_or_else(|| format!("position: {position}"))?;
 
-        Some(Vec3::new(x, -y, z * Z_FACTOR))
+        Ok(Vec3::new(x, -y, z * Z_FACTOR))
     }
 
-    fn parse_shape_kind(shape_kind: &str) -> Option<ShapeKind> {
+    fn parse_shape_kind(shape_kind: &str) -> Result<ShapeKind, String> {
         match shape_kind {
-            "rect" => Some(ShapeKind::Rect),
-            "capsule_x" => Some(ShapeKind::CapsuleX),
-            "frame" => Some(ShapeKind::Frame),
-            "dash_frame" => Some(ShapeKind::DashFrame),
-            _ => None,
+            "rect" => Ok(ShapeKind::Rect),
+            "capsule_x" => Ok(ShapeKind::CapsuleX),
+            "frame" => Ok(ShapeKind::Frame),
+            "dash_frame" => Ok(ShapeKind::DashFrame),
+            _ => Err(format!("shape_kind: {shape_kind}")),
         }
     }
 
-    fn parse_shape(&mut self, name: &str, remain: &str, resources: &ScreenResources, overrides: &ScreenResources) -> Option<bool> {
-        let (shape_kind_str, remain) = remain.split_once("%")?;
-        let (size_str, remain) = remain.split_once("@")?;
-        let (position_str, color_str) = remain.split_once("!")?;
+    fn parse_shape<'a>(&mut self, name: &'a str, remain: &str, resources: &ScreenResources, overrides: &ScreenResources) -> Result<Option<(&'a str, Element)>, String> {
+        let (shape_kind_str, remain) = remain.split_once("%").ok_or_else(|| format!("shape: {remain}"))?;
+        let (size_str, remain) = remain.split_once("@").ok_or_else(|| format!("shape: {remain}"))?;
+        let (position_str, color_str) = remain.split_once("!").ok_or_else(|| format!("shape: {remain}"))?;
 
         let raw_position = Self::parse_position(position_str)?;
         let size = Self::parse_size(size_str)?;
@@ -116,57 +126,50 @@ impl ScreenLayout {
             kind: Self::parse_shape_kind(shape_kind_str)?,
             position,
             size,
-            color: *overrides.color_map.get(color_str).or(resources.color_map.get(color_str))?,
+            color: *overrides.color_map.get(color_str).or(resources.color_map.get(color_str)).ok_or_else(|| format!("shape: {remain}"))?,
         };
 
-        if self.element_map.insert(name.to_string(), Element::Shape(element)).is_some() {
-            return None;
-        }
-        Some(true)
+        Ok(Some((name, Element::Shape(element))))
     }
 
-    fn parse_sprite(&mut self, name: &str, remain: &str, resources: &ScreenResources, overrides: &ScreenResources) -> Option<bool> {
-        let (atlas_item, remain) = remain.split_once('%')?;
-        let (size_str, remain) = remain.split_once("@")?;
-        let (position, color) = remain.split_once("!")?;
-        let (atlas, item) = atlas_item.split_once('.')?;
+    fn parse_sprite<'a>(&mut self, name: &'a str, remain: &str, resources: &ScreenResources, overrides: &ScreenResources) -> Result<Option<(&'a str, Element)>, String> {
+        let (atlas_item, remain) = remain.split_once('%').ok_or_else(|| format!("sprite: {remain}"))?;
+        let (size_str, remain) = remain.split_once("@").ok_or_else(|| format!("sprite: {remain}"))?;
+        let (position, color) = remain.split_once("!").ok_or_else(|| format!("sprite: {remain}"))?;
+        let (atlas, item) = atlas_item.split_once('.').ok_or_else(|| format!("sprite: {atlas_item}"))?;
 
         let element = SpriteElement {
             atlas: atlas.to_string(),
             item: item.to_string(),
             position: Self::parse_position(position)?,
             size: Self::parse_size(size_str)?,
-            color: *overrides.color_map.get(color).or(resources.color_map.get(color))?,
+            color: *overrides.color_map.get(color).or(resources.color_map.get(color)).ok_or_else(|| format!("sprite: {color}"))?,
         };
 
-        if self.element_map.insert(name.to_string(), Element::Sprite(element)).is_some() {
-            return None;
-        }
-
-        Some(true)
+        Ok(Some((name, Element::Sprite(element))))
     }
 
-    fn parse_font_info(font_info: &str, resources: &ScreenResources, overrides: &ScreenResources) -> Option<(String, f32, JustifyText)> {
+    fn parse_font_info(font_info: &str, resources: &ScreenResources, overrides: &ScreenResources) -> Result<(String, f32, JustifyText), String> {
         let mut parts = font_info.split(".");
-        let name_str = parts.next()?;
-        let font_size = parts.next()?.parse::<f32>().ok()?;
-        let justify_str = parts.next()?;
+        let name_str = parts.next().ok_or_else(|| format!("font_info: {font_info}"))?;
+        let font_size = parts.next().and_then(|p| p.parse::<f32>().ok()).ok_or_else(|| format!("font_info: {font_info}"))?;
+        let justify_str = parts.next().ok_or_else(|| format!("font_info: {font_info}"))?;
 
-        let font_name = overrides.font_map.get(name_str).or(resources.font_map.get(name_str))?.clone();
+        let font_name = overrides.font_map.get(name_str).or(resources.font_map.get(name_str)).ok_or_else(|| format!("font_info: {font_info}"))?.clone();
         let justify = match justify_str {
             "left" => JustifyText::Left,
             "center" => JustifyText::Center,
             "right" => JustifyText::Right,
             _ => JustifyText::Center,
         };
-        Some((font_name, font_size, justify))
+        Ok((font_name, font_size, justify))
     }
 
-    fn parse_text(&mut self, name: &str, remain: &str, resources: &ScreenResources, overrides: &ScreenResources) -> Option<bool> {
-        let (font_info, remain) = remain.split_once('%')?;
-        let (size_str, remain) = remain.split_once('@')?;
-        let (position_str, remain) = remain.split_once('!')?;
-        let (color, default_text) = remain.split_once('|')?;
+    fn parse_text_internal(remain: &str, resources: &ScreenResources, overrides: &ScreenResources) -> Result<TextElement, String> {
+        let (font_info, remain) = remain.split_once('%').ok_or_else(|| format!("text: {remain}"))?;
+        let (size_str, remain) = remain.split_once('@').ok_or_else(|| format!("text: {remain}"))?;
+        let (position_str, remain) = remain.split_once('!').ok_or_else(|| format!("text: {remain}"))?;
+        let (color, default_text) = remain.split_once('|').ok_or_else(|| format!("text: {remain}"))?;
 
         let size = Self::parse_size(size_str)?;
         let position = Self::parse_position(position_str)?;
@@ -174,21 +177,23 @@ impl ScreenLayout {
 
         let element = TextElement {
             default_text: default_text.to_string(),
-            color: *overrides.color_map.get(color).or(resources.color_map.get(color))?,
+            color: *overrides.color_map.get(color).or(resources.color_map.get(color)).ok_or_else(|| format!("text: {color}"))?,
             font_name,
             font_size,
             position,
             size,
             justify,
         };
-        if self.element_map.insert(name.to_string(), Element::Text(element)).is_some() {
-            return None;
-        }
-        Some(true)
+        Ok(element)
     }
-    fn parse_layout(&mut self, name: &str, remain: &str) -> Option<bool> {
-        let (layout, remain) = remain.split_once('%')?;
-        let (size_str, position_str) = remain.split_once('@')?;
+    fn parse_text<'a>(&mut self, name: &'a str, remain: &str, resources: &ScreenResources, overrides: &ScreenResources) -> Result<Option<(&'a str, Element)>, String> {
+        let element = Self::parse_text_internal(remain, resources, overrides)?;
+        Ok(Some((name, Element::Text(element))))
+    }
+
+    fn parse_layout<'a>(&mut self, name: &'a str, remain: &str) -> Result<Option<(&'a str, Element)>, String> {
+        let (layout, remain) = remain.split_once('%').ok_or_else(|| format!("layout: {remain}"))?;
+        let (size_str, position_str) = remain.split_once('@').ok_or_else(|| format!("layout: {remain}"))?;
 
         let size = Self::parse_size(size_str)?;
         let position = Self::parse_position(position_str)?;
@@ -198,10 +203,27 @@ impl ScreenLayout {
             position,
             size,
         };
-        if self.element_map.insert(name.to_string(), Element::Layout(element)).is_some() {
-            return None;
-        }
-        Some(true)
+
+        Ok(Some((name, Element::Layout(element))))
+    }
+    fn parse_ui_input<'a>(&mut self, name: &'a str, remain: &str, resources: &ScreenResources, overrides: &ScreenResources) -> Result<Option<(&'a str, Element)>, String> {
+        let text_element = Self::parse_text_internal(remain, resources, overrides)?;
+        let mut chars = name.chars();
+        let password = chars.next().ok_or_else(|| format!("ui_input: {name}"))? == '?';
+        let new_name = if password {
+            &name[1..]
+        } else {
+            name
+        };
+
+        self.has_ui = true;
+
+        let element = UiInputBoxElement {
+            text_element,
+            password,
+        };
+
+        Ok(Some((new_name, Element::UiInputBox(element))))
     }
 
     pub(crate) fn entity_option(&self, name: &str) -> Option<&Entity> {
@@ -244,7 +266,8 @@ impl ScreenLayoutManager {
         }
         let screen_layout_manager = Self {
             layout_map,
-            entity_map: HashMap::new(),
+            base_entity_map: HashMap::new(),
+            ui_entity_map: HashMap::new(),
         };
         Ok(screen_layout_manager)
     }
@@ -260,14 +283,15 @@ impl ScreenLayoutManager {
         resources.color_map.insert("white".to_string(), Srgba::WHITE);
 
         for (line_number, line) in init_file.lines().enumerate() {
-            let parsed = Self::parse_kind(line) //
-                .and_then(|(kind, remain)| Some((kind, Self::parse_name(remain)?)))
+            let result = Self::parse_kind(line) //
+                .and_then(|(kind, remain)| Ok((kind, Self::parse_name(remain)?)))
                 .and_then(|(kind, (name, remain))| match kind {
                     '$' => Self::parse_resource(name, remain, &base_resources, &mut resources),
-                    _ => None,
+                    _ => Err(format!("invalid kind in init file: {kind}")),
                 });
-            if parsed.is_none() {
-                println!("[_.self] Parse error at line {}", line_number + 1);
+            match result {
+                Ok(_) => continue,
+                Err(err) => println!("[_.self] Parse error on line {}: {err}", line_number + 1),
             }
         }
 
@@ -281,33 +305,40 @@ impl ScreenLayoutManager {
 
         let mut screen_layout = ScreenLayout::default();
         for (line_number, line) in layout_file.lines().enumerate() {
-            let parsed = Self::parse_kind(line) //
-                .and_then(|(kind, remain)| Some((kind, Self::parse_name(remain)?)))
+            let result = Self::parse_kind(line) //
+                .and_then(|(kind, remain)| Ok((kind, Self::parse_name(remain)?)))
                 .and_then(|(kind, (name, remain))| match kind {
                     '$' => Self::parse_resource(name, remain, resources, &mut overrides),
                     '*' => screen_layout.parse_sprite(name, remain, resources, &overrides),
                     '&' => screen_layout.parse_text(name, remain, resources, &overrides),
                     '#' => screen_layout.parse_shape(name, remain, resources, &overrides),
+                    '?' => screen_layout.parse_ui_input(name, remain, resources, &overrides),
                     '/' => screen_layout.parse_layout(name, remain),
-                    _ => None,
+                    _ => Err(format!("kind: {kind}")),
                 });
 
-            if parsed.is_none() {
-                println!("[{layout_name}.self] Parse error at line {}", line_number + 1);
+            match result {
+                Ok(Some((name, element))) => {
+                    if screen_layout.element_map.insert(name.to_string(), element).is_some() {
+                        println!("[{layout_name}.self] Duplicate element on line {}: {name}", line_number + 1);
+                    }
+                }
+                Ok(None) => continue,
+                Err(err) => println!("[{layout_name}.self] Parse error on line {}: {err}", line_number + 1),
             }
         }
 
         Ok(screen_layout)
     }
 
-    fn parse_name(remain: &str) -> Option<(&str, &str)> {
-        remain.split_once(':')
+    fn parse_name(remain: &str) -> Result<(&str, &str), String> {
+        remain.split_once(':').ok_or_else(|| format!("name: {remain}"))
     }
 
-    fn parse_kind(line: &str) -> Option<(char, &str)> {
+    fn parse_kind(line: &str) -> Result<(char, &str), String> {
         let mut chars = line.chars();
-        let (kind, remain) = (chars.next()?, chars.as_str());
-        Some((kind, remain))
+        let (kind, remain) = (chars.next().ok_or_else(|| format!("kind: {line}"))?, chars.as_str());
+        Ok((kind, remain))
     }
 
     fn parse_color_components(remain: &str) -> Option<Srgba> {
@@ -320,48 +351,48 @@ impl ScreenLayoutManager {
         Some(Srgba::new(r, g, b, a))
     }
 
-    fn parse_color(remain: &str, in_resources: &ScreenResources, out_colors: &mut HashMap<String, Srgba>) -> Option<bool> {
-        let (name, remain) = remain.split_once('=')?;
+    fn parse_color<'a>(remain: &'a str, in_resources: &ScreenResources, out_colors: &mut HashMap<String, Srgba>) -> Result<Option<(&'a str, Element)>, String> {
+        let (name, remain) = remain.split_once('=').ok_or_else(|| format!("color: {remain}"))?;
 
-        let color = in_resources.color_map.get(remain).cloned().or_else(|| Self::parse_color_components(remain))?;
+        let color = in_resources.color_map.get(remain).cloned().or_else(|| Self::parse_color_components(remain)).ok_or_else(|| format!("color: {remain}"))?;
 
         out_colors.insert(name.to_string(), color);
-        Some(false)
+        Ok(None)
     }
 
-    fn parse_font(remain: &str, fonts: &mut HashMap<String, String>) -> Option<bool> {
-        let (name, remain) = remain.split_once('=')?;
+    fn parse_font<'a>(remain: &'a str, fonts: &mut HashMap<String, String>) -> Result<Option<(&'a str, Element)>, String> {
+        let (name, remain) = remain.split_once('=').ok_or_else(|| format!("font: {remain}"))?;
 
         fonts.insert(name.to_string(), remain.to_string());
 
-        Some(false)
+        Ok(None)
     }
 
-    fn parse_resource(name: &str, remain: &str, in_resources: &ScreenResources, out_resources: &mut ScreenResources) -> Option<bool> {
+    fn parse_resource<'a>(name: &'a str, remain: &'a str, in_resources: &ScreenResources, out_resources: &mut ScreenResources) -> Result<Option<(&'a str, Element)>, String> {
         match name {
             "color" => Self::parse_color(remain, in_resources, &mut out_resources.color_map),
             "font" => Self::parse_font(remain, &mut out_resources.font_map),
-            _ => None,
+            _ => Err(format!("resource: {name}")),
         }
     }
 
-    fn make_shape_bundle_frame(element: &ShapeElement, dash_size: f32, meshes: &mut Assets<Mesh>, materials: &mut Assets<FrameMaterial>) -> impl Bundle {
+    fn spawn_shape_bundle_frame(parent: &mut ChildBuilder, element: &ShapeElement, dash_size: f32, meshes: &mut Assets<Mesh>, materials: &mut Assets<FrameMaterial>) -> Entity {
         let mesh = Mesh2d(meshes.add(Rectangle::new(element.size.x, element.size.y)));
         let material = MeshMaterial2d(materials.add(FrameMaterial::new(LinearRgba::from(element.color), element.size, dash_size)));
         let transform = Transform::from_translation(element.position);
 
-        (mesh, material, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::IGNORE)
+        parent.spawn((mesh, material, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::IGNORE)).id()
     }
 
-    fn make_shape_bundle_rect(element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> impl Bundle {
+    fn spawn_shape_bundle_rect(parent: &mut ChildBuilder, element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> Entity {
         let mesh = Mesh2d(meshes.add(Rectangle::new(element.size.x, element.size.y)));
         let material = MeshMaterial2d(materials.add(Color::Srgba(element.color)));
         let transform = Transform::from_translation(element.position);
 
-        (mesh, material, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::IGNORE)
+        parent.spawn((mesh, material, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::IGNORE)).id()
     }
 
-    fn make_shape_bundle_capsule_x(element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> impl Bundle {
+    fn spawn_shape_bundle_capsule_x(parent: &mut ChildBuilder, element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> Entity {
         let mesh = Mesh2d(meshes.add(Capsule2d::new(element.size.y / 2.0, element.size.x - element.size.y)));
         let material = MeshMaterial2d(materials.add(Color::Srgba(element.color)));
         let rotation = Quat::from_rotation_z(PI / 2.0);
@@ -372,10 +403,10 @@ impl ScreenLayoutManager {
             scale: Vec3::ONE,
         };
 
-        (mesh, material, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::IGNORE)
+        parent.spawn((mesh, material, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::IGNORE)).id()
     }
 
-    fn make_sprite_bundle(element: &SpriteElement, am: &AtlasManager) -> Option<impl Bundle> {
+    fn spawn_sprite_bundle(parent: &mut ChildBuilder, element: &SpriteElement, am: &AtlasManager) -> Option<Entity> {
         let (atlas, image) = am.get_atlas_texture(&element.atlas, &element.item)?;
 
         let sprite = (
@@ -388,14 +419,15 @@ impl ScreenLayoutManager {
             },
             Transform::from_translation(element.position),
         );
-        Some((sprite, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::IGNORE))
+        let sprite = parent.spawn((sprite, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::IGNORE)).id();
+        Some(sprite)
     }
 
-    fn make_text_bundle(element: &TextElement, asset_server: &AssetServer) -> impl Bundle {
+    fn spawn_text_bundle(parent: &mut ChildBuilder, element: &TextElement, asset_server: &AssetServer) -> Entity {
         let font = asset_server.load(&element.font_name);
         let translation = Vec3::new(element.position.x, element.position.y - (element.size.y / 2.0), element.position.z);
 
-        (
+        let bundle = (
             //
             Text2d::new(&element.default_text),
             TextBounds::from(element.size),
@@ -404,7 +436,8 @@ impl ScreenLayoutManager {
             TextLayout::new_with_justify(element.justify),
             Transform::from_translation(translation),
             Anchor::CenterLeft,
-        )
+        );
+        parent.spawn(bundle).id()
     }
 
     fn make_container_bundle(element: &LayoutElement) -> impl Bundle {
@@ -419,6 +452,32 @@ impl ScreenLayoutManager {
             UiFxTrackedSize::from(element.size),
             PickingBehavior::IGNORE,
         )
+    }
+
+    fn spawn_input_bundle(parent: &mut ChildBuilder, element: &UiInputBoxElement, asset_server: &AssetServer) -> Entity {
+        let font = asset_server.load(&element.text_element.font_name);
+        let bundle = (
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(element.text_element.position.x),
+                top: Val::Px(-element.text_element.position.y),
+                width: Val::Px(element.text_element.size.x),
+                height: Val::Px(element.text_element.size.y),
+                ..default()
+            },
+            // Prevent clicks on the input from also bubbling down to the container
+            // behind it
+            FocusPolicy::Block,
+            TextInput,
+            TextInputTextFont(TextFont::from_font(font).with_font_size(element.text_element.font_size)),
+            TextInputTextColor(TextColor(Color::WHITE)),
+            TextInputInactive(true),
+            TextInputSettings {
+                retain_on_submit: true,
+                mask_character: element.password.then_some('*'),
+            },
+        );
+        parent.spawn(bundle).id()
     }
 
     fn make_name(base_name: &str, name: &str) -> String {
@@ -437,56 +496,103 @@ impl ScreenLayoutManager {
             let full_name = Self::make_name(base_name, name);
             let id = match element {
                 Element::Shape(e) => match e.kind {
-                    ShapeKind::Rect => parent.spawn(Self::make_shape_bundle_rect(e, meshes, materials_color)),
-                    ShapeKind::CapsuleX => parent.spawn(Self::make_shape_bundle_capsule_x(e, meshes, materials_color)),
-                    ShapeKind::Frame => parent.spawn(Self::make_shape_bundle_frame(e, 0.0, meshes, materials_frame)),
-                    ShapeKind::DashFrame => parent.spawn(Self::make_shape_bundle_frame(e, 8.0, meshes, materials_frame)),
-                }
-                .id(),
+                    ShapeKind::Rect => Self::spawn_shape_bundle_rect(parent, e, meshes, materials_color),
+                    ShapeKind::CapsuleX => Self::spawn_shape_bundle_capsule_x(parent, e, meshes, materials_color),
+                    ShapeKind::Frame => Self::spawn_shape_bundle_frame(parent, e, 0.0, meshes, materials_frame),
+                    ShapeKind::DashFrame => Self::spawn_shape_bundle_frame(parent, e, 8.0, meshes, materials_frame),
+                },
                 Element::Sprite(e) => {
-                    if let Some(sprite) = Self::make_sprite_bundle(e, am) {
-                        parent.spawn(sprite).id()
+                    if let Some(sprite) = Self::spawn_sprite_bundle(parent, e, am) {
+                        sprite
                     } else {
                         continue;
                     }
                 }
-                Element::Text(e) => {
-                    let text = Self::make_text_bundle(e, asset_server);
-                    parent.spawn(text).id()
-                }
+                Element::Text(e) => Self::spawn_text_bundle(parent, e, asset_server),
                 Element::Layout(e) => {
                     let container = Self::make_container_bundle(e);
                     parent
                         .spawn(container)
                         .with_children(|parent| {
-                            let mut nested_entities = self.build_layout(&e.layout, parent, &full_name, am, (asset_server, meshes, materials_color, materials_frame));
-                            entities.append(&mut nested_entities);
+                            let nested_entities = self.build_layout(&e.layout, parent, &full_name, am, (asset_server, meshes, materials_color, materials_frame));
+                            entities.extend(nested_entities);
                         })
                         .id()
                 }
+                Element::UiInputBox(_) => continue,
             };
             entities.push((full_name, id));
         }
 
         entities
     }
+    fn build_ui_layer(&self, layout_name: &str, parent: &mut ChildBuilder, asset_server: &AssetServer) -> Vec<(String, Entity)> {
+        let mut entities = Vec::new();
+        let layout = self.layout_map.get(layout_name).unwrap();
+        for (name, element) in &layout.element_map {
+            let id = match element {
+                Element::UiInputBox(e) => Self::spawn_input_bundle(parent, e, asset_server),
+                Element::Shape(_) => continue,
+                Element::Sprite(_) => continue,
+                Element::Text(_) => continue,
+                Element::Layout(_) => continue,
+            };
+            entities.push((name.clone(), id));
+        }
+        entities
+    }
 
     #[allow(clippy::type_complexity)]
     pub(crate) fn build(&mut self, commands: &mut Commands, layout_name: &str, am: &AtlasManager, (asset_server, mut meshes, mut materials_color, mut materials_frame): (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>, ResMut<Assets<FrameMaterial>>)) -> &ScreenLayout {
-        let id = commands
+        let base_id = commands
             .spawn(ScreenLayoutContainer::default())
             .with_children(|parent| {
                 let entities = self.build_layout(layout_name, parent, "", am, (&asset_server, &mut meshes, &mut materials_color, &mut materials_frame));
-                let layout = self.layout_map.get_mut(layout_name).unwrap();
-                layout.entity_map = entities.into_iter().collect();
+                if let Some(layout) = self.layout_map.get_mut(layout_name) {
+                    layout.entity_map = entities.into_iter().collect();
+                }
             })
             .id();
-        self.entity_map.insert(layout_name.to_string(), id);
+        self.base_entity_map.insert(layout_name.to_string(), base_id);
+
+        let layout = self.layout_map.get(layout_name).unwrap();
+        if layout.has_ui {
+            let ui_id = commands
+                .spawn(Self::ui_base())
+                .with_children(|parent| {
+                    let entities = self.build_ui_layer(layout_name, parent, &asset_server);
+                    if let Some(layout) = self.layout_map.get_mut(layout_name) {
+                        layout.entity_map.extend(entities);
+                    }
+                })
+                .id();
+            self.ui_entity_map.insert(layout_name.to_string(), ui_id);
+        }
+
         self.layout_map.get(layout_name).unwrap()
     }
 
     pub(crate) fn destroy(&mut self, mut commands: Commands, layout_name: &str) {
-        let entity = self.entity_map.remove(layout_name).unwrap();
-        commands.entity(entity).despawn_recursive();
+        if let Some(entity) = self.base_entity_map.remove(layout_name) {
+            commands.entity(entity).despawn_recursive();
+        }
+        if let Some(entity) = self.ui_entity_map.remove(layout_name) {
+            commands.entity(entity).despawn_recursive();
+        }
+    }
+
+    fn ui_base() -> impl Bundle {
+        (
+            Node {
+                display: Display::Block,
+                position_type: PositionType::Absolute,
+                left: Val::Percent(0.0),
+                top: Val::Percent(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                ..default()
+            },
+            PickingBehavior::IGNORE,
+        )
     }
 }

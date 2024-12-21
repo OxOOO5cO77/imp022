@@ -44,6 +44,7 @@ fn main() -> Result<(), std::io::Error> {
     print!(" {} shapes", type_map.get(&'#').unwrap_or(&0));
     print!(" {} images", type_map.get(&'*').unwrap_or(&0));
     print!(" {} text", type_map.get(&'&').unwrap_or(&0));
+    print!(" {} input", type_map.get(&'?').unwrap_or(&0));
     println!();
     Ok(())
 }

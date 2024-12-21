@@ -5,8 +5,7 @@ use crate::network::client_drawbridge::{AuthInfo, DrawbridgeClient, DrawbridgeIF
 use crate::network::client_gate::{GateClient, GateCommand, GateIFace};
 use crate::system::AppState;
 use bevy::prelude::*;
-use bevy::ui::FocusPolicy;
-use bevy_simple_text_input::{TextInput, TextInputInactive, TextInputSettings, TextInputSubmitEvent, TextInputTextColor, TextInputTextFont, TextInputValue};
+use bevy_simple_text_input::{TextInputCursorPos, TextInputInactive, TextInputSubmitEvent, TextInputValue};
 use shared_net::types::AuthType;
 use std::env;
 use std::mem::discriminant;
@@ -83,31 +82,15 @@ fn drawbridge_enter(
     net.current_task = DrawbridgeClient::start("[::1]:23450".to_string(), from_drawbridge_tx, to_drawbridge_rx, &net.runtime);
 }
 
-fn textedit_bundle(left: f32, top: f32, width: f32, height: f32, mask_character: Option<char>, active: bool, value: &str) -> impl Bundle {
-    (
-        Node {
-            left: Val::Px(left),
-            top: Val::Px(top),
-            width: Val::Px(width),
-            height: Val::Px(height),
-            ..default()
-        },
-        // Prevent clicks on the input from also bubbling down to the container
-        // behind it
-        FocusPolicy::Block,
-        TextInput,
-        TextInputTextFont(TextFont {
-            font_size: 32.0,
-            ..default()
-        }),
-        TextInputValue(value.into()),
-        TextInputTextColor(TextColor(Color::WHITE)),
-        TextInputInactive(!active),
-        TextInputSettings {
-            retain_on_submit: true,
-            mask_character,
-        },
-    )
+trait TextInputExt {
+    fn with_text(self, text: &str, active: bool) -> Self;
+}
+
+impl TextInputExt for &mut EntityCommands<'_> {
+    fn with_text(self, text: &str, active: bool) -> Self {
+        self //
+            .insert((TextInputInactive(!active), TextInputCursorPos(text.len()), TextInputValue(text.into())))
+    }
 }
 
 #[allow(clippy::type_complexity)]
@@ -123,26 +106,13 @@ fn login_ui_setup(
 
     commands.entity(layout.entity("connected_icon")).insert(ConnectedIcon);
 
-    let ui_base = Node {
-        display: Display::Block,
-        position_type: PositionType::Absolute,
-        left: Val::Percent(0.0),
-        top: Val::Percent(0.0),
-        width: Val::Percent(100.0),
-        height: Val::Percent(100.0),
-        ..default()
-    };
+    let username = commands.entity(layout.entity("username")).with_text(&drawbridge.username, true).id();
+    let password = commands.entity(layout.entity("password")).with_text(&drawbridge.password, false).id();
 
-    let mut tracker = LoginContext {
-        username: Entity::PLACEHOLDER,
-        password: Entity::PLACEHOLDER,
+    let tracker = LoginContext {
+        username,
+        password,
     };
-    commands //
-        .spawn((LoginScreen, ui_base, PickingBehavior::IGNORE))
-        .with_children(|parent| {
-            tracker.username = parent.spawn(textedit_bundle(768.0, 500.0, 475.0, 44.0, None, true, &drawbridge.username)).id();
-            tracker.password = parent.spawn(textedit_bundle(768.0, 560.0, 475.0, 44.0, Some('*'), false, &drawbridge.password)).id();
-        });
     commands.insert_resource(tracker)
 }
 
