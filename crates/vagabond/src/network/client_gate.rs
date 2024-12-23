@@ -1,14 +1,15 @@
-use bevy::prelude::Resource;
-use hall::data::core::AttributeKind;
-use hall::message::*;
-use shared_net::sizedbuffers::Bufferable;
-use shared_net::types::{AuthType, GameIdType, PartType};
-use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 use std::collections::HashMap;
+
+use bevy::prelude::Resource;
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
+
+use hall::data::core::AttributeKind;
+use hall::message::*;
+use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
+use shared_net::{AuthType, Bufferable, GameIdType, PartType};
 
 pub(crate) enum GateCommand {
     Hello,

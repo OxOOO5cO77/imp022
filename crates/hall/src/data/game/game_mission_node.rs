@@ -1,8 +1,7 @@
 use crate::data::core::{MissionNodeContent, MissionNodeIdType, MissionNodeKind, MissionNodeLink, MissionNodeLinkDir, MissionNodeLinkState, MissionNodeState};
 use crate::data::game::RemoteIdType;
 use crate::data::hall::HallMissionNode;
-use shared_net::sizedbuffers::Bufferable;
-use shared_net::VSizedBuffer;
+use shared_net::{Bufferable, VSizedBuffer};
 
 pub struct GameMissionNode {
     pub id: MissionNodeIdType,
@@ -225,8 +224,7 @@ impl GameMissionNodePlayerView {
 #[cfg(test)]
 mod test {
     use crate::data::game::GameMissionNodePlayerView;
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
+    use shared_net::{Bufferable, VSizedBuffer};
 
     #[test]
     fn test_game_mission_node_player_view() {

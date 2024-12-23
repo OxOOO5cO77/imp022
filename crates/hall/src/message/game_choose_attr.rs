@@ -1,10 +1,8 @@
-use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
-use shared_net::types::GameIdType;
+use shared_net::bufferable_derive::Bufferable;
+use shared_net::{op, Bufferable, GameIdType, VSizedBuffer};
 
 use crate::data::core::AttributeKind;
-use shared_net::bufferable_derive::Bufferable;
-use shared_net::sizedbuffers::Bufferable;
-use shared_net::{op, VSizedBuffer};
+use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
 
 #[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
@@ -38,8 +36,7 @@ impl GameResponseMessage for GameChooseAttrResponse {}
 #[cfg(test)]
 mod test {
     use crate::message::game_choose_attr::{AttributeKind, GameChooseAttrRequest, GameChooseAttrResponse};
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
+    use shared_net::{Bufferable, VSizedBuffer};
 
     #[test]
     fn test_request() {

@@ -1,8 +1,7 @@
-use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
 use shared_net::bufferable_derive::Bufferable;
-use shared_net::sizedbuffers::Bufferable;
-use shared_net::types::GameIdType;
-use shared_net::{op, VSizedBuffer};
+use shared_net::{op, Bufferable, GameIdType, VSizedBuffer};
+
+use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
 
 #[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
@@ -35,8 +34,7 @@ impl GameResponseMessage for GameEndTurnResponse {}
 #[cfg(test)]
 mod test {
     use crate::message::game_end_turn::{GameEndTurnRequest, GameEndTurnResponse};
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
+    use shared_net::{Bufferable, VSizedBuffer};
 
     #[test]
     fn test_request() {

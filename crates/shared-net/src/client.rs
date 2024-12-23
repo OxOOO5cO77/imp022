@@ -1,15 +1,15 @@
 use std::io::ErrorKind;
 use std::net::{SocketAddr, ToSocketAddrs};
 
+use crate::op;
+use crate::util::write_buf;
+use crate::{RoutedMessage, VSizedBuffer};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::signal;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
-use tokio::time::{Duration, sleep};
-
-use crate::{RoutedMessage, VSizedBuffer};
-use crate::op;
-use crate::util::write_buf;
+use tokio::time::{sleep, Duration};
+use tracing::error;
 
 #[derive(PartialEq)]
 pub enum VClientMode {
@@ -20,7 +20,10 @@ pub enum VClientMode {
 
 type FnProcess<T> = fn(context: T, UnboundedSender<RoutedMessage>, msg: VSizedBuffer) -> VClientMode;
 
-pub async fn async_client<T>(context: T, flavor: op::Flavor, external_tx: UnboundedSender<RoutedMessage>, mut external_rx: UnboundedReceiver<RoutedMessage>, interface: String, process: FnProcess<T>) -> Result<(),()> where T: Clone {
+pub async fn async_client<T>(context: T, flavor: op::Flavor, external_tx: UnboundedSender<RoutedMessage>, mut external_rx: UnboundedReceiver<RoutedMessage>, interface: String, process: FnProcess<T>) -> Result<(), ()>
+where
+    T: Clone,
+{
     let mut addr = interface.to_socket_addrs().expect("Invalid interface for async_client");
     let addr = addr.next().unwrap();
 
@@ -37,7 +40,7 @@ pub async fn async_client<T>(context: T, flavor: op::Flavor, external_tx: Unboun
                                 match active_connection.read_exact(&mut sized_buf.raw[VSizedBuffer::sizesize()..]).await {
                                     Ok(bytes) => {
                                         if bytes != expected_bytes {
-                                            println!("Bytes:{} Expected:{}", bytes, expected_bytes);
+                                            error!("Bytes:{} Expected:{}", bytes, expected_bytes);
                                             break VClientMode::Shutdown;
                                         }
                                         sized_buf.set_size(expected_bytes);

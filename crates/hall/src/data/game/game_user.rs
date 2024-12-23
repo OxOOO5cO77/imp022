@@ -1,7 +1,9 @@
+use rand::Rng;
+
+use shared_net::{AuthType, PartType};
+
 use crate::data::game::GameMachine;
 use crate::data::player::{Player, PlayerMissionState, PlayerState};
-use rand::Rng;
-use shared_net::types::{AuthType, PartType};
 
 pub struct GameUser {
     pub(crate) auth: AuthType,

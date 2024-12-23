@@ -1,9 +1,8 @@
+use shared_net::bufferable_derive::Bufferable;
+use shared_net::{op, Bufferable, GameIdType, PartType, SeedType, VSizedBuffer};
+
 use crate::data::player::PlayerCard;
 use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
-use shared_net::bufferable_derive::Bufferable;
-use shared_net::sizedbuffers::Bufferable;
-use shared_net::types::{GameIdType, PartType, SeedType};
-use shared_net::{op, VSizedBuffer};
 
 type PartsArray = [PartType; 8];
 
@@ -43,8 +42,7 @@ mod test {
     use crate::data::core::Rarity::Legendary;
     use crate::data::player::PlayerCard;
     use crate::message::game_build::{GameBuildRequest, GameBuildResponse};
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
+    use shared_net::{Bufferable, VSizedBuffer};
 
     pub const CARD_COUNT: usize = 40;
 

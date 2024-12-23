@@ -1,31 +1,41 @@
-use std::env;
-
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
-use shared_net::types::NodeType;
+use tracing::{info, instrument};
 
-use shared_net::{op, VClientMode, RoutedMessage, VSizedBuffer};
+use shared_net::{op, NodeType, RoutedMessage, VClientMode, VSizedBuffer};
 
 #[derive(Clone)]
 struct NoContext;
 
-#[tokio::main]
-async fn main() -> Result<(), ()> {
-    println!("[Forum] START");
+#[derive(Debug)]
+enum ForumError {
+    Client(()),
+}
 
-    let mut args = env::args();
+#[tokio::main]
+async fn main() -> Result<(), ForumError> {
+    tracing_subscriber::fmt::init();
+
+    let mut args = std::env::args();
     let _ = args.next(); // program name
-    let iface_to_courtyard = args.next().unwrap_or("[::1]:12345".to_string());
+    let courtyard = args.next().unwrap_or("[::1]:12345".to_string());
+
+    forum_main(courtyard).await
+}
+
+#[instrument]
+async fn forum_main(courtyard: String) -> Result<(), ForumError> {
+    info!("START");
 
     let (dummy_tx, dummy_rx) = mpsc::unbounded_channel();
 
-    let courtyard_client = shared_net::async_client(NoContext, op::Flavor::Forum, dummy_tx, dummy_rx, iface_to_courtyard, process_courtyard);
-    
-    let result = courtyard_client.await;
+    let courtyard_client = shared_net::async_client(NoContext, op::Flavor::Forum, dummy_tx, dummy_rx, courtyard, process_courtyard);
 
-    println!("[Forum] END");
+    courtyard_client.await.map_err(ForumError::Client)?;
 
-    result
+    info!("END");
+
+    Ok(())
 }
 
 fn process_courtyard(_context: NoContext, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
@@ -45,7 +55,10 @@ fn c_chat(tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
     out.push(&op::Command::Chat);
     out.xfer_bytes(&mut buf);
 
-    let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });
+    let _ = tx.send(RoutedMessage {
+        route: op::Route::None,
+        buf: out,
+    });
 }
 
 fn c_dm(tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
@@ -61,5 +74,8 @@ fn c_dm(tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
     out.push(&sender);
     out.xfer_bytes(&mut buf);
 
-    let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });
+    let _ = tx.send(RoutedMessage {
+        route: op::Route::None,
+        buf: out,
+    });
 }

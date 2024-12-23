@@ -1,4 +1,5 @@
 use crate::data::game::GameProcess;
+use shared_net::Bufferable;
 use std::collections::VecDeque;
 
 use crate::data::core::{DelayType, Instruction};
@@ -6,7 +7,6 @@ use crate::data::game::game_process::GameProcessPlayerView;
 use crate::data::hall::HallCard;
 use crate::data::player::PlayerCard;
 use shared_net::bufferable_derive::Bufferable;
-use shared_net::sizedbuffers::Bufferable;
 use shared_net::VSizedBuffer;
 use std::fmt;
 
@@ -180,8 +180,7 @@ impl GameMachinePlayerView {
 #[cfg(test)]
 mod test {
     use crate::data::game::game_machine::GameMachinePlayerView;
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
+    use shared_net::{Bufferable, VSizedBuffer};
 
     #[test]
     fn test_machine_player_view() {

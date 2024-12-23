@@ -1,7 +1,5 @@
 use shared_net::bufferable_derive::Bufferable;
-use shared_net::sizedbuffers::Bufferable;
-use shared_net::types::{AuthType, NodeType, UserIdType};
-use shared_net::VSizedBuffer;
+use shared_net::{AuthType, Bufferable, NodeType, UserIdType, VSizedBuffer};
 
 #[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
@@ -24,8 +22,7 @@ impl GateHeader {
 #[cfg(test)]
 mod test {
     use crate::message::gate_header::GateHeader;
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
+    use shared_net::{Bufferable, VSizedBuffer};
 
     #[test]
     fn test_gate_header() {

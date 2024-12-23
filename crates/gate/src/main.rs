@@ -1,16 +1,15 @@
 use std::collections::HashMap;
-use std::env;
 use std::net::{IpAddr, Ipv6Addr, SocketAddr};
 use std::sync::{Arc, Mutex};
 
 use chrono::Utc;
+use gate::message::gate_header::GateHeader;
 use tokio::signal;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
+use tracing::{info, instrument};
 
-use gate::message::gate_header::GateHeader;
-use shared_net::types::{AuthType, NodeType, TimestampType, UserIdType};
-use shared_net::{op, IdMessage, RoutedMessage, VClientMode, VSizedBuffer};
+use shared_net::{op, AuthType, IdMessage, NodeType, RoutedMessage, TimestampType, UserIdType, VClientMode, VSizedBuffer};
 
 struct GateUser {
     name: String,
@@ -24,33 +23,51 @@ struct Gate {
     map: HashMap<u128, GateUser>,
 }
 
-#[tokio::main]
-async fn main() {
-    println!("[Gate] START");
+#[allow(dead_code)]
+#[derive(Debug)]
+enum GateError {
+    Interrupt,
+    Parse(std::net::AddrParseError),
+    Client(()),
+    Server(()),
+}
 
-    let mut args = env::args();
+#[tokio::main]
+async fn main() -> Result<(), GateError> {
+    tracing_subscriber::fmt::init();
+
+    let mut args = std::env::args();
     let _ = args.next(); // program name
     let iface_to_courtyard = args.next().unwrap_or("[::1]:12345".to_string());
     let iface_to_vagabond = args.next().unwrap_or("[::]:23451".to_string());
+
+    gate_main(iface_to_vagabond, iface_to_courtyard).await
+}
+
+#[instrument]
+async fn gate_main(interface: String, courtyard: String) -> Result<(), GateError> {
+    info!("START");
 
     let (g2c_tx, g2c_rx) = mpsc::unbounded_channel();
     let (g2v_tx, g2v_rx) = mpsc::unbounded_channel();
 
     let gate_context = Arc::new(Mutex::new(Gate {
-        myface: iface_to_vagabond.parse().unwrap(),
+        myface: interface.parse().map_err(GateError::Parse)?,
         reply: g2v_tx.clone(),
         map: HashMap::new(),
     }));
 
-    let gate = shared_net::async_server(gate_context.clone(), g2v_tx, g2c_rx, iface_to_vagabond, process_vagabond);
-    let courtyard_client = shared_net::async_client(gate_context.clone(), op::Flavor::Gate, g2c_tx, g2v_rx, iface_to_courtyard, process_courtyard);
+    let gate = shared_net::async_server(gate_context.clone(), g2v_tx, g2c_rx, interface, process_vagabond);
+    let courtyard_client = shared_net::async_client(gate_context.clone(), op::Flavor::Gate, g2c_tx, g2v_rx, courtyard, process_courtyard);
 
     tokio::spawn(gate);
     tokio::spawn(courtyard_client);
 
-    let _ = signal::ctrl_c().await;
+    signal::ctrl_c().await.map_err(|_| GateError::Interrupt)?;
 
-    println!("[Gate] END");
+    info!("END");
+
+    Ok(())
 }
 
 fn process_vagabond(context: Arc<Mutex<Gate>>, tx: UnboundedSender<RoutedMessage>, msg: IdMessage) -> bool {
@@ -60,27 +77,10 @@ fn process_vagabond(context: Arc<Mutex<Gate>>, tx: UnboundedSender<RoutedMessage
 
     match command {
         op::Command::Hello => v_hello(context, id, &mut buf),
-        op::Command::Chat |
-        op::Command::DM => v_marshal_username(context, op::Flavor::Forum, command, &tx, &mut buf),
-        op::Command::InvGen |
-        op::Command::InvList => v_marshal(context, op::Flavor::Archive, command, &tx, id, &mut buf),
-        op::Command::GameActivate |
-        op::Command::GameBuild |
-        op::Command::GameStartTurn |
-        op::Command::GameChooseAttr |
-        op::Command::GamePlayCard |
-        op::Command::GameUpdateState |
-        op::Command::GameEndTurn => v_marshal(context, op::Flavor::Hall, command, &tx, id, &mut buf),
-        op::Command::NoOp |
-        op::Command::Register |
-        op::Command::Authorize |
-        op::Command::GameStartGame |
-        op::Command::GameRoll |
-        op::Command::GameResources |
-        op::Command::GameResolveCards |
-        op::Command::GameEndGame |
-        op::Command::GameTick |
-        op::Command::UserAttr => false,
+        op::Command::Chat | op::Command::DM => v_marshal_username(context, op::Flavor::Forum, command, &tx, &mut buf),
+        op::Command::InvGen | op::Command::InvList => v_marshal(context, op::Flavor::Archive, command, &tx, id, &mut buf),
+        op::Command::GameActivate | op::Command::GameBuild | op::Command::GameStartTurn | op::Command::GameChooseAttr | op::Command::GamePlayCard | op::Command::GameUpdateState | op::Command::GameEndTurn => v_marshal(context, op::Flavor::Hall, command, &tx, id, &mut buf),
+        op::Command::NoOp | op::Command::Register | op::Command::Authorize | op::Command::GameStartGame | op::Command::GameRoll | op::Command::GameResources | op::Command::GameResolveCards | op::Command::GameEndGame | op::Command::GameTick | op::Command::UserAttr => false,
     }
 }
 
@@ -102,7 +102,11 @@ fn v_marshal_username(context: Arc<Mutex<Gate>>, flavor: op::Flavor, command: op
         out.push(&user.name);
         out.xfer_bytes(buf);
 
-        tx.send(RoutedMessage { route: op::Route::Local, buf: out }).is_ok()
+        tx.send(RoutedMessage {
+            route: op::Route::Local,
+            buf: out,
+        })
+        .is_ok()
     } else {
         false
     }
@@ -117,7 +121,11 @@ fn v_marshal(context: Arc<Mutex<Gate>>, flavor: op::Flavor, command: op::Command
         out.push(&GateHeader::new(id, user.user, auth));
         out.xfer_bytes(buf);
 
-        tx.send(RoutedMessage { route: op::Route::Local, buf: out }).is_ok()
+        tx.send(RoutedMessage {
+            route: op::Route::Local,
+            buf: out,
+        })
+        .is_ok()
     } else {
         false
     }
@@ -130,32 +138,15 @@ fn process_courtyard(context: Arc<Mutex<Gate>>, tx: UnboundedSender<RoutedMessag
         op::Command::Authorize => c_authorize(context, &mut buf),
         op::Command::DM => c_marshal_name(command, context, &tx, &mut buf),
         op::Command::Chat => c_marshal_all(command, &tx, &mut buf),
-        op::Command::InvList |
-        op::Command::GameActivate |
-        op::Command::GameBuild |
-        op::Command::GameStartGame |
-        op::Command::GameStartTurn |
-        op::Command::GameRoll |
-        op::Command::GameChooseAttr |
-        op::Command::GameResources |
-        op::Command::GamePlayCard |
-        op::Command::GameResolveCards |
-        op::Command::GameEndTurn |
-        op::Command::GameTick |
-        op::Command::GameUpdateState |
-        op::Command::GameEndGame => c_marshal_one(command, &tx, &mut buf),
-        op::Command::NoOp |
-        op::Command::Register |
-        op::Command::Hello |
-        op::Command::UserAttr |
-        op::Command::InvGen => VClientMode::Continue,
+        op::Command::InvList | op::Command::GameActivate | op::Command::GameBuild | op::Command::GameStartGame | op::Command::GameStartTurn | op::Command::GameRoll | op::Command::GameChooseAttr | op::Command::GameResources | op::Command::GamePlayCard | op::Command::GameResolveCards | op::Command::GameEndTurn | op::Command::GameTick | op::Command::GameUpdateState | op::Command::GameEndGame => c_marshal_one(command, &tx, &mut buf),
+        op::Command::NoOp | op::Command::Register | op::Command::Hello | op::Command::UserAttr | op::Command::InvGen => VClientMode::Continue,
     }
 }
 
 fn convert_to_v6(iface: SocketAddr) -> Ipv6Addr {
     match iface.ip() {
         IpAddr::V4(ipv4) => ipv4.to_ipv6_compatible(),
-        IpAddr::V6(ipv6) => ipv6
+        IpAddr::V6(ipv6) => ipv6,
     }
 }
 
@@ -175,7 +166,14 @@ fn c_authorize(context: Arc<Mutex<Gate>>, buf: &mut VSizedBuffer) -> VClientMode
 
     let mut context = context.lock().unwrap();
 
-    context.map.insert(auth, GateUser { name, user, vagabond: 0 });
+    context.map.insert(
+        auth,
+        GateUser {
+            name,
+            user,
+            vagabond: 0,
+        },
+    );
 
     let ipv6 = convert_to_v6(context.myface);
     out.push_bytes(&ipv6.octets());
@@ -183,7 +181,14 @@ fn c_authorize(context: Arc<Mutex<Gate>>, buf: &mut VSizedBuffer) -> VClientMode
     out.push(&auth);
     out.xfer_bytes(buf);
 
-    if context.reply.send(RoutedMessage { route: op::Route::Local, buf: out }).is_err() {
+    if context
+        .reply
+        .send(RoutedMessage {
+            route: op::Route::Local,
+            buf: out,
+        })
+        .is_err()
+    {
         return VClientMode::Disconnect;
     }
 
@@ -196,7 +201,14 @@ fn c_authorize(context: Arc<Mutex<Gate>>, buf: &mut VSizedBuffer) -> VClientMode
     let now = Utc::now().timestamp() as TimestampType;
     update.push(&now);
 
-    if context.reply.send(RoutedMessage { route: op::Route::Local, buf: update }).is_err() {
+    if context
+        .reply
+        .send(RoutedMessage {
+            route: op::Route::Local,
+            buf: update,
+        })
+        .is_err()
+    {
         VClientMode::Disconnect
     } else {
         VClientMode::Continue
@@ -235,7 +247,13 @@ fn send_to_client(route: op::Route, command: op::Command, tx: &UnboundedSender<R
     out.push(&command);
     out.xfer_bytes(buf);
 
-    if tx.send(RoutedMessage { route, buf: out }).is_err() {
+    if tx
+        .send(RoutedMessage {
+            route,
+            buf: out,
+        })
+        .is_err()
+    {
         VClientMode::Disconnect
     } else {
         VClientMode::Continue

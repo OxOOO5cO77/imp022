@@ -8,6 +8,8 @@ authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 [dependencies]
 sqlx = { version = "0.8.2", features = ["postgres", "macros", "uuid", "runtime-tokio-rustls"] }
 tokio = { version = "1.42.0", features = ["macros", "rt-multi-thread"] }
+tracing = { version = "0.1.41" }
+tracing-subscriber = { version = "0.3.19" }
 uuid = { version = "1.11.0", features = ["v4"] }
 gate = { path = "../gate" }
 shared-net = { path = "../shared-net" }

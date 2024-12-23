@@ -1,6 +1,6 @@
 use crate::data::hall::HallMissionObjective;
 use shared_net::bufferable_derive::Bufferable;
-use shared_net::sizedbuffers::Bufferable;
+use shared_net::Bufferable;
 use shared_net::VSizedBuffer;
 
 pub struct GameMissionObjective {
@@ -41,8 +41,7 @@ impl GameMissionObjectivePlayerView {
 #[cfg(test)]
 mod test {
     use crate::data::game::GameMissionObjectivePlayerView;
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
+    use shared_net::{Bufferable, VSizedBuffer};
 
     #[test]
     fn test_game_mission_objective_player_view() {

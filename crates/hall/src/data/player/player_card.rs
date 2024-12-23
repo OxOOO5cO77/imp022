@@ -4,8 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::data::core::{CardNumberType, Rarity, SetType};
 use crate::data::hall::HallCard;
-use shared_net::sizedbuffers::Bufferable;
-use shared_net::VSizedBuffer;
+use shared_net::{Bufferable, VSizedBuffer};
 
 pub type PackedCardType = u16;
 
@@ -81,8 +80,7 @@ impl Bufferable for PlayerCard {
 mod test {
     use crate::data::core::Rarity;
     use crate::data::player::player_card::PlayerCard;
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
+    use shared_net::{Bufferable, VSizedBuffer};
 
     #[test]
     fn test_player_card() {

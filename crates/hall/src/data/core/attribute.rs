@@ -1,7 +1,6 @@
 use num_enum::{FromPrimitive, IntoPrimitive};
 use serde::{Deserialize, Serialize};
-use shared_net::sizedbuffers::Bufferable;
-use shared_net::VSizedBuffer;
+use shared_net::{Bufferable, VSizedBuffer};
 
 pub type AttributeValueType = u8;
 type AttributeKindType = u8;

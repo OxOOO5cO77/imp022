@@ -1,7 +1,7 @@
-use crate::message::CommandMessage;
 use shared_net::bufferable_derive::Bufferable;
-use shared_net::sizedbuffers::Bufferable;
-use shared_net::{op, VSizedBuffer};
+use shared_net::{op, Bufferable, VSizedBuffer};
+
+use crate::message::CommandMessage;
 
 #[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
@@ -16,8 +16,7 @@ impl CommandMessage for GameResolveCardsMessage {
 #[cfg(test)]
 mod test {
     use crate::message::game_resolve_cards::GameResolveCardsMessage;
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
+    use shared_net::{Bufferable, VSizedBuffer};
 
     #[test]
     fn test_response() {

@@ -3,7 +3,7 @@ use crate::data::game::game_machine::GameMachineContext;
 use crate::data::hall::HallCard;
 use crate::data::player::PlayerCard;
 use shared_net::bufferable_derive::Bufferable;
-use shared_net::sizedbuffers::Bufferable;
+use shared_net::Bufferable;
 use shared_net::VSizedBuffer;
 use std::cmp::Ordering;
 
@@ -118,8 +118,7 @@ impl GameProcessPlayerView {
 #[cfg(test)]
 mod test {
     use crate::data::game::game_process::GameProcessPlayerView;
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
+    use shared_net::{Bufferable, VSizedBuffer};
 
     #[test]
     fn test_process_player_view() {

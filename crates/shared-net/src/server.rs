@@ -5,12 +5,12 @@ use std::sync::Arc;
 use tokio::io::{AsyncReadExt, WriteHalf};
 use tokio::net::TcpListener;
 use tokio::signal;
-use tokio::sync::{mpsc, Mutex};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use tokio::sync::{mpsc, Mutex};
+use tracing::{error, info};
 
-use crate::{IdMessage, Route, RoutedMessage, VSizedBuffer};
-use crate::op;
 use crate::util::write_buf;
+use crate::{op, IdMessage, RoutedMessage, VSizedBuffer};
 
 struct VConnection<T> {
     write: WriteHalf<T>,
@@ -21,7 +21,10 @@ type VConnectionMap<T> = HashMap<u8, VConnection<T>>;
 
 type FnProcess<T> = fn(context: T, UnboundedSender<RoutedMessage>, msg: IdMessage) -> bool;
 
-pub async fn async_server<T>(context: T, external_tx: UnboundedSender<RoutedMessage>, mut external_rx: UnboundedReceiver<RoutedMessage>, interface: String, process: FnProcess<T>) -> Result<(), ()> where T: Clone {
+pub async fn async_server<T>(context: T, external_tx: UnboundedSender<RoutedMessage>, mut external_rx: UnboundedReceiver<RoutedMessage>, interface: String, process: FnProcess<T>) -> Result<(), ()>
+where
+    T: Clone,
+{
     let listener = TcpListener::bind(interface).await.unwrap();
 
     let connections = Arc::new(Mutex::new(VConnectionMap::new()));
@@ -54,7 +57,7 @@ pub async fn async_server<T>(context: T, external_tx: UnboundedSender<RoutedMess
                     Ok(id) => id,
                     Err(_) => continue,
                 };
-                println!("Connection {} from {}", id, local_addr);
+                info!("Connection {} from {}", id, local_addr);
                 connections.insert(id, connection);
                 last_id = id;
 
@@ -74,7 +77,7 @@ pub async fn async_server<T>(context: T, external_tx: UnboundedSender<RoutedMess
                                         Ok(bytes) => {
 
                                             if bytes != expected_bytes {
-                                                println!("Bytes:{} Expected:{}", bytes, expected_bytes);
+                                                error!("Bytes:{} Expected:{}", bytes, expected_bytes);
                                                 true
                                             } else {
                                                 buf.set_size(expected_bytes);
@@ -110,10 +113,10 @@ pub async fn async_server<T>(context: T, external_tx: UnboundedSender<RoutedMess
                         if let Some(cx) = connections.get_mut(&id) {
                             cx.flavor = Some(flavor);
                         }
-                        println!("Registered {} as {:?}", id, flavor);
+                        info!("Registered {} as {:?}", id, flavor);
                         let mut out = VSizedBuffer::new(32);
                         out.push(&op::Command::Hello);
-                        outgoing_tx.send(RoutedMessage { route: Route::One(id), buf: out }).is_ok()
+                        outgoing_tx.send(RoutedMessage { route: op::Route::One(id), buf: out }).is_ok()
                     }
                     _ => {
                         msg.buf.rewind();
@@ -131,10 +134,10 @@ pub async fn async_server<T>(context: T, external_tx: UnboundedSender<RoutedMess
             Some(msg) = outgoing_rx.recv() => {
                 // handle outgoing
                 match msg.route {
-                    Route::Local => {
+                    op::Route::Local => {
                         let _ = external_tx.send( msg );
                     }
-                    Route::One(msg_id) => {
+                    op::Route::One(msg_id) => {
                         let msg_buf = msg.buf;
                         let mut connections = connections.lock().await;
 
@@ -145,7 +148,7 @@ pub async fn async_server<T>(context: T, external_tx: UnboundedSender<RoutedMess
                             }
                         }
                     }
-                    Route::Any(flavor) => {
+                    op::Route::Any(flavor) => {
                         let msg_buf = msg.buf;
                         let mut connections = connections.lock().await;
                         if let Some((id,cx)) = connections.iter_mut().find(|(_,cx)| cx.flavor == Some(flavor)) {
@@ -154,7 +157,7 @@ pub async fn async_server<T>(context: T, external_tx: UnboundedSender<RoutedMess
                             }
                         }
                     }
-                    Route::All(flavor) => {
+                    op::Route::All(flavor) => {
                         let msg_buf = msg.buf;
                         let mut connections = connections.lock().await;
                         for (id,cx) in connections.iter_mut().filter(|(_,cx)| cx.flavor == Some(flavor)) {
@@ -163,7 +166,7 @@ pub async fn async_server<T>(context: T, external_tx: UnboundedSender<RoutedMess
                             }
                         }
                     }
-                    Route::None => {}
+                    op::Route::None => {}
                 }
             }
             _ = signal::ctrl_c() => {

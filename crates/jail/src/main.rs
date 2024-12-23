@@ -1,33 +1,42 @@
-use std::env;
-
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
-use shared_net::types::{NodeType, TimestampType, UserIdType};
+use tracing::{info, instrument};
 
-use shared_net::{VClientMode, RoutedMessage, VSizedBuffer};
-use shared_net::op;
-use shared_net::op::Flavor;
+use shared_net::{op, NodeType, RoutedMessage, TimestampType, UserIdType, VClientMode, VSizedBuffer};
 
 #[derive(Clone)]
 struct NoContext;
 
-#[tokio::main]
-async fn main() -> Result<(), ()> {
-    println!("[Jail] START");
+#[allow(dead_code)]
+#[derive(Debug)]
+enum JailError {
+    Client(()),
+}
 
-    let mut args = env::args();
+#[tokio::main]
+async fn main() -> Result<(), JailError> {
+    tracing_subscriber::fmt::init();
+
+    let mut args = std::env::args();
     let _ = args.next(); // program name
-    let iface_to_courtyard = args.next().unwrap_or("[::1]:12345".to_string());
+    let courtyard = args.next().unwrap_or("[::1]:12345".to_string());
+
+    jail_main(courtyard).await
+}
+
+#[instrument]
+async fn jail_main(courtyard: String) -> Result<(), JailError> {
+    info!("START");
 
     let (dummy_tx, dummy_rx) = mpsc::unbounded_channel();
 
-    let courtyard_client = shared_net::async_client(NoContext, Flavor::Jail, dummy_tx, dummy_rx, iface_to_courtyard, process_courtyard);
+    let courtyard_client = shared_net::async_client(NoContext, op::Flavor::Jail, dummy_tx, dummy_rx, courtyard, process_courtyard);
 
-    let result = courtyard_client.await;
+    courtyard_client.await.map_err(JailError::Client)?;
 
-    println!("[Jail] END");
+    info!("END");
 
-    result
+    Ok(())
 }
 
 fn process_courtyard(_context: NoContext, _tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
@@ -44,5 +53,5 @@ fn c_userattr(mut buf: VSizedBuffer) {
     let attr = buf.pull::<String>();
     let time = buf.pull::<TimestampType>();
 
-    println!("[{}] {}: {}", user, attr, time);
+    info!(user, attr, time);
 }

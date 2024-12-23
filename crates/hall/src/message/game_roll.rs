@@ -1,8 +1,8 @@
+use shared_net::bufferable_derive::Bufferable;
+use shared_net::{op, Bufferable, VSizedBuffer};
+
 use crate::data::core::ErgType;
 use crate::message::CommandMessage;
-use shared_net::bufferable_derive::Bufferable;
-use shared_net::sizedbuffers::Bufferable;
-use shared_net::{op, VSizedBuffer};
 
 type RollArray = [ErgType; 4];
 
@@ -19,8 +19,7 @@ impl CommandMessage for GameRollMessage {
 #[cfg(test)]
 mod test {
     use crate::message::game_roll::GameRollMessage;
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
+    use shared_net::{Bufferable, VSizedBuffer};
 
     #[test]
     fn test_response() {

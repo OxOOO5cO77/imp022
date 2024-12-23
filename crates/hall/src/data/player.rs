@@ -1,7 +1,8 @@
 use crate::data::core::Attributes;
 use serde::{Deserialize, Serialize};
-use shared_net::types::SeedType;
 use std::collections::VecDeque;
+
+use shared_net::SeedType;
 
 mod player_build;
 mod player_card;

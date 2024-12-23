@@ -1,11 +1,10 @@
 use serde::{Deserialize, Serialize};
+use shared_net::Bufferable;
 
 use crate::data::core::AttributeValueType;
 use crate::data::player::{PlayerBuild, PlayerDetail};
 use shared_net::bufferable_derive::Bufferable;
-use shared_net::sizedbuffers::Bufferable;
-use shared_net::types::SeedType;
-use shared_net::VSizedBuffer;
+use shared_net::{SeedType, VSizedBuffer};
 
 type AttributeArray = [AttributeValueType; 4];
 type BuildArray = [PlayerBuild; 4];
@@ -26,8 +25,7 @@ mod test {
     use crate::data::player::player_build::PlayerBuild;
     use crate::data::player::player_detail::PlayerDetail;
     use crate::data::player::player_part::PlayerPart;
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
+    use shared_net::{Bufferable, VSizedBuffer};
 
     #[test]
     fn test_player_part() {

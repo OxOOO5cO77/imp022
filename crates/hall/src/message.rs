@@ -27,9 +27,7 @@ pub use game_roll::GameRollMessage;
 pub use game_start_game::GameStartGameMessage;
 pub use game_tick::GameTickMessage;
 
-use shared_net::op;
-use shared_net::sizedbuffers::Bufferable;
-use shared_net::types::GameIdType;
+use shared_net::{op, Bufferable, GameIdType};
 
 pub trait CommandMessage: Bufferable {
     const COMMAND: op::Command;

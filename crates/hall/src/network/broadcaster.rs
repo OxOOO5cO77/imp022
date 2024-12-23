@@ -1,9 +1,11 @@
-use crate::network::util::send_routed_message;
-use hall::message::CommandMessage;
-use shared_net::types::{NodeType, UserIdType};
-use shared_net::RoutedMessage;
 use std::collections::HashMap;
+
 use tokio::sync::mpsc::UnboundedSender;
+
+use hall::message::CommandMessage;
+use shared_net::{NodeType, RoutedMessage, UserIdType};
+
+use crate::network::util::send_routed_message;
 
 pub(crate) struct Broadcaster {
     pub(crate) local_tx: UnboundedSender<RoutedMessage>,

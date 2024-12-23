@@ -1,9 +1,8 @@
+use shared_net::bufferable_derive::Bufferable;
+use shared_net::{op, Bufferable, GameIdType, VSizedBuffer};
+
 use crate::data::core::MissionNodeIdType;
 use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
-use shared_net::bufferable_derive::Bufferable;
-use shared_net::sizedbuffers::Bufferable;
-use shared_net::types::GameIdType;
-use shared_net::{op, VSizedBuffer};
 
 pub type CardIdxType = u8;
 
@@ -71,8 +70,7 @@ impl GameResponseMessage for GamePlayCardResponse {}
 #[cfg(test)]
 mod test {
     use crate::message::game_play_card::{CardTarget, GamePlayCardRequest, GamePlayCardResponse};
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
+    use shared_net::{Bufferable, VSizedBuffer};
 
     #[test]
     fn test_request() {

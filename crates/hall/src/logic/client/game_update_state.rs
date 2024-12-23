@@ -1,9 +1,10 @@
-use crate::network::broadcaster::Broadcaster;
-use crate::HallContext;
 use gate::message::gate_header::GateHeader;
 use hall::data::game::GameState;
 use hall::message::{GameUpdateStateRequest, GameUpdateStateResponse};
-use shared_net::types::NodeType;
+use shared_net::NodeType;
+
+use crate::network::broadcaster::Broadcaster;
+use crate::HallContext;
 
 pub(crate) fn recv_game_update_state(context: &HallContext, request: GameUpdateStateRequest, _: NodeType, header: GateHeader) -> Option<GameUpdateStateResponse> {
     let games = context.games.read().unwrap();

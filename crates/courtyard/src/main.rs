@@ -1,27 +1,39 @@
-use std::env;
-
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
+use tracing::{info, instrument};
 
-use shared_net::{op, IdMessage, RoutedMessage, VSizedBuffer};
-use shared_net::sizedbuffers::Bufferable;
+use shared_net::{op, Bufferable, IdMessage, RoutedMessage, VSizedBuffer};
 
 #[derive(Clone)]
 struct NoContext;
 
-#[tokio::main]
-async fn main() {
-    println!("[Courtyard] START");
+#[derive(Debug)]
+enum CourtyardError {
+    Server(()),
+}
 
-    let mut args = env::args();
+#[tokio::main]
+async fn main() -> Result<(), CourtyardError> {
+    tracing_subscriber::fmt::init();
+
+    let mut args = std::env::args();
     let _ = args.next(); // program name
     let interface = args.next().unwrap_or("[::]:12345".to_string());
 
+    courtyard_main(interface).await
+}
+
+#[instrument]
+async fn courtyard_main(interface: String) -> Result<(), CourtyardError> {
+    info!("START");
+
     let (dummy_tx, dummy_rx) = mpsc::unbounded_channel();
 
-    let _ = shared_net::async_server(NoContext, dummy_tx, dummy_rx, interface, process).await;
+    shared_net::async_server(NoContext, dummy_tx, dummy_rx, interface, process).await.map_err(CourtyardError::Server)?;
 
-    println!("[Courtyard] END");
+    info!("END");
+
+    Ok(())
 }
 
 fn process(_context: NoContext, tx: UnboundedSender<RoutedMessage>, msg: IdMessage) -> bool {
@@ -34,7 +46,11 @@ fn process(_context: NoContext, tx: UnboundedSender<RoutedMessage>, msg: IdMessa
     out_buf.push(&msg.id);
     out_buf.xfer_bytes(&mut in_buf);
 
-    println!("[Courtyard] [{}] {:?} ==> {:?} **{} bytes**", msg.id, command, route, out_buf.size());
+    info!(msg.id, ?command, ?route, bytes = out_buf.size());
 
-    tx.send(RoutedMessage { route, buf: out_buf }).is_ok()
+    tx.send(RoutedMessage {
+        route,
+        buf: out_buf,
+    })
+    .is_ok()
 }

@@ -1,6 +1,5 @@
 use num_enum::{FromPrimitive, IntoPrimitive};
-use shared_net::sizedbuffers::Bufferable;
-use shared_net::VSizedBuffer;
+use shared_net::{Bufferable, VSizedBuffer};
 
 #[cfg(test)]
 use strum_macros::EnumIter;

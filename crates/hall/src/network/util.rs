@@ -1,9 +1,8 @@
-use hall::message::CommandMessage;
-use shared_net::sizedbuffers::Bufferable;
-use shared_net::types::NodeType;
-use shared_net::{op, RoutedMessage, VSizedBuffer};
 use tokio::sync::mpsc::error::SendError;
 use tokio::sync::mpsc::UnboundedSender;
+
+use hall::message::CommandMessage;
+use shared_net::{op, Bufferable, NodeType, RoutedMessage, VSizedBuffer};
 
 pub(crate) fn send_routed_message<T: CommandMessage>(message: &T, gate: NodeType, vagabond: NodeType, tx: &UnboundedSender<RoutedMessage>) -> Result<(), SendError<RoutedMessage>> {
     let route = op::Route::One(gate);

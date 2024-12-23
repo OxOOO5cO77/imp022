@@ -9,6 +9,7 @@ authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 bufferable-derive = { version = "0.1.0", path = "bufferable-derive" }
 num_enum = { version = "0.7.3" }
 tokio = { version = "1.42.0", features = ["io-util", "macros", "net", "rt", "signal", "sync", "time"] }
+tracing = { version = "0.1.41" }
 
 [dev-dependencies]
 strum_macros = { version = "0.26.4" }

@@ -2,8 +2,7 @@ use std::mem::size_of;
 
 use crate::data::core::{Detail, DetailNumberType, DetailValueType, GeneralType, SpecificType};
 use serde::{Deserialize, Serialize};
-use shared_net::sizedbuffers::Bufferable;
-use shared_net::VSizedBuffer;
+use shared_net::{Bufferable, VSizedBuffer};
 
 pub type PackedDetailType = u64;
 
@@ -97,8 +96,7 @@ impl Bufferable for PlayerDetail {
 mod test {
     use crate::data::core::Detail;
     use crate::data::player::player_detail::PlayerDetail;
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
+    use shared_net::{Bufferable, VSizedBuffer};
 
     #[test]
     fn test_player_detail() {

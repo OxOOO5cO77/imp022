@@ -1,15 +1,17 @@
+use std::mem::discriminant;
+
+use bevy::prelude::*;
+use bevy_simple_text_input::{TextInputCursorPos, TextInputInactive, TextInputSubmitEvent, TextInputValue};
+use tokio::sync::mpsc;
+
+use shared_net::AuthType;
+
 use crate::gfx::FrameMaterial;
 use crate::manager::{AtlasManager, NetworkManager, ScreenLayoutManager};
 use crate::network::client_drawbridge;
 use crate::network::client_drawbridge::{AuthInfo, DrawbridgeClient, DrawbridgeIFace};
 use crate::network::client_gate::{GateClient, GateCommand, GateIFace};
 use crate::system::AppState;
-use bevy::prelude::*;
-use bevy_simple_text_input::{TextInputCursorPos, TextInputInactive, TextInputSubmitEvent, TextInputValue};
-use shared_net::types::AuthType;
-use std::env;
-use std::mem::discriminant;
-use tokio::sync::mpsc;
 
 const SCREEN_LAYOUT: &str = "login";
 
@@ -64,8 +66,8 @@ fn drawbridge_enter(
     let (to_drawbridge_tx, to_drawbridge_rx) = mpsc::unbounded_channel();
     let (from_drawbridge_tx, from_drawbridge_rx) = mpsc::unbounded_channel();
 
-    let username = env::var("VAGABOND_USERNAME").unwrap_or("".to_string());
-    let password = env::var("VAGABOND_PASSWORD").unwrap_or("".to_string());
+    let username = std::env::var("VAGABOND_USERNAME").unwrap_or("".to_string());
+    let password = std::env::var("VAGABOND_PASSWORD").unwrap_or("".to_string());
 
     let drawbridge = DrawbridgeIFace {
         username,

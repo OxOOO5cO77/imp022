@@ -1,10 +1,13 @@
 use std::collections::HashMap;
 
-use crate::AppState;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
 use axum::Json;
-use shared_net::types::SeedType;
+use tracing::{info, warn};
+
+use shared_net::SeedType;
+
+use crate::AppState;
 use warehouse::rest::player::PlayerBioResponse;
 
 pub(crate) async fn get(State(state): State<AppState>, Path(params): Path<HashMap<String, String>>) -> impl IntoResponse {
@@ -13,13 +16,14 @@ pub(crate) async fn get(State(state): State<AppState>, Path(params): Path<HashMa
     let player_bio = state.bio_manager.generate_bio(seed);
 
     match &player_bio {
-        Some(p) => println!("[Warehouse] /player/{seed_string} => {} ({},{},{})", p.name, p.birthplace.0, p.birthplace.1, p.birthplace.2),
-        None => println!("[Warehouse] /player/{seed_string} => INVALID"),
+        Some(p) => info!("[Warehouse] /player/{seed_string} => {} ({},{},{})", p.name, p.birthplace.0, p.birthplace.1, p.birthplace.2),
+        None => warn!("[Warehouse] /player/{seed_string} => INVALID"),
     }
 
-    Json(PlayerBioResponse {
+    let response = PlayerBioResponse {
         player_bio,
-    })
+    };
+    Json(response)
 }
 
 #[cfg(test)]

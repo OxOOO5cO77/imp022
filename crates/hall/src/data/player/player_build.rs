@@ -3,8 +3,7 @@ use std::mem::size_of;
 use serde::{Deserialize, Serialize};
 
 use crate::data::core::{Build, BuildNumberType, BuildValueType, CompanyType, MarketType};
-use shared_net::sizedbuffers::Bufferable;
-use shared_net::VSizedBuffer;
+use shared_net::{Bufferable, VSizedBuffer};
 
 pub type PackedBuildType = u32;
 
@@ -98,8 +97,7 @@ impl Bufferable for PlayerBuild {
 mod test {
     use crate::data::core::Build;
     use crate::data::player::player_build::PlayerBuild;
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
+    use shared_net::{Bufferable, VSizedBuffer};
 
     #[test]
     fn test_player_build() {

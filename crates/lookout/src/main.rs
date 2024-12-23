@@ -1,45 +1,61 @@
-use std::env;
 use std::sync::{Arc, Mutex};
 
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use sqlx::types::Uuid;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
-use shared_net::types::{PasswordType, NodeType, UserIdType};
+use tracing::{info, instrument};
 
-use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
+use shared_net::{op, NodeType, PasswordType, RoutedMessage, UserIdType, VClientMode, VSizedBuffer};
 
 struct Lookout {
     pool: PgPool,
 }
 
+#[allow(dead_code)]
+#[derive(Debug)]
+enum LookoutError {
+    Environment(std::env::VarError),
+    Database(sqlx::Error),
+    Client(()),
+}
+
 #[tokio::main]
-async fn main() -> Result<(), ()> {
-    println!("[Lookout] START");
+async fn main() -> Result<(), LookoutError> {
+    tracing_subscriber::fmt::init();
 
-    let mut args = env::args();
+    let mut args = std::env::args();
     let _ = args.next(); // program name
-    let iface_to_courtyard = args.next().unwrap_or("[::1]:12345".to_string());
+    let courtyard = args.next().unwrap_or("[::1]:12345".to_string());
 
-    let db_connect = env::var("DB_CONNECT").expect("DB_CONNECT must be set");
+    let db_connect = std::env::var("DB_CONNECT").map_err(LookoutError::Environment)?;
+
+    lookout_main(courtyard, &db_connect).await
+}
+
+#[instrument]
+async fn lookout_main(courtyard: String, database: &str) -> Result<(), LookoutError> {
+    info!("START");
 
     let context = Arc::new(Mutex::new(Lookout {
-        pool: PgPoolOptions::new().max_connections(16).connect(&db_connect).await.unwrap()
+        pool: PgPoolOptions::new().max_connections(16).connect(database).await.map_err(LookoutError::Database)?,
     }));
 
     let (dummy_tx, dummy_rx) = mpsc::unbounded_channel();
 
-    let courtyard_client = shared_net::async_client(context, op::Flavor::Lookout, dummy_tx, dummy_rx, iface_to_courtyard, process_courtyard);
+    let courtyard_client = shared_net::async_client(context, op::Flavor::Lookout, dummy_tx, dummy_rx, courtyard, process_courtyard);
 
-    let result = courtyard_client.await;
+    courtyard_client.await.map_err(LookoutError::Client)?;
 
-    println!("[Lookout] END");
+    info!("END");
 
-    result
+    Ok(())
 }
 
 fn process_courtyard(context: Arc<Mutex<Lookout>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
-    if buf.pull::<op::Command>() == op::Command::Authorize { c_authorize(context, tx, &mut buf) }
+    if buf.pull::<op::Command>() == op::Command::Authorize {
+        c_authorize(context, tx, &mut buf)
+    }
     VClientMode::Continue
 }
 
@@ -65,7 +81,7 @@ fn c_authorize(context: Arc<Mutex<Lookout>>, tx: UnboundedSender<RoutedMessage>,
                 let pass = Uuid::as_u128(&user.pass_uuid);
 
                 if pass_hash == pass {
-                    println!("[Lookout] ALLOW: {}", user.name);
+                    info!(user_hash, "ALLOW: {}", user.name);
                     let auth = Uuid::new_v4().as_u128();
 
                     let mut out = VSizedBuffer::new(256);
@@ -78,16 +94,19 @@ fn c_authorize(context: Arc<Mutex<Lookout>>, tx: UnboundedSender<RoutedMessage>,
                     out.push(&auth);
                     out.push(&user.name);
 
-                    let _ = tx.send(RoutedMessage { route: op::Route::None, buf: out });
+                    let _ = tx.send(RoutedMessage {
+                        route: op::Route::None,
+                        buf: out,
+                    });
                 } else {
-                    println!("[Lookout] DENY: {}", user.name);
+                    info!(user_hash, "DENY: {}", user.name);
                 }
             }
             Ok(None) => {
-                println!("[Lookout] UNKNOWN: {}", user_hash);
+                info!(user_hash, "UNKNOWN");
             }
             Err(err) => {
-                println!("[Lookout] ERROR: {:?}", err);
+                info!(user_hash, "ERROR: {:?}", err);
             }
         }
     };

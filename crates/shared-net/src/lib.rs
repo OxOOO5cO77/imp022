@@ -1,23 +1,20 @@
-pub use client::async_client;
-pub use client::VClientMode;
-pub use server::async_server;
-
-use crate::op::Route;
-#[doc(inline)]
-pub use crate::sizedbuffers::VSizedBuffer;
-#[doc(inline)]
-pub use bufferable_derive;
-
 mod client;
-pub mod op;
 mod server;
-pub mod sizedbuffers;
-pub mod types;
-pub mod util;
+mod sizedbuffers;
+mod types;
+mod util;
+
+pub mod op;
+
+pub use bufferable_derive;
+pub use client::{async_client, VClientMode};
+pub use server::async_server;
+pub use sizedbuffers::{Bufferable, VSizedBuffer};
+pub use types::*;
 
 #[derive(Clone)]
 pub struct RoutedMessage {
-    pub route: Route,
+    pub route: op::Route,
     pub buf: VSizedBuffer,
 }
 

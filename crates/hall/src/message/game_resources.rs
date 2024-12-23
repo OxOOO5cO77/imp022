@@ -1,9 +1,9 @@
+use shared_net::bufferable_derive::Bufferable;
+use shared_net::{op, Bufferable, VSizedBuffer};
+
 use crate::data::core::{AttributeKind, AttributeValueType, ErgType};
 use crate::data::player::PlayerStatePlayerView;
 use crate::message::CommandMessage;
-use shared_net::bufferable_derive::Bufferable;
-use shared_net::sizedbuffers::Bufferable;
-use shared_net::{op, VSizedBuffer};
 
 #[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
@@ -24,8 +24,7 @@ mod test {
     use crate::data::core::AttributeKind;
     use crate::data::player::PlayerStatePlayerView;
     use crate::message::game_resources::GameResourcesMessage;
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
+    use shared_net::{Bufferable, VSizedBuffer};
 
     #[test]
     fn test_response() {

@@ -1,9 +1,9 @@
-use crate::logic::shared::update_user;
-use crate::HallContext;
 use gate::message::gate_header::GateHeader;
 use hall::message::{GameEndTurnRequest, GameEndTurnResponse};
-use shared_net::op;
-use shared_net::types::NodeType;
+use shared_net::{op, NodeType};
+
+use crate::logic::shared::update_user;
+use crate::HallContext;
 
 pub(crate) fn recv_game_end_turn(context: &HallContext, request: GameEndTurnRequest, _: NodeType, header: GateHeader) -> Option<GameEndTurnResponse> {
     let mut games = context.games.write().unwrap();

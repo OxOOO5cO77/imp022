@@ -1,13 +1,15 @@
 use std::collections::VecDeque;
 use std::iter::zip;
 
-use crate::manager::data_manager::DataManager;
+use rand::prelude::*;
+
 use hall::data::core::{AttributeValueType, Attributes};
 use hall::data::hall::{HallBuild, HallDetail};
 use hall::data::player::{Player, PlayerBuild, PlayerCard, PlayerDetail, PlayerPart};
 use hall::data::util;
-use rand::prelude::*;
-use shared_net::types::{PartType, SeedType};
+use shared_net::{PartType, SeedType};
+
+use crate::manager::data_manager::DataManager;
 
 #[derive(Clone)]
 pub(crate) struct PlayerPartBuilder {

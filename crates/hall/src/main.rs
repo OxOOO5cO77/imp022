@@ -1,19 +1,21 @@
+use std::collections::HashMap;
+use std::rc::Rc;
+use std::sync::RwLock;
+
+use gate::message::gate_header::GateHeader;
+use hall::data::game::GameState;
+use hall::message::{GameRequestMessage, GameResponseMessage};
+use tokio::sync::mpsc;
+use tokio::sync::mpsc::error::SendError;
+use tokio::sync::mpsc::UnboundedSender;
+use tracing::{info, instrument};
+
+use shared_net::{op, GameIdType, NodeType, RoutedMessage, VClientMode, VSizedBuffer};
+
 use crate::logic::handle_phase_complete;
 use crate::manager::data_manager::DataManager;
 use crate::network::broadcaster::Broadcaster;
 use crate::network::util::send_routed_message;
-use gate::message::gate_header::GateHeader;
-use hall::data::game::GameState;
-use hall::message::{GameRequestMessage, GameResponseMessage};
-use shared_net::types::{GameIdType, NodeType};
-use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
-use std::collections::HashMap;
-use std::env;
-use std::rc::Rc;
-use std::sync::RwLock;
-use tokio::sync::mpsc;
-use tokio::sync::mpsc::error::SendError;
-use tokio::sync::mpsc::UnboundedSender;
 
 mod logic;
 mod manager;
@@ -28,30 +30,42 @@ struct Hall {
     bx: RwLock<Broadcaster>,
 }
 
-#[tokio::main]
-async fn main() -> Result<(), ()> {
-    println!("[Hall] START");
+#[allow(dead_code)]
+#[derive(Debug)]
+enum HallError {
+    Io(std::io::Error),
+    Client(()),
+}
 
-    let mut args = env::args();
+#[tokio::main]
+async fn main() -> Result<(), HallError> {
+    tracing_subscriber::fmt::init();
+
+    let mut args = std::env::args();
     let _ = args.next(); // program name
-    let iface_to_courtyard = args.next().unwrap_or("[::1]:12345".to_string());
+    let courtyard = args.next().unwrap_or("[::1]:12345".to_string());
+
+    hall_main(courtyard).await
+}
+
+#[instrument]
+async fn hall_main(courtyard: String) -> Result<(), HallError> {
+    info!("START");
 
     let (local_tx, local_rx) = mpsc::unbounded_channel();
 
     let context = Hall {
         games: RwLock::new(HashMap::new()),
-        data_manager: RwLock::new(DataManager::new().expect("[Hall] Unable to initialize DataManager")),
+        data_manager: RwLock::new(DataManager::new().map_err(HallError::Io)?),
         bx: RwLock::new(Broadcaster::new(local_tx.clone())),
     };
     let context = Rc::new(context);
 
-    let courtyard_client = shared_net::async_client(context, op::Flavor::Hall, local_tx, local_rx, iface_to_courtyard, process_courtyard);
+    shared_net::async_client(context, op::Flavor::Hall, local_tx, local_rx, courtyard, process_courtyard).await.map_err(HallError::Client)?;
 
-    let result = courtyard_client.await;
+    info!("END");
 
-    println!("[Hall] END");
-
-    result
+    Ok(())
 }
 
 fn process_courtyard(context: HallContext, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
@@ -91,11 +105,8 @@ where
     let response = handle_request(context, request, gate, header);
 
     if let Some(response) = response {
-        match send_routed_message(&response, gate, vagabond, &tx) {
-            Ok(_) => Ok(game_id),
-            Err(err) => Err(err),
-        }
-    } else {
-        Ok(game_id)
+        send_routed_message(&response, gate, vagabond, &tx)?;
     }
+
+    Ok(game_id)
 }

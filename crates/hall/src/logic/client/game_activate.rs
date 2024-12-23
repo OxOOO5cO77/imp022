@@ -1,12 +1,14 @@
-use crate::manager::player_builder::PlayerBuilder;
-use crate::HallContext;
+use rand::Rng;
+use tracing::info;
+
 use gate::message::gate_header::GateHeader;
 use hall::data::game::{GameStage, GameState, GameUser};
 use hall::data::player::PlayerMissionState;
 use hall::message::{GameActivateRequest, GameActivateResponse};
-use rand::Rng;
-use shared_net::op;
-use shared_net::types::{GameIdType, NodeType};
+use shared_net::{op, GameIdType, NodeType};
+
+use crate::manager::player_builder::PlayerBuilder;
+use crate::HallContext;
 
 pub(crate) fn recv_game_activate(context: &HallContext, request: GameActivateRequest, gate: NodeType, header: GateHeader) -> Option<GameActivateResponse> {
     // todo: check for existing user
@@ -44,7 +46,7 @@ pub(crate) fn recv_game_activate(context: &HallContext, request: GameActivateReq
 
     context.bx.write().ok()?.track(header.user, (gate, header.vagabond));
 
-    println!("[Hall] [{:X}] Sending parts to G({})=>V({})", game_id, gate, header.vagabond);
+    info!(game_id, "Sending parts to G({})=>V({})", gate, header.vagabond);
 
     let parts = [
         //

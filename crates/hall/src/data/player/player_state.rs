@@ -4,7 +4,7 @@ use crate::data::player::PlayerCard;
 use crate::message::{CardTarget, PicksType};
 use rand::{seq::SliceRandom, Rng};
 use shared_net::bufferable_derive::Bufferable;
-use shared_net::sizedbuffers::Bufferable;
+use shared_net::Bufferable;
 use shared_net::{op, VSizedBuffer};
 use std::collections::{HashMap, VecDeque};
 
@@ -151,8 +151,7 @@ mod test {
     use crate::data::core::Rarity;
     use crate::data::player::player_card::PlayerCard;
     use crate::data::player::player_state::PlayerStatePlayerView;
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
+    use shared_net::{Bufferable, VSizedBuffer};
 
     #[test]
     fn test_player_state_player_view() {

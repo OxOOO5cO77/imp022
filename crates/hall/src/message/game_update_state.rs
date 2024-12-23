@@ -1,10 +1,9 @@
+use shared_net::bufferable_derive::Bufferable;
+use shared_net::{op, Bufferable, GameIdType, VSizedBuffer};
+
 use crate::data::game::{GameMachine, GameMachinePlayerView, GameMission, GameMissionPlayerView, GameUser};
 use crate::data::player::PlayerStatePlayerView;
 use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
-use shared_net::bufferable_derive::Bufferable;
-use shared_net::sizedbuffers::Bufferable;
-use shared_net::types::GameIdType;
-use shared_net::{op, VSizedBuffer};
 
 #[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
@@ -53,8 +52,7 @@ mod test {
     use crate::data::game::{GameMachinePlayerView, GameMissionPlayerView};
     use crate::data::player::PlayerStatePlayerView;
     use crate::message::game_update_state::GameUpdateStateResponse;
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
+    use shared_net::{Bufferable, VSizedBuffer};
 
     #[test]
     fn test_response() {

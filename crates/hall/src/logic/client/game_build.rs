@@ -1,11 +1,13 @@
-use crate::logic::shared::update_user;
-use crate::manager::player_builder::PlayerBuilder;
-use crate::HallContext;
+use tracing::info;
+
 use gate::message::gate_header::GateHeader;
 use hall::data::game::GameState;
 use hall::message::{GameBuildRequest, GameBuildResponse};
-use shared_net::op;
-use shared_net::types::NodeType;
+use shared_net::{op, NodeType};
+
+use crate::logic::shared::update_user;
+use crate::manager::player_builder::PlayerBuilder;
+use crate::HallContext;
 
 pub(crate) fn recv_game_build(context: &HallContext, request: GameBuildRequest, gate: NodeType, header: GateHeader) -> Option<GameBuildResponse> {
     let mut games = context.games.write().unwrap();
@@ -33,7 +35,7 @@ pub(crate) fn recv_game_build(context: &HallContext, request: GameBuildRequest, 
         }
     }
 
-    println!("[Hall] Sending build to G({})=>V({})", gate, header.vagabond);
+    info!(game_id = request.game_id, "Sending build to G({})=>V({})", gate, header.vagabond);
 
     response
 }

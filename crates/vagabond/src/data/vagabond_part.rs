@@ -1,6 +1,7 @@
-use crate::data::{VagabondBuild, VagabondDetail};
 use hall::data::core::AttributeValueType;
-use shared_net::types::SeedType;
+use shared_net::SeedType;
+
+use crate::data::{VagabondBuild, VagabondDetail};
 
 #[derive(Default, Clone)]
 pub struct VagabondPart {

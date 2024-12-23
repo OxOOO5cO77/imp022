@@ -5,7 +5,7 @@ use crate::data::game::{GameMissionNodePlayerView, GameMissionObjectivePlayerVie
 use crate::data::hall::HallMission;
 use crate::data::player::PlayerMissionState;
 use shared_net::bufferable_derive::Bufferable;
-use shared_net::sizedbuffers::Bufferable;
+use shared_net::Bufferable;
 use shared_net::VSizedBuffer;
 
 #[derive(Default)]
@@ -60,8 +60,7 @@ impl GameMissionPlayerView {
 #[cfg(test)]
 mod test {
     use crate::data::game::GameMissionPlayerView;
-    use shared_net::sizedbuffers::Bufferable;
-    use shared_net::VSizedBuffer;
+    use shared_net::{Bufferable, VSizedBuffer};
 
     #[test]
     fn test_game_mission_player_view() {
