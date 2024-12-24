@@ -1,4 +1,3 @@
-use shared_net::bufferable_derive::Bufferable;
 use shared_net::{op, Bufferable, GameIdType, VSizedBuffer};
 
 use crate::data::core::MissionNodeIdType;

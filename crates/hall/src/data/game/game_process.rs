@@ -2,7 +2,6 @@ use crate::data::core::{Instruction, PriorityType};
 use crate::data::game::game_machine::GameMachineContext;
 use crate::data::hall::HallCard;
 use crate::data::player::PlayerCard;
-use shared_net::bufferable_derive::Bufferable;
 use shared_net::Bufferable;
 use shared_net::VSizedBuffer;
 use std::cmp::Ordering;

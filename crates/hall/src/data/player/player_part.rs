@@ -3,7 +3,6 @@ use shared_net::Bufferable;
 
 use crate::data::core::AttributeValueType;
 use crate::data::player::{PlayerBuild, PlayerDetail};
-use shared_net::bufferable_derive::Bufferable;
 use shared_net::{SeedType, VSizedBuffer};
 
 type AttributeArray = [AttributeValueType; 4];

@@ -4,7 +4,6 @@ use crate::data::game::game_mission_objective::GameMissionObjective;
 use crate::data::game::{GameMissionNodePlayerView, GameMissionObjectivePlayerView, RemoteIdType};
 use crate::data::hall::HallMission;
 use crate::data::player::PlayerMissionState;
-use shared_net::bufferable_derive::Bufferable;
 use shared_net::Bufferable;
 use shared_net::VSizedBuffer;
 

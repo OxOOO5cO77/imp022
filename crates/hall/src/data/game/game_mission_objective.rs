@@ -1,7 +1,5 @@
 use crate::data::hall::HallMissionObjective;
-use shared_net::bufferable_derive::Bufferable;
-use shared_net::Bufferable;
-use shared_net::VSizedBuffer;
+use shared_net::{Bufferable, VSizedBuffer};
 
 pub struct GameMissionObjective {
     complete: bool,

@@ -1,4 +1,3 @@
-use shared_net::bufferable_derive::Bufferable;
 use shared_net::{op, Bufferable, GameIdType, PartType, SeedType, VSizedBuffer};
 
 use crate::data::player::PlayerCard;

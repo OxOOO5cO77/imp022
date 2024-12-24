@@ -1,4 +1,3 @@
-use shared_net::bufferable_derive::Bufferable;
 use shared_net::{AuthType, Bufferable, NodeType, UserIdType, VSizedBuffer};
 
 #[derive(Bufferable)]

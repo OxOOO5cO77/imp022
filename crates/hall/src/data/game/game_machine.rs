@@ -6,7 +6,6 @@ use crate::data::core::{DelayType, Instruction};
 use crate::data::game::game_process::GameProcessPlayerView;
 use crate::data::hall::HallCard;
 use crate::data::player::PlayerCard;
-use shared_net::bufferable_derive::Bufferable;
 use shared_net::VSizedBuffer;
 use std::fmt;
 

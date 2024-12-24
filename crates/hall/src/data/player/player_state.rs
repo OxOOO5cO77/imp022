@@ -3,7 +3,6 @@ use crate::data::hall::HallCard;
 use crate::data::player::PlayerCard;
 use crate::message::{CardTarget, PicksType};
 use rand::{seq::SliceRandom, Rng};
-use shared_net::bufferable_derive::Bufferable;
 use shared_net::Bufferable;
 use shared_net::{op, VSizedBuffer};
 use std::collections::{HashMap, VecDeque};
