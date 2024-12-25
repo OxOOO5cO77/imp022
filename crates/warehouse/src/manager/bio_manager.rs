@@ -36,13 +36,11 @@ fn is_leap_year(year: i32) -> bool {
 
 impl BioManager {
     pub fn new() -> Result<Self, Error> {
-        Ok(
-            BioManager {
-                country: load_data_single("assets/data/bio/country.ron")?,
-                city: load_data_single("assets/data/bio/city.ron")?,
-                name: load_data_single("assets/data/bio/name.ron")?,
-            }
-        )
+        Ok(BioManager {
+            country: load_data_single("assets/data/bio/country.ron")?,
+            city: load_data_single("assets/data/bio/city.ron")?,
+            name: load_data_single("assets/data/bio/name.ron")?,
+        })
     }
 
     fn country(&self, rng: &mut impl Rng) -> String {
@@ -61,7 +59,11 @@ impl BioManager {
 
     fn dob(&self, rng: &mut impl Rng) -> NaiveDate {
         let year = 2049 - rng.random_range(16..50);
-        let day_max = if is_leap_year(year) { 366 } else { 365 };
+        let day_max = if is_leap_year(year) {
+            366
+        } else {
+            365
+        };
         NaiveDate::from_yo_opt(year, rng.random_range(1..=day_max)).unwrap_or(NaiveDate::MIN)
     }
 
@@ -76,15 +78,8 @@ impl BioManager {
     }
 
     fn make_id(rng: &mut impl Rng) -> String {
-        format!("{:016X}", rng.next_u64())
-            .chars()
-            .collect::<Vec<char>>()
-            .chunks(4)
-            .map(|c| c.iter().collect::<String>())
-            .collect::<Vec<String>>()
-            .join("-")
+        format!("{:016X}", rng.next_u64()).chars().collect::<Vec<char>>().chunks(4).map(|c| c.iter().collect::<String>()).collect::<Vec<String>>().join("-")
     }
-
 
     pub fn generate_bio(&self, seed: u64) -> Option<PlayerBio> {
         let mut rng = StdRng::seed_from_u64(seed);
@@ -99,15 +94,13 @@ impl BioManager {
         let id = Self::make_id(&mut rng);
         let dob = self.dob(&mut rng);
 
-        Some(
-            PlayerBio {
-                seed,
-                id,
-                name,
-                birthplace,
-                dob,
-            }
-        )
+        Some(PlayerBio {
+            seed,
+            id,
+            name,
+            birthplace,
+            dob,
+        })
     }
 }
 
@@ -117,6 +110,19 @@ where
     P: AsRef<Path>,
 {
     let ron = std::fs::read_to_string(source_file)?;
-    let parsed = ron::from_str::<T>(&ron).map_err(|o| Error::new(ErrorKind::Other, o))?;
-    Ok(parsed)
+    ron::from_str::<T>(&ron).map_err(|o| Error::new(ErrorKind::Other, o))
+}
+
+#[cfg(test)]
+mod bio_manager_test {
+    use crate::manager::bio_manager::BioManager;
+
+    #[test]
+    fn test_load_data() -> Result<(), std::io::Error> {
+        let bm = BioManager::new()?;
+        assert!(!bm.city.is_empty());
+        assert!(!bm.country.is_empty());
+        assert!(!bm.name.is_empty());
+        Ok(())
+    }
 }
