@@ -1,4 +1,4 @@
-use crate::data::core::{Instruction, PriorityType};
+use crate::data::core::{Attributes, Instruction, PriorityType};
 use crate::data::game::game_machine::GameMachineContext;
 use crate::data::hall::HallCard;
 use crate::data::player::PlayerCard;
@@ -32,22 +32,22 @@ impl GameProcess {
         )
     }
 
-    pub(crate) fn launch(&mut self, context: &mut GameMachineContext) {
+    pub(crate) fn launch(&mut self, context: &mut GameMachineContext, attrs: &Attributes) {
         for code in &self.launch_code {
             match code {
-                Instruction::TTL(ttl) => self.ttl = *ttl as TTLType,
-                _ => context.execute(*code),
+                Instruction::TTL(ttl) => self.ttl = ttl.resolve(attrs) as TTLType,
+                _ => context.execute(*code, attrs),
             }
         }
     }
 
-    pub(crate) fn run(&mut self, context: &mut GameMachineContext) {
+    pub(crate) fn run(&mut self, context: &mut GameMachineContext, attrs: &Attributes) {
         if self.ttl == 0 {
             return;
         }
         self.ttl -= 1;
         for code in &self.run_code {
-            context.execute(*code);
+            context.execute(*code, attrs);
         }
     }
     pub(crate) fn get_ttl(&self) -> TTLType {

@@ -2,7 +2,7 @@ use crate::data::game::GameProcess;
 use shared_net::Bufferable;
 use std::collections::VecDeque;
 
-use crate::data::core::{DelayType, Instruction};
+use crate::data::core::{Attributes, DelayType, Instruction, ValueTarget};
 use crate::data::game::game_process::GameProcessPlayerView;
 use crate::data::hall::HallCard;
 use crate::data::player::PlayerCard;
@@ -86,13 +86,13 @@ impl GameMachine {
         }
     }
 
-    pub(crate) fn tick(&mut self) {
+    pub(crate) fn tick(&mut self, attrs: &Attributes) {
         if self.state != GameMachineState::Active {
             return;
         }
 
         if let Some(Some(mut process)) = self.queue.pop_front() {
-            process.launch(&mut self.context);
+            process.launch(&mut self.context, attrs);
             self.running.push(process);
         }
         self.queue.push_back(None);
@@ -101,7 +101,7 @@ impl GameMachine {
         self.running.sort();
 
         for process in self.running.iter_mut() {
-            process.run(&mut self.context);
+            process.run(&mut self.context, attrs);
         }
 
         self.state = self.context.check_termination();
@@ -133,12 +133,22 @@ impl GameMachineContext {
         }
     }
 
-    pub(crate) fn execute(&mut self, instruction: Instruction) {
+    pub(crate) fn execute(&mut self, instruction: Instruction, attrs: &Attributes) {
         match instruction {
-            Instruction::ChangeFreeSpace(amount) => self.free_space = self.free_space.saturating_add_signed(amount),
-            Instruction::ChangeThermalCapacity(amount) => self.thermal_capacity = self.thermal_capacity.saturating_add_signed(amount),
-            Instruction::ChangeSystemHealth(amount) => self.system_health = self.system_health.saturating_add_signed(amount),
-            Instruction::ChangeOpenPorts(amount) => self.open_ports = self.open_ports.saturating_add_signed(amount),
+            Instruction::INC(target, amount) => match target {
+                ValueTarget::None => {}
+                ValueTarget::FreeSpace => self.free_space = self.free_space.saturating_add(amount.resolve(attrs)),
+                ValueTarget::ThermalCapacity => self.thermal_capacity = self.thermal_capacity.saturating_add(amount.resolve(attrs)),
+                ValueTarget::SystemHealth => self.system_health = self.system_health.saturating_add(amount.resolve(attrs)),
+                ValueTarget::OpenPorts => self.open_ports = self.open_ports.saturating_add(amount.resolve(attrs)),
+            },
+            Instruction::DEC(target, amount) => match target {
+                ValueTarget::None => {}
+                ValueTarget::FreeSpace => self.free_space = self.free_space.saturating_sub(amount.resolve(attrs)),
+                ValueTarget::ThermalCapacity => self.thermal_capacity = self.thermal_capacity.saturating_sub(amount.resolve(attrs)),
+                ValueTarget::SystemHealth => self.system_health = self.system_health.saturating_sub(amount.resolve(attrs)),
+                ValueTarget::OpenPorts => self.open_ports = self.open_ports.saturating_sub(amount.resolve(attrs)),
+            },
             _ => {}
         }
     }

@@ -13,7 +13,7 @@ pub(crate) fn handle_choose_attr(game: &mut GameState, bx: &mut Broadcaster) {
                 if let Some(remote_id) = mission.remote_from_node(user.mission_state.node) {
                     if let Some(remote) = remotes.get(&remote_id) {
                         let (remote_attr, remote_kind) = remote.choose_attr(&mut rng);
-                        let (local_erg, remote_erg) = GameState::resolve_matchups(erg_roll, &player.attributes.get(kind), &remote_attr);
+                        let (local_erg, remote_erg) = GameState::resolve_matchups(erg_roll, &player.attributes.get_values(kind), &remote_attr);
                         user.state.add_erg(kind, local_erg);
 
                         let player_state_view = PlayerStatePlayerView::from(&user.state);
@@ -22,7 +22,7 @@ pub(crate) fn handle_choose_attr(game: &mut GameState, bx: &mut Broadcaster) {
                             remote_attr,
                             local_erg,
                             remote_erg,
-                            remote_kind: remote_kind.into(),
+                            remote_kind,
                         };
 
                         bx.send_to_user(id, &message);

@@ -7,6 +7,7 @@ use crate::screen::util::on_out_generic;
 use crate::system::ui_effects::{Glower, Hider, SetColorEvent, TextTip, UiFxTrackedColor, UiFxTrackedSize};
 use crate::system::AppState;
 use bevy::prelude::*;
+use hall::data::core::{AttributeValues, Attributes};
 use vagabond::data::{VagabondCard, VagabondPart};
 use warehouse::data::player_bio::PlayerBio;
 
@@ -25,7 +26,7 @@ impl Plugin for ComposePlugin {
             .add_systems(OnEnter(AppState::ComposeInit), compose_init_enter)
             .add_systems(Update, compose_init_update.run_if(in_state(AppState::ComposeInit)))
             .add_systems(OnEnter(AppState::Compose), compose_enter)
-            .add_systems(Update, (context_update, finish_player, populate_bio_ui, populate_deck_ui, commit_button_ui, compose_update).run_if(in_state(AppState::Compose)))
+            .add_systems(Update, (finish_player, populate_bio_ui, populate_deck_ui, commit_button_ui, compose_update).run_if(in_state(AppState::Compose)))
             .add_systems(PostUpdate, populate_part_layouts.run_if(in_state(AppState::Compose)))
             .add_systems(OnExit(AppState::Compose), compose_exit);
     }
@@ -72,6 +73,7 @@ enum ComposeState {
 struct ComposeContext {
     state: ComposeState,
     deck: Vec<VagabondCard>,
+    attributes: Attributes,
 }
 
 #[derive(Event)]
@@ -82,7 +84,6 @@ struct CardHeader(usize);
 
 struct PopulatePlayerUiData {
     player_bio: PlayerBio,
-    deck: Vec<VagabondCard>,
 }
 
 #[derive(Event)]
@@ -522,7 +523,7 @@ fn on_over_header(
             let new_y = (header_transform.translation.y + (tooltip_size.y / 2.0)).clamp(-1080.0 + tooltip_size.y, 0.0);
             let position = Vec2::new(tooltip_transform.translation.x, -new_y);
             let card = context.deck.get(header.0).cloned();
-            commands.entity(tooltip.0).remove::<Hider>().trigger(UpdateCardTooltipEvent::new(position, card));
+            commands.entity(tooltip.0).remove::<Hider>().trigger(UpdateCardTooltipEvent::new(position, card, &context.attributes));
         }
     }
 }
@@ -582,19 +583,6 @@ fn populate_part_layouts(
     }
 }
 
-fn context_update(
-    // bevy system
-    mut read: EventReader<PopulatePlayerUi>,
-    mut context: ResMut<ComposeContext>,
-) {
-    if let Some(event) = read.read().last() {
-        match event {
-            PopulatePlayerUi::Hide => {}
-            PopulatePlayerUi::Show(data) => context.deck = data.deck.clone(),
-        }
-    }
-}
-
 fn commit_button_ui(
     // bevy system
     mut commands: Commands,
@@ -623,6 +611,7 @@ fn populate_deck_ui(
     mut read: EventReader<PopulatePlayerUi>,
     header_q: Query<(Entity, &CardHeader)>,
     gutter_q: Query<Entity, With<DeckGutterGroup>>,
+    context: Res<ComposeContext>,
 ) {
     if let Some(event) = read.read().last() {
         let visibility = match event {
@@ -630,10 +619,10 @@ fn populate_deck_ui(
                 commands.trigger_targets(CardPopulateEvent::default(), header_q.iter().map(|(e, _)| e).collect::<Vec<_>>());
                 Visibility::Hidden
             }
-            PopulatePlayerUi::Show(data) => {
-                for (idx, card) in data.deck.iter().enumerate() {
+            PopulatePlayerUi::Show(_) => {
+                for (idx, card) in context.deck.iter().enumerate() {
                     if let Some((entity, _)) = header_q.iter().find(|(_, h)| h.0 == idx) {
-                        commands.entity(entity).trigger(CardPopulateEvent::from(card));
+                        commands.entity(entity).trigger(CardPopulateEvent::new(Some(card.clone()), context.attributes));
                     }
                 }
                 Visibility::Visible
@@ -677,6 +666,10 @@ fn seed_from_holder(holder: &PartHolder) -> u64 {
     holder.part.as_ref().map(|o| o.seed).unwrap_or_default()
 }
 
+fn attributes_from_holder(holder: &PartHolder) -> AttributeValues {
+    AttributeValues::from_array(holder.part.as_ref().map(|o| o.values).unwrap_or_default())
+}
+
 fn finish_player(
     // bevy system
     mut read: EventReader<FinishPlayer>,
@@ -691,10 +684,22 @@ fn finish_player(
         for (holder, holder_kind) in holder_q.iter() {
             if let Some(idx) = match holder_kind {
                 Slot::StatRow(row) => match row {
-                    StatRowKind::Analyze => Some(0),
-                    StatRowKind::Breach => Some(1),
-                    StatRowKind::Compute => Some(2),
-                    StatRowKind::Disrupt => Some(3),
+                    StatRowKind::Analyze => {
+                        context.attributes.analyze = attributes_from_holder(holder);
+                        Some(0)
+                    }
+                    StatRowKind::Breach => {
+                        context.attributes.breach = attributes_from_holder(holder);
+                        Some(1)
+                    }
+                    StatRowKind::Compute => {
+                        context.attributes.compute = attributes_from_holder(holder);
+                        Some(2)
+                    }
+                    StatRowKind::Disrupt => {
+                        context.attributes.disrupt = attributes_from_holder(holder);
+                        Some(3)
+                    }
                     StatRowKind::Build => Some(5),
                     StatRowKind::Detail => Some(7),
                 },
@@ -733,6 +738,7 @@ fn compose_update(
     wm: Res<WarehouseManager>,
     dm: Res<DataManager>,
     mut app_state: ResMut<NextState<AppState>>,
+    mut context: ResMut<ComposeContext>,
 ) {
     match gate.grx.try_recv() {
         Ok(GateCommand::GameBuild(gate_response)) => match wm.fetch_player(gate_response.seed) {
@@ -744,12 +750,11 @@ fn compose_update(
                     };
                     commands.insert_resource(handoff);
 
-                    let mut deck = dm.convert_deck(gate_response.deck);
-                    deck.sort_by_key(|c| (std::cmp::Reverse(c.rarity), c.set, c.number));
+                    context.deck = dm.convert_deck(gate_response.deck);
+                    context.deck.sort_by_key(|c| (std::cmp::Reverse(c.rarity), c.set, c.number));
 
                     let data = PopulatePlayerUiData {
                         player_bio,
-                        deck,
                     };
                     send.send(PopulatePlayerUi::Show(data));
                 } else {

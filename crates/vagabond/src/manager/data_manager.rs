@@ -66,8 +66,7 @@ where
     P: AsRef<Path>,
 {
     let ron = std::fs::read_to_string(source_file)?;
-    let parsed = ron::from_str::<T>(&ron).map_err(|o| Error::new(ErrorKind::Other, o))?;
-    Ok(parsed)
+    ron::from_str::<T>(&ron).map_err(|o| Error::new(ErrorKind::Other, o))
 }
 
 #[cfg(test)]

@@ -6,9 +6,9 @@
 #cost_bg:capsule_x%20,16@212,5,1!dim
 &cost:main.12.center%20,18@212,4,2!white|0
 #launch_bg:rect%220,100@8,56,1!whitish
-&launch:main.12.center%236,64@0,178,2!black|LAUNCH
+&launch:main.12.left%212,92@12,60,2!black|LAUNCH
 #run_bg:rect%220,100@8,172,1!whitish
-&run:main.12.center%236,64@0,242,2!black|RUN
+&run:main.12.left%212,92@12,176,2!black|RUN
 #priority_bg:capsule_x%20,16@174,294,1!whitish
 &priority:main.12.center%20,18@174,294,2!black|0
 #delay_bg:capsule_x%20,16@202,294,1!whitish

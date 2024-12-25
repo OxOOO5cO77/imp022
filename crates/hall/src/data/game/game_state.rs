@@ -166,10 +166,12 @@ impl GameState {
         self.current_tick += 1;
 
         self.users.values_mut().for_each(|user| {
-            user.machine.tick();
-            user.state.fill_hand();
+            if let Some(player) = &user.player {
+                user.machine.tick(&player.attributes);
+                user.state.fill_hand();
+            }
         });
-        self.remotes.values_mut().for_each(|remote| remote.machine.tick());
+        self.remotes.values_mut().for_each(|remote| remote.machine.tick(&remote.attributes));
 
         self.current_tick
     }

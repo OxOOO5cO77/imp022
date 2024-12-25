@@ -15,6 +15,16 @@ pub enum AttributeKind {
     Disrupt,
 }
 
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, FromPrimitive, IntoPrimitive)]
+pub enum AttributeValueKind {
+    #[num_enum(default)]
+    Accuracy,
+    Boost,
+    Celerity,
+    Duration,
+}
+
 #[derive(Default, Clone, Copy, Serialize, Deserialize)]
 pub struct AttributeValues {
     pub accuracy: AttributeValueType,
@@ -45,6 +55,15 @@ impl AttributeValues {
             duration,
         }
     }
+
+    pub fn get_value(&self, value: AttributeValueKind) -> AttributeValueType {
+        match value {
+            AttributeValueKind::Accuracy => self.accuracy,
+            AttributeValueKind::Boost => self.boost,
+            AttributeValueKind::Celerity => self.celerity,
+            AttributeValueKind::Duration => self.duration,
+        }
+    }
 }
 
 impl Attributes {
@@ -62,7 +81,16 @@ impl Attributes {
         }
     }
 
-    pub fn get(&self, kind: AttributeKind) -> [AttributeValueType; 4] {
+    pub fn get_value(&self, kind: AttributeKind, value: AttributeValueKind) -> AttributeValueType {
+        match kind {
+            AttributeKind::Analyze => self.analyze,
+            AttributeKind::Breach => self.breach,
+            AttributeKind::Compute => self.compute,
+            AttributeKind::Disrupt => self.disrupt,
+        }
+        .get_value(value)
+    }
+    pub fn get_values(&self, kind: AttributeKind) -> [AttributeValueType; 4] {
         match kind {
             AttributeKind::Analyze => self.analyze,
             AttributeKind::Breach => self.breach,

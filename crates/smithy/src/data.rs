@@ -2,6 +2,7 @@ pub(crate) mod build;
 pub(crate) mod card;
 pub(crate) mod detail;
 pub(crate) mod mission;
+pub(crate) mod rules;
 mod shared;
 
 pub(crate) use build::DbBuild;

@@ -69,8 +69,7 @@ where
     P: AsRef<Path>,
 {
     let ron = std::fs::read_to_string(source_file)?;
-    let parsed = ron::from_str::<T>(&ron).map_err(|o| Error::new(ErrorKind::Other, o))?;
-    Ok(parsed)
+    ron::from_str::<T>(&ron).map_err(|o| Error::new(ErrorKind::Other, o))
 }
 
 #[cfg(test)]
@@ -83,6 +82,7 @@ mod data_manager_test {
         assert!(!dm.card.is_empty());
         assert!(!dm.build.is_empty());
         assert!(!dm.detail.is_empty());
+        assert!(!dm.mission.is_empty());
         Ok(())
     }
 }

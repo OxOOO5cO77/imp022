@@ -9,7 +9,7 @@ use crate::screen::util::{GameMissionNodePlayerViewExt, KindIconSize};
 use crate::system::ui_effects::{Blinker, Glower, SetColorEvent, TextTip, UiFxTrackedColor};
 use crate::system::AppState;
 use bevy::prelude::*;
-use hall::data::core::{AttributeKind, BuildValueType, DelayType, ErgType, MissionNodeIdType};
+use hall::data::core::{AttributeKind, Attributes, BuildValueType, DelayType, ErgType, MissionNodeIdType};
 use hall::data::game::{GameMachinePlayerView, GameProcessPlayerView, TickType};
 use hall::data::player::PlayerStatePlayerView;
 use hall::message::*;
@@ -642,7 +642,7 @@ fn on_over_process(
             MachineKind::Remote => &context.cached_remote,
         };
         let card = cached.queue.iter().find(|(_, d)| queue_item.0 == *d).map(|(c, _)| c.card.clone());
-        commands.trigger_targets(UpdateCardTooltipEvent::new(event.pointer_location.position, card), tooltip.0);
+        commands.trigger_targets(UpdateCardTooltipEvent::new(event.pointer_location.position, card, &Attributes::from_arrays(context.cached_state.attr)), tooltip.0);
     }
 }
 
@@ -709,12 +709,13 @@ fn hand_ui_update(
     mut receive: EventReader<UiEvent>,
     hand_q: Query<(Entity, &HandCard)>,
     dm: Res<DataManager>,
+    context: Res<GameplayContext>,
 ) {
     for ui_event in receive.read() {
         if let UiEvent::PlayerState(player_state) = ui_event {
             for (entity, hand) in &hand_q {
                 let card = player_state.hand.get(hand.0).and_then(|o| dm.convert_card(o));
-                commands.entity(entity).trigger(CardPopulateEvent::from(card));
+                commands.entity(entity).trigger(CardPopulateEvent::new(card, Attributes::from_arrays(context.cached_state.attr)));
             }
         }
     }
@@ -894,6 +895,7 @@ fn machine_ui_update(
     mut sprite_q: Query<(&MachineKind, &mut Sprite, &MachineQueueItem)>,
     running_q: Query<(Entity, &MachineKind, &MachineRunning)>,
     dm: Res<DataManager>,
+    context: Res<GameplayContext>,
 ) {
     for ui_event in receive.read() {
         match ui_event {
@@ -946,7 +948,7 @@ fn machine_ui_update(
                         remote
                     };
                     let card = machine.running.get(running.0).and_then(|process| dm.convert_card(&process.player_card));
-                    commands.entity(entity).trigger(CardPopulateEvent::from(card));
+                    commands.entity(entity).trigger(CardPopulateEvent::new(card, Attributes::from_arrays(context.cached_state.attr)));
                 }
             }
             _ => {}

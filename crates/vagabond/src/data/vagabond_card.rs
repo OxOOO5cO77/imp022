@@ -1,4 +1,4 @@
-use hall::data::core::{AttributeKind, CardNumberType, DelayType, ErgType, PriorityType, Rarity, SetType};
+use hall::data::core::{AttributeKind, CardNumberType, DelayType, ErgType, Instruction, PriorityType, Rarity, SetType};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -11,6 +11,6 @@ pub struct VagabondCard {
     pub cost: ErgType,
     pub delay: DelayType,
     pub priority: PriorityType,
-    pub launch_rules: String,
-    pub run_rules: String,
+    pub launch_rules: Vec<Instruction>,
+    pub run_rules: Vec<Instruction>,
 }
