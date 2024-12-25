@@ -2,7 +2,6 @@ use crate::data::shared::extract_cards;
 use hall::data::core::{BuildNumberType, CardSlot, Detail, GeneralType, SpecificType};
 use sqlx::postgres::PgRow;
 use sqlx::{FromRow, Pool, Postgres, Row};
-use std::collections::HashMap;
 
 #[derive(FromRow)]
 pub(crate) struct DbDetail {
@@ -39,15 +38,18 @@ fn row_to_detail(row: &PgRow) -> DbDetail {
     }
 }
 
-pub(crate) async fn process_detail(pool: &Pool<Postgres>) -> Result<(Vec<DbDetail>, HashMap<GeneralType, String>, HashMap<SpecificType, String>), sqlx::Error> {
+pub(crate) async fn process_detail(pool: &Pool<Postgres>) -> Result<(Vec<DbDetail>, Vec<(GeneralType, String)>, Vec<(SpecificType, String)>), sqlx::Error> {
     let rows = sqlx::query("SELECT * FROM detail").fetch_all(pool).await?;
 
     let details = rows.iter().map(row_to_detail).collect::<Vec<DbDetail>>();
 
     let general_rows = sqlx::query("SELECT id,name FROM \"detail/general\"").fetch_all(pool).await?;
-    let general = general_rows.iter().map(|row| (row.get::<i32, _>("id") as GeneralType, row.get("name"))).collect::<HashMap<GeneralType, String>>();
+    let mut general = general_rows.iter().map(|row| (row.get::<i32, _>("id") as GeneralType, row.get("name"))).collect::<Vec<(GeneralType, String)>>();
     let specific_rows = sqlx::query("SELECT id,name FROM \"detail/specific\"").fetch_all(pool).await?;
-    let specific = specific_rows.iter().map(|row| (row.get::<i32, _>("id") as SpecificType, row.get("name"))).collect::<HashMap<SpecificType, String>>();
+    let mut specific = specific_rows.iter().map(|row| (row.get::<i32, _>("id") as SpecificType, row.get("name"))).collect::<Vec<(SpecificType, String)>>();
+
+    general.sort();
+    specific.sort();
 
     Ok((details, general, specific))
 }
