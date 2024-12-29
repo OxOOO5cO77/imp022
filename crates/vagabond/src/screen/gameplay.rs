@@ -1,21 +1,27 @@
+use std::cmp::{Ordering, PartialEq};
+use std::collections::{HashMap, VecDeque};
+
+use bevy::prelude::*;
+
+use hall::data::core::{AttributeKind, Attributes, DelayType, MissionNodeIdType, MissionNodeKind};
+use hall::data::game::{GameMachinePlayerView, GameProcessPlayerView, TickType};
+use hall::data::player::PlayerStatePlayerView;
+use hall::message::*;
+use vagabond::data::{VagabondCard, VagabondMachine, VagabondProcess};
+
 use crate::gfx::FrameMaterial;
 use crate::manager::{AtlasManager, DataManager, ScreenLayoutManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::card_layout::{CardLayout, CardPopulateEvent};
 use crate::screen::card_tooltip::{on_update_tooltip, CardTooltip, UpdateCardTooltipEvent};
-use crate::screen::compose::ComposeHandoff;
+use crate::screen::gameplay::events::*;
+use crate::screen::gameplay_init::GameplayInitHandoff;
 use crate::screen::util;
 use crate::screen::util::{GameMissionNodePlayerViewExt, KindIconSize};
 use crate::system::ui_effects::{Blinker, Glower, SetColorEvent, TextTip, UiFxTrackedColor};
 use crate::system::AppState;
-use bevy::prelude::*;
-use hall::data::core::{AttributeKind, Attributes, BuildValueType, DelayType, ErgType, MissionNodeIdType};
-use hall::data::game::{GameMachinePlayerView, GameProcessPlayerView, TickType};
-use hall::data::player::PlayerStatePlayerView;
-use hall::message::*;
-use std::cmp::{Ordering, PartialEq};
-use std::collections::{HashMap, VecDeque};
-use vagabond::data::{VagabondCard, VagabondMachine, VagabondProcess};
+
+mod events;
 
 const SCREEN_LAYOUT: &str = "gameplay";
 
@@ -33,47 +39,10 @@ pub struct GameplayPlugin;
 impl Plugin for GameplayPlugin {
     fn build(&self, app: &mut App) {
         app //
-            .add_event::<UiEvent>()
-            .add_systems(OnEnter(AppState::GameplayInit), gameplay_init_enter)
-            .add_systems(Update, gameplay_init_update.run_if(in_state(AppState::GameplayInit)))
             .add_systems(OnEnter(AppState::Gameplay), gameplay_enter)
-            .add_systems(Update, (gameplay_update, erg_ui_update, phase_ui_update, hand_ui_update, indicator_ui_update, local_state_update, local_ui_update, roll_ui_update, remote_ui_update, machine_ui_update).run_if(in_state(AppState::Gameplay)))
+            .add_systems(Update, gameplay_update.run_if(in_state(AppState::Gameplay)))
             .add_systems(PostUpdate, cleanup_indicator_post_update.run_if(in_state(AppState::Gameplay)))
-            .add_systems(OnExit(AppState::Gameplay), gameplay_exit)
-            .add_observer(tty_update);
-    }
-}
-
-#[derive(Resource)]
-struct GameplayInitHandoff {
-    initial_response: Option<Box<GameUpdateStateResponse>>,
-    name: String,
-    id: String,
-}
-
-fn gameplay_init_enter(
-    // bevy system
-    gate: ResMut<GateIFace>,
-) {
-    gate.send_game_update_state();
-}
-
-fn gameplay_init_update(
-    //
-    mut commands: Commands,
-    mut gate: ResMut<GateIFace>,
-    mut app_state: ResMut<NextState<AppState>>,
-    gameplay_handoff: Res<ComposeHandoff>,
-) {
-    if let Ok(GateCommand::GameUpdateState(gate_response)) = gate.grx.try_recv() {
-        let handoff = GameplayInitHandoff {
-            initial_response: Some(gate_response),
-            name: gameplay_handoff.local_name.clone(),
-            id: gameplay_handoff.local_id.clone(),
-        };
-        commands.insert_resource(handoff);
-        commands.remove_resource::<ComposeHandoff>();
-        app_state.set(AppState::Gameplay)
+            .add_systems(OnExit(AppState::Gameplay), gameplay_exit);
     }
 }
 
@@ -191,6 +160,9 @@ struct MachineInfo {
 }
 
 #[derive(Component)]
+struct MissionNodeDisplay(MissionNodeKind);
+
+#[derive(Component)]
 struct TTYMessageText {
     kind: MachineKind,
     slot: usize,
@@ -203,33 +175,6 @@ impl TTYMessageText {
             slot,
         }
     }
-}
-
-#[derive(Event)]
-struct TTYMessageEvent {
-    kind: MachineKind,
-    message: String,
-}
-
-impl TTYMessageEvent {
-    fn new(kind: MachineKind, message: &str) -> Self {
-        Self {
-            kind,
-            message: message.to_string(),
-        }
-    }
-}
-
-#[derive(Event)]
-enum UiEvent {
-    GamePhase(VagabondGamePhase),
-    PlayerState(PlayerStatePlayerView),
-    ChooseAttr(Option<AttributeKind>),
-    Roll([ErgType; 4]),
-    PlayerErg([ErgType; 4]),
-    Resources([ErgType; 4], [ErgType; 4], [BuildValueType; 4], AttributeKind),
-    MachineInfoUpdate(MachineKind, MachineInfo),
-    MachineStateUpdate(GameMachinePlayerView, GameMachinePlayerView),
 }
 
 #[derive(Component)]
@@ -287,12 +232,32 @@ fn gameplay_enter(
     // bevy system
     mut commands: Commands,
     mut handoff: ResMut<GameplayInitHandoff>,
-    mut send: EventWriter<UiEvent>,
     am: Res<AtlasManager>,
     mut slm: ResMut<ScreenLayoutManager>,
     for_slm: (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>, ResMut<Assets<FrameMaterial>>),
 ) {
-    let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, for_slm);
+    let (layout, base_id) = slm.build(&mut commands, SCREEN_LAYOUT, &am, for_slm);
+
+    // spawn observers
+    commands.entity(base_id).with_children(|parent| {
+        parent.spawn(Observer::new(on_tty_update));
+        parent.spawn(Observer::new(on_tty_update));
+        parent.spawn(Observer::new(on_roll_ui_update_roll));
+        parent.spawn(Observer::new(on_roll_ui_update_resources));
+        parent.spawn(Observer::new(on_indicator_ui_update));
+        parent.spawn(Observer::new(on_hand_ui_update));
+        parent.spawn(Observer::new(on_erg_ui_update));
+        parent.spawn(Observer::new(on_phase_ui_update));
+        parent.spawn(Observer::new(on_local_state_update_player));
+        parent.spawn(Observer::new(on_local_state_update_machine));
+        parent.spawn(Observer::new(on_mission_ui_update));
+        parent.spawn(Observer::new(on_local_ui_update_attr));
+        parent.spawn(Observer::new(on_local_ui_update_player));
+        parent.spawn(Observer::new(on_remote_ui_update_roll));
+        parent.spawn(Observer::new(on_remote_ui_update_resources));
+        parent.spawn(Observer::new(on_machine_ui_update_info));
+        parent.spawn(Observer::new(on_machine_ui_update_state));
+    });
 
     let container = commands.entity(layout.entity("text_tip")).insert_text_tip_container(layout.entity("text_tip/text")).id();
     commands.entity(layout.entity("attributes/a")).insert_text_tip(container, "Analyze");
@@ -300,12 +265,12 @@ fn gameplay_enter(
     commands.entity(layout.entity("attributes/c")).insert_text_tip(container, "Compute");
     commands.entity(layout.entity("attributes/d")).insert_text_tip(container, "Disrupt");
 
-    const LOCAL_ATTR: [[&str; 4]; 4] = [
+    const LOCAL_ATTR: &[&[&str]] = &[
         //
-        ["attributes/aa", "attributes/ab", "attributes/ac", "attributes/ad"],
-        ["attributes/ba", "attributes/bb", "attributes/bc", "attributes/bd"],
-        ["attributes/ca", "attributes/cb", "attributes/cc", "attributes/cd"],
-        ["attributes/da", "attributes/db", "attributes/dc", "attributes/dd"],
+        &["attributes/aa", "attributes/ab", "attributes/ac", "attributes/ad"],
+        &["attributes/ba", "attributes/bb", "attributes/bc", "attributes/bd"],
+        &["attributes/ca", "attributes/cb", "attributes/cc", "attributes/cd"],
+        &["attributes/da", "attributes/db", "attributes/dc", "attributes/dd"],
     ];
 
     for (row_idx, row) in LOCAL_ATTR.iter().enumerate() {
@@ -314,20 +279,20 @@ fn gameplay_enter(
         }
     }
 
-    const ROLL: [&str; 4] = ["ea", "eb", "ec", "ed"];
+    const ROLL: &[&str] = &["ea", "eb", "ec", "ed"];
 
     for (roll_idx, roll) in ROLL.iter().enumerate() {
         commands.entity(layout.entity(roll)).insert(RollText(roll_idx));
     }
 
-    const REMOTE_ATTR: [&str; 4] = ["ra", "rb", "rc", "rd"];
+    const REMOTE_ATTR: &[&str] = &["ra", "rb", "rc", "rd"];
 
     for (remote_idx, remote) in REMOTE_ATTR.iter().enumerate() {
         commands.entity(layout.entity(remote)).insert(RemoteAttrText(remote_idx));
     }
     commands.entity(layout.entity("r_icon")).insert((RemoteAttrIcon, Visibility::Hidden));
 
-    const ERG: [&str; 4] = ["la", "lb", "lc", "ld"];
+    const ERG: &[&str] = &["la", "lb", "lc", "ld"];
 
     for (erg_idx, erg) in ERG.iter().enumerate() {
         commands.entity(layout.entity(erg)).insert(PlayerStateText::Erg(erg_idx));
@@ -348,9 +313,9 @@ fn gameplay_enter(
     commands.entity(layout.entity("attributes/row_c")).observe_pickable_row(AttributeKind::Compute);
     commands.entity(layout.entity("attributes/row_d")).observe_pickable_row(AttributeKind::Disrupt);
 
-    const MACHINES: [(&str, MachineKind); 2] = [("local", MachineKind::Local), ("remote", MachineKind::Remote)];
+    const MACHINES: &[(&str, MachineKind)] = &[("local", MachineKind::Local), ("remote", MachineKind::Remote)];
 
-    for (machine_name, machine_kind) in &MACHINES {
+    for (machine_name, machine_kind) in MACHINES {
         commands.entity(layout.entity(machine_name)).insert((*machine_kind, PickingBehavior::default())).observe(on_card_drop);
 
         commands.entity(layout.entity(&format!("{}/title", machine_name))).insert((*machine_kind, MachineText(MachineTextKind::Title)));
@@ -381,6 +346,16 @@ fn gameplay_enter(
         commands.entity(layout.entity(&format!("r_tty{}", msg_index))).insert(TTYMessageText::new(MachineKind::Remote, msg_index));
     }
 
+    const NODES: &[(MissionNodeKind, &str)] = &[
+        //
+        (MissionNodeKind::AccessPoint, "node_a"),
+        (MissionNodeKind::Backend, "node_b"),
+    ];
+
+    for (kind, node) in NODES {
+        commands.entity(layout.entity(node)).insert((MissionNodeDisplay(*kind), Visibility::Hidden));
+    }
+
     let tooltip = CardLayout::build(&mut commands, layout, "tooltip");
     let tooltip_id = commands.entity(tooltip).insert(Visibility::Hidden).observe(on_update_tooltip).id();
     commands.insert_resource(CardTooltip(tooltip_id));
@@ -397,15 +372,15 @@ fn gameplay_enter(
         name: initial_response.mission.node.as_str().to_string(),
         id: initial_response.mission.node.make_id(),
     };
-    recv_update_state(*initial_response, &mut send);
+    recv_update_state(&mut commands, *initial_response);
 
-    commands.trigger(TTYMessageEvent::new(MachineKind::Local, &format!("Connected to {}", remote_info.id)));
-    commands.trigger(TTYMessageEvent::new(MachineKind::Remote, &format!("Connection from {}", handoff.id)));
+    commands.trigger(TTYMessageTrigger::new(MachineKind::Local, &format!("Connected to {}", remote_info.id)));
+    commands.trigger(TTYMessageTrigger::new(MachineKind::Remote, &format!("Connection from {}", handoff.id)));
 
-    send.send(UiEvent::MachineInfoUpdate(MachineKind::Local, local_info));
-    send.send(UiEvent::MachineInfoUpdate(MachineKind::Remote, remote_info));
+    commands.trigger(MachineInfoTrigger::new(MachineKind::Local, local_info));
+    commands.trigger(MachineInfoTrigger::new(MachineKind::Remote, remote_info));
 
-    send.send(UiEvent::GamePhase(VagabondGamePhase::Start));
+    commands.trigger(GamePhaseTrigger::new(VagabondGamePhase::Start));
 }
 
 fn on_click_next(_event: Trigger<Pointer<Click>>, mut context: ResMut<GameplayContext>, gate: Res<GateIFace>) {
@@ -448,11 +423,11 @@ fn on_over_next(
 fn on_click_attr(
     //
     event: Trigger<Pointer<Click>>,
-    mut send: EventWriter<UiEvent>,
+    mut commands: Commands,
     attr_q: Query<&AttributeRow>,
 ) {
     if let Ok(AttributeRow(kind)) = attr_q.get(event.target) {
-        send.send(UiEvent::ChooseAttr(Some(*kind)));
+        commands.trigger(ChooseAttrTrigger::new(Some(*kind)));
     }
 }
 
@@ -502,16 +477,17 @@ fn make_indicator_bundle(parent: Entity, translation: Vec3, offset: Vec2, mut me
     )
 }
 
-fn indicator_ui_update(mut commands: Commands, mut receive: EventReader<UiEvent>, indicator_q: Query<(Entity, &Indicator)>) {
-    for ui_event in receive.read() {
-        if let UiEvent::GamePhase(phase) = ui_event {
-            match phase {
-                VagabondGamePhase::Start => {}
-                VagabondGamePhase::Play => {}
-                VagabondGamePhase::Draw => indicator_q.iter().for_each(|(e, i)| cleanup_indicator(&mut commands, e, i.parent)),
-                _ => {}
-            }
-        }
+fn on_indicator_ui_update(
+    // bevy system
+    event: Trigger<GamePhaseTrigger>,
+    mut commands: Commands,
+    indicator_q: Query<(Entity, &Indicator)>,
+) {
+    match event.phase {
+        VagabondGamePhase::Start => {}
+        VagabondGamePhase::Play => {}
+        VagabondGamePhase::Draw => indicator_q.iter().for_each(|(e, i)| cleanup_indicator(&mut commands, e, i.parent)),
+        _ => {}
     }
 }
 
@@ -531,7 +507,6 @@ fn on_card_drag_start(
     mut context: ResMut<GameplayContext>,
     meshes: ResMut<Assets<Mesh>>,
     materials: ResMut<Assets<ColorMaterial>>,
-    mut send: EventWriter<UiEvent>,
 ) {
     if context.phase != VagabondGamePhase::Play {
         return;
@@ -564,7 +539,7 @@ fn on_card_drag_start(
             } else if let Some((entity, mut indicator)) = indicator_q.iter_mut().find(|(_, i)| i.parent == target) {
                 if let Some(card) = card {
                     context.cached_state.erg[map_kind_to_index(card.kind)] += card.cost;
-                    send.send(UiEvent::PlayerErg(context.cached_state.erg));
+                    commands.trigger(PlayerErgTrigger::new(context.cached_state.erg));
                 }
                 context.card_picks.remove(&(hand.0 as CardIdxType));
                 indicator.target = None;
@@ -594,8 +569,8 @@ fn on_card_drag(
 fn on_card_drag_end(
     // bevy system
     event: Trigger<Pointer<DragEnd>>,
-    indicator_q: Query<Entity, With<IndicatorActive>>,
     mut commands: Commands,
+    indicator_q: Query<Entity, With<IndicatorActive>>,
 ) {
     commands.entity(event.target).insert(PickingBehavior::default());
     if let Ok(entity) = indicator_q.get_single() {
@@ -606,11 +581,11 @@ fn on_card_drag_end(
 fn on_card_drop(
     // bevy system
     event: Trigger<Pointer<DragDrop>>,
+    mut commands: Commands,
     mut indicator_q: Query<&mut Indicator, With<IndicatorActive>>,
     mut machine_q: Query<&MachineKind>,
     hand_q: Query<&HandCard>,
     mut context: ResMut<GameplayContext>,
-    mut send: EventWriter<UiEvent>,
 ) {
     let dropped_on = event.target;
 
@@ -621,7 +596,7 @@ fn on_card_drop(
                 context.add_card_pick(hand.0, target);
                 if let Some((kind, cost)) = context.hand.get_mut(hand.0).map(|card| (card.kind, card.cost)) {
                     context.cached_state.erg[map_kind_to_index(kind)] -= cost;
-                    send.send(UiEvent::PlayerErg(context.cached_state.erg));
+                    commands.trigger(PlayerErgTrigger::new(context.cached_state.erg));
                 }
             }
         }
@@ -675,84 +650,70 @@ fn cleanup_indicator_post_update(
     }
 }
 
-fn roll_ui_update(
+fn on_roll_ui_update_roll(
     // bevy system
-    mut receive: EventReader<UiEvent>,
+    event: Trigger<RollTrigger>,
     mut roll_q: Query<(&mut Text2d, &mut TextColor, &RollText)>,
 ) {
-    for ui_event in receive.read() {
-        match ui_event {
-            UiEvent::Roll(roll) => {
-                for (mut text, mut color, RollText(index)) in roll_q.iter_mut() {
-                    *text = format!("{}", roll[*index]).into();
-                    *color = bevy::color::palettes::basic::GRAY.into();
-                }
-            }
-            UiEvent::Resources(local_erg, remote_erg, _, _) => {
-                for (_, mut color, RollText(index)) in roll_q.iter_mut() {
-                    *color = match local_erg[*index].cmp(&remote_erg[*index]) {
-                        Ordering::Less => bevy::color::palettes::basic::RED,
-                        Ordering::Equal => bevy::color::palettes::basic::YELLOW,
-                        Ordering::Greater => bevy::color::palettes::basic::GREEN,
-                    }
-                    .into();
-                }
-            }
-            _ => {}
-        }
+    for (mut text, mut color, RollText(index)) in roll_q.iter_mut() {
+        *text = format!("{}", event.roll[*index]).into();
+        *color = bevy::color::palettes::basic::GRAY.into();
     }
 }
 
-fn hand_ui_update(
+fn on_roll_ui_update_resources(
     // bevy system
+    event: Trigger<ResourcesTrigger>,
+    mut roll_q: Query<(&mut TextColor, &RollText)>,
+) {
+    for (mut color, RollText(index)) in roll_q.iter_mut() {
+        *color = match event.local_erg[*index].cmp(&event.remote_erg[*index]) {
+            Ordering::Less => bevy::color::palettes::basic::RED,
+            Ordering::Equal => bevy::color::palettes::basic::YELLOW,
+            Ordering::Greater => bevy::color::palettes::basic::GREEN,
+        }
+        .into();
+    }
+}
+
+fn on_hand_ui_update(
+    // bevy system
+    event: Trigger<PlayerStateTrigger>,
     mut commands: Commands,
-    mut receive: EventReader<UiEvent>,
     hand_q: Query<(Entity, &HandCard)>,
     dm: Res<DataManager>,
     context: Res<GameplayContext>,
 ) {
-    for ui_event in receive.read() {
-        if let UiEvent::PlayerState(player_state) = ui_event {
-            for (entity, hand) in &hand_q {
-                let card = player_state.hand.get(hand.0).and_then(|o| dm.convert_card(o));
-                commands.entity(entity).trigger(CardPopulateEvent::new(card, Attributes::from_arrays(context.cached_state.attr)));
-            }
-        }
+    for (entity, hand) in &hand_q {
+        let card = event.state.hand.get(hand.0).and_then(|o| dm.convert_card(o));
+        commands.entity(entity).trigger(CardPopulateEvent::new(card, Attributes::from_arrays(context.cached_state.attr)));
     }
 }
 
-fn erg_ui_update(
+fn on_erg_ui_update(
     // bevy system
-    mut receive: EventReader<UiEvent>,
+    event: Trigger<PlayerErgTrigger>,
     mut erg_q: Query<(&mut Text2d, &PlayerStateText)>,
 ) {
-    for ui_event in receive.read() {
-        if let UiEvent::PlayerErg(erg) = ui_event {
-            for (mut erg_text, state_text) in erg_q.iter_mut() {
-                if let PlayerStateText::Erg(index) = state_text {
-                    *erg_text = format!("{}", erg[*index]).into();
-                }
-            }
+    for (mut erg_text, state_text) in erg_q.iter_mut() {
+        if let PlayerStateText::Erg(index) = state_text {
+            *erg_text = format!("{}", event.erg[*index]).into();
         }
     }
 }
 
-fn phase_ui_update(
+fn on_phase_ui_update(
     // bevy system
-    mut receive: EventReader<UiEvent>,
+    event: Trigger<GamePhaseTrigger>,
     mut sprite_q: Query<(&mut Sprite, &PhaseIcon)>,
 ) {
-    for ui_event in receive.read() {
-        if let UiEvent::GamePhase(phase) = ui_event {
-            for (mut sprite, icon) in sprite_q.iter_mut() {
-                let color = if *phase == icon.0 {
-                    bevy::color::palettes::css::CHARTREUSE
-                } else {
-                    Srgba::new(0.2, 0.2, 0.2, 1.0)
-                };
-                sprite.color = color.into();
-            }
-        }
+    for (mut sprite, icon) in sprite_q.iter_mut() {
+        let color = if event.phase == icon.0 {
+            bevy::color::palettes::css::CHARTREUSE
+        } else {
+            Srgba::new(0.2, 0.2, 0.2, 1.0)
+        };
+        sprite.color = color.into();
     }
 }
 
@@ -773,123 +734,136 @@ fn cache_game_machine(machine: &GameMachinePlayerView, dm: &DataManager) -> Vaga
     }
 }
 
-fn local_state_update(
+fn on_local_state_update_player(
     // bevy system
-    mut receive: EventReader<UiEvent>,
+    event: Trigger<PlayerStateTrigger>,
     mut context: ResMut<GameplayContext>,
     dm: Res<DataManager>,
 ) {
-    for ui_event in receive.read() {
-        match ui_event {
-            UiEvent::PlayerState(player_state) => {
-                context.cached_state = player_state.clone();
-                context.hand = player_state.hand.iter().filter_map(|card| dm.convert_card(card)).collect();
-            }
-            UiEvent::MachineStateUpdate(local, remote) => {
-                context.cached_local = cache_game_machine(local, &dm);
-                context.cached_remote = cache_game_machine(remote, &dm);
-            }
+    context.cached_state = event.state.clone();
+    context.hand = event.state.hand.iter().filter_map(|card| dm.convert_card(card)).collect();
+}
+
+fn on_local_state_update_machine(
+    // bevy system
+    event: Trigger<MachineStateTrigger>,
+    mut context: ResMut<GameplayContext>,
+    dm: Res<DataManager>,
+) {
+    context.cached_local = cache_game_machine(&event.local, &dm);
+    context.cached_remote = cache_game_machine(&event.remote, &dm);
+}
+
+fn on_local_ui_update_player(
+    // bevy system
+    event: Trigger<PlayerStateTrigger>,
+    mut text_q: Query<(&mut Text2d, &mut TextColor, &PlayerStateText)>,
+) {
+    for (mut text, _, state_text) in text_q.iter_mut() {
+        match state_text {
+            PlayerStateText::Attribute(row, col) => *text = format!("{}", event.state.attr[*row][*col]).into(),
+            PlayerStateText::Deck => *text = event.state.deck.to_string().into(),
+            PlayerStateText::Heap => *text = event.state.heap.len().to_string().into(),
             _ => {}
         }
     }
 }
 
-fn local_ui_update(
+fn on_local_ui_update_attr(
     // bevy system
+    event: Trigger<ChooseAttrTrigger>,
     mut commands: Commands,
-    mut receive: EventReader<UiEvent>,
     mut text_q: Query<(&mut Text2d, &mut TextColor, &PlayerStateText)>,
     mut row_q: Query<(Entity, &UiFxTrackedColor, Option<&Glower>), With<AttributeRow>>,
     mut context: ResMut<GameplayContext>,
 ) {
-    for ui_event in receive.read() {
-        match ui_event {
-            UiEvent::PlayerState(player_state) => {
-                for (mut text, _, state_text) in text_q.iter_mut() {
-                    match state_text {
-                        PlayerStateText::Attribute(row, col) => *text = format!("{}", player_state.attr[*row][*col]).into(),
-                        PlayerStateText::Deck => *text = player_state.deck.to_string().into(),
-                        PlayerStateText::Heap => *text = player_state.heap.len().to_string().into(),
-                        _ => {}
-                    }
-                }
-            }
-            UiEvent::ChooseAttr(kind) => {
-                if context.phase != VagabondGamePhase::Pick {
-                    continue;
-                }
+    if context.phase != VagabondGamePhase::Pick {
+        return;
+    }
 
-                if kind.is_none() {
-                    for (entity, source_color, _) in row_q.iter() {
-                        let color = source_color.color;
-                        commands.entity(entity).insert(Glower::new(color, Srgba::new(0.0, 1.0, 0.0, 1.0), GLOWER_SPEED));
-                    }
+    if event.kind.is_none() {
+        for (entity, source_color, _) in row_q.iter() {
+            let color = source_color.color;
+            commands.entity(entity).insert(Glower::new(color, Srgba::new(0.0, 1.0, 0.0, 1.0), GLOWER_SPEED));
+        }
+    } else {
+        for (entity, _, glower) in row_q.iter_mut() {
+            if let Some(glower) = glower {
+                glower.remove(&mut commands, entity);
+            }
+        }
+    }
+
+    for (_, mut color, state_text) in text_q.iter_mut() {
+        if let PlayerStateText::Attribute(row, _) = state_text {
+            *color = if let Some(kind) = event.kind {
+                if *row == map_kind_to_index(kind) {
+                    context.attr_pick = Some(kind);
+                    bevy::color::palettes::basic::GREEN
                 } else {
-                    for (entity, _, glower) in row_q.iter_mut() {
-                        if let Some(glower) = glower {
-                            glower.remove(&mut commands, entity);
-                        }
-                    }
+                    bevy::color::palettes::basic::GRAY
                 }
-
-                for (_, mut color, state_text) in text_q.iter_mut() {
-                    if let PlayerStateText::Attribute(row, _) = state_text {
-                        *color = if let Some(kind) = kind {
-                            if *row == map_kind_to_index(*kind) {
-                                context.attr_pick = Some(*kind);
-                                bevy::color::palettes::basic::GREEN
-                            } else {
-                                bevy::color::palettes::basic::GRAY
-                            }
-                        } else {
-                            bevy::color::palettes::basic::GRAY
-                        }
-                        .into()
-                    }
-                }
+            } else {
+                bevy::color::palettes::basic::GRAY
             }
-            _ => {}
+            .into()
         }
     }
 }
 
-fn remote_ui_update(
+fn on_remote_ui_update_roll(
     // bevy system
+    _event: Trigger<RollTrigger>,
     mut commands: Commands,
-    mut receive: EventReader<UiEvent>,
+    mut text_q: Query<(&mut Text2d, &mut TextColor, &RemoteAttrText)>,
+    icon_q: Query<Entity, With<RemoteAttrIcon>>,
+) {
+    for (mut attr_text, mut color, RemoteAttrText(_)) in text_q.iter_mut() {
+        *attr_text = "-".into();
+        *color = bevy::color::palettes::basic::GRAY.into();
+    }
+    if let Ok(entity) = icon_q.get_single() {
+        commands.entity(entity).insert(Visibility::Hidden);
+    }
+}
+
+fn on_remote_ui_update_resources(
+    // bevy system
+    event: Trigger<ResourcesTrigger>,
+    mut commands: Commands,
     mut text_q: Query<(&mut Text2d, &mut TextColor, &RemoteAttrText)>,
     mut icon_q: Query<(Entity, &mut Sprite), With<RemoteAttrIcon>>,
     am: Res<AtlasManager>,
 ) {
-    for ui_event in receive.read() {
-        match ui_event {
-            UiEvent::Roll(_) => {
-                for (mut attr_text, mut color, RemoteAttrText(_)) in text_q.iter_mut() {
-                    *attr_text = "-".into();
-                    *color = bevy::color::palettes::basic::GRAY.into();
-                }
-                if let Ok((entity, _)) = icon_q.get_single() {
-                    commands.entity(entity).insert(Visibility::Hidden);
-                }
+    for (mut attr_text, mut color, RemoteAttrText(index)) in text_q.iter_mut() {
+        *attr_text = event.remote_attr[*index].to_string().into();
+        *color = bevy::color::palettes::basic::RED.into();
+    }
+    if let Ok((entity, mut sprite)) = icon_q.get_single_mut() {
+        util::replace_kind_icon(&mut sprite, event.remote_kind, KindIconSize::Large, &am);
+        commands.entity(entity).insert(Visibility::Visible);
+    }
+}
+
+fn on_machine_ui_update_info(
+    // bevy system
+    event: Trigger<MachineInfoTrigger>,
+    mut text_q: Query<(&MachineKind, &mut Text2d, &MachineText)>,
+) {
+    for (machine_component, mut text, MachineText(kind)) in text_q.iter_mut() {
+        if *machine_component == event.kind {
+            match kind {
+                MachineTextKind::Title => *text = event.info.name.to_string().into(),
+                MachineTextKind::Id => *text = event.info.id.to_string().into(),
+                MachineTextKind::Vitals(_) => {}
             }
-            UiEvent::Resources(_, _, remote_attr, remote_kind) => {
-                for (mut attr_text, mut color, RemoteAttrText(index)) in text_q.iter_mut() {
-                    *attr_text = remote_attr[*index].to_string().into();
-                    *color = bevy::color::palettes::basic::RED.into();
-                }
-                if let Ok((entity, mut sprite)) = icon_q.get_single_mut() {
-                    util::replace_kind_icon(&mut sprite, *remote_kind, KindIconSize::Large, &am);
-                    commands.entity(entity).insert(Visibility::Visible);
-                }
-            }
-            _ => {}
         }
     }
 }
 
-fn machine_ui_update(
+fn on_machine_ui_update_state(
     // bevy system
-    mut receive: EventReader<UiEvent>,
+    event: Trigger<MachineStateTrigger>,
     mut commands: Commands,
     mut text_q: Query<(&MachineKind, &mut Text2d, &MachineText)>,
     mut sprite_q: Query<(&MachineKind, &mut Sprite, &MachineQueueItem)>,
@@ -897,68 +871,66 @@ fn machine_ui_update(
     dm: Res<DataManager>,
     context: Res<GameplayContext>,
 ) {
-    for ui_event in receive.read() {
-        match ui_event {
-            UiEvent::MachineInfoUpdate(machine, info) => {
-                for (machine_component, mut text, MachineText(kind)) in text_q.iter_mut() {
-                    if machine_component == machine {
-                        match kind {
-                            MachineTextKind::Title => *text = info.name.to_string().into(),
-                            MachineTextKind::Id => *text = info.id.to_string().into(),
-                            _ => {}
-                        }
-                    }
-                }
-            }
-            UiEvent::MachineStateUpdate(local, remote) => {
-                for (machine_component, mut text, MachineText(kind)) in text_q.iter_mut() {
-                    if let MachineTextKind::Vitals(index) = kind {
-                        let machine = if *machine_component == MachineKind::Local {
-                            local
-                        } else {
-                            remote
-                        };
-                        *text = machine.vitals[*index].to_string().into();
-                    }
-                }
-
-                for (machine_component, mut sprite, MachineQueueItem(index)) in sprite_q.iter_mut() {
-                    let (machine, player_owned) = if *machine_component == MachineKind::Local {
-                        (local, true)
-                    } else {
-                        (remote, false)
-                    };
-
-                    sprite.color = if let Some(process) = machine.queue.iter().find(|(_, delay)| delay == index).map(|(item, _)| item) {
-                        if process.local == player_owned {
-                            bevy::color::palettes::basic::GREEN
-                        } else {
-                            bevy::color::palettes::basic::RED
-                        }
-                    } else {
-                        bevy::color::palettes::basic::WHITE
-                    }
-                    .into();
-                }
-
-                for (entity, machine_component, running) in running_q.iter() {
-                    let machine = if *machine_component == MachineKind::Local {
-                        local
-                    } else {
-                        remote
-                    };
-                    let card = machine.running.get(running.0).and_then(|process| dm.convert_card(&process.player_card));
-                    commands.entity(entity).trigger(CardPopulateEvent::new(card, Attributes::from_arrays(context.cached_state.attr)));
-                }
-            }
-            _ => {}
+    for (machine_component, mut text, MachineText(kind)) in text_q.iter_mut() {
+        if let MachineTextKind::Vitals(index) = kind {
+            let machine = if *machine_component == MachineKind::Local {
+                &event.local
+            } else {
+                &event.remote
+            };
+            *text = machine.vitals[*index].to_string().into();
         }
+    }
+
+    for (machine_component, mut sprite, MachineQueueItem(index)) in sprite_q.iter_mut() {
+        let (machine, player_owned) = if *machine_component == MachineKind::Local {
+            (&event.local, true)
+        } else {
+            (&event.remote, false)
+        };
+
+        sprite.color = if let Some(process) = machine.queue.iter().find(|(_, delay)| delay == index).map(|(item, _)| item) {
+            if process.local == player_owned {
+                bevy::color::palettes::basic::GREEN
+            } else {
+                bevy::color::palettes::basic::RED
+            }
+        } else {
+            bevy::color::palettes::basic::WHITE
+        }
+        .into();
+    }
+
+    for (entity, machine_component, running) in running_q.iter() {
+        let machine = if *machine_component == MachineKind::Local {
+            &event.local
+        } else {
+            &event.remote
+        };
+        let card = machine.running.get(running.0).and_then(|process| dm.convert_card(&process.player_card));
+        commands.entity(entity).trigger(CardPopulateEvent::new(card, Attributes::from_arrays(context.cached_state.attr)));
     }
 }
 
-fn tty_update(
+fn on_mission_ui_update(
     // bevy system
-    event: Trigger<TTYMessageEvent>,
+    event: Trigger<MissionTrigger>,
+    mut commands: Commands,
+    display_q: Query<(Entity, &MissionNodeDisplay)>,
+) {
+    for (entity, display) in &display_q {
+        let visibility = if event.mission.node.kind == display.0 {
+            Visibility::Visible
+        } else {
+            Visibility::Hidden
+        };
+        commands.entity(entity).insert(visibility);
+    }
+}
+
+fn on_tty_update(
+    // bevy system
+    event: Trigger<TTYMessageTrigger>,
     mut context: ResMut<GameplayContext>,
     mut text_q: Query<(&mut Text2d, &mut TTYMessageText)>,
 ) {
@@ -981,95 +953,95 @@ fn tty_update(
 
 fn gameplay_update(
     // bevy system
-    commands: Commands,
+    mut commands: Commands,
     mut gate: ResMut<GateIFace>,
     mut context: ResMut<GameplayContext>,
-    mut send: EventWriter<UiEvent>,
 ) {
     let new_phase = match gate.grx.try_recv() {
-        Ok(GateCommand::GameStartTurn(gate_response)) => recv_start_turn(commands, *gate_response),
-        Ok(GateCommand::GameRoll(gate_response)) => recv_roll(commands, *gate_response, &mut send),
-        Ok(GateCommand::GameChooseAttr(gate_response)) => recv_choose_attr(commands, *gate_response, &mut send),
-        Ok(GateCommand::GameResources(gate_response)) => recv_resources(commands, *gate_response, &mut send),
-        Ok(GateCommand::GamePlayCard(gate_response)) => recv_play_card(commands, *gate_response),
-        Ok(GateCommand::GameResolveCards(gate_response)) => recv_resolve_cards(commands, *gate_response),
-        Ok(GateCommand::GameEndTurn(gate_response)) => recv_end_turn(commands, *gate_response),
-        Ok(GateCommand::GameTick(gate_response)) => recv_tick(commands, *gate_response, &mut context),
-        Ok(GateCommand::GameEndGame(gate_response)) => recv_end_game(commands, *gate_response),
-        Ok(GateCommand::GameUpdateState(gate_response)) => recv_update_state(*gate_response, &mut send),
+        Ok(GateCommand::GameStartTurn(gate_response)) => recv_start_turn(&mut commands, *gate_response),
+        Ok(GateCommand::GameRoll(gate_response)) => recv_roll(&mut commands, *gate_response),
+        Ok(GateCommand::GameChooseAttr(gate_response)) => recv_choose_attr(&mut commands, *gate_response),
+        Ok(GateCommand::GameResources(gate_response)) => recv_resources(&mut commands, *gate_response),
+        Ok(GateCommand::GamePlayCard(gate_response)) => recv_play_card(&mut commands, *gate_response),
+        Ok(GateCommand::GameResolveCards(gate_response)) => recv_resolve_cards(&mut commands, *gate_response),
+        Ok(GateCommand::GameEndTurn(gate_response)) => recv_end_turn(&mut commands, *gate_response),
+        Ok(GateCommand::GameTick(gate_response)) => recv_tick(&mut commands, *gate_response, &mut context),
+        Ok(GateCommand::GameEndGame(gate_response)) => recv_end_game(&mut commands, *gate_response),
+        Ok(GateCommand::GameUpdateState(gate_response)) => recv_update_state(&mut commands, *gate_response),
         Ok(_) => None,
         Err(_) => None,
     };
     if let Some(phase) = new_phase {
         context.phase = phase;
-        send.send(UiEvent::GamePhase(phase));
+        commands.trigger(GamePhaseTrigger::new(phase));
     }
 }
 
-fn recv_start_turn(mut commands: Commands, response: GameStartTurnResponse) -> Option<VagabondGamePhase> {
-    commands.trigger(TTYMessageEvent::new(MachineKind::Remote, "TURN STARTED"));
+fn recv_start_turn(commands: &mut Commands, response: GameStartTurnResponse) -> Option<VagabondGamePhase> {
+    commands.trigger(TTYMessageTrigger::new(MachineKind::Remote, "TURN STARTED"));
     response.success.then_some(VagabondGamePhase::Wait(WaitKind::All))
 }
 
-fn recv_roll(mut commands: Commands, response: GameRollMessage, send: &mut EventWriter<UiEvent>) -> Option<VagabondGamePhase> {
-    commands.trigger(TTYMessageEvent::new(MachineKind::Local, "CHOOSE ATTR"));
-    send.send(UiEvent::Roll(response.roll));
-    send.send(UiEvent::ChooseAttr(None));
+fn recv_roll(commands: &mut Commands, response: GameRollMessage) -> Option<VagabondGamePhase> {
+    commands.trigger(TTYMessageTrigger::new(MachineKind::Local, "CHOOSE ATTR"));
+    commands.trigger(RollTrigger::new(response.roll));
+    commands.trigger(ChooseAttrTrigger::new(None));
     Some(VagabondGamePhase::Pick)
 }
 
-fn recv_choose_attr(mut commands: Commands, response: GameChooseAttrResponse, send: &mut EventWriter<UiEvent>) -> Option<VagabondGamePhase> {
-    commands.trigger(TTYMessageEvent::new(MachineKind::Remote, "ATTR CHOSEN"));
+fn recv_choose_attr(commands: &mut Commands, response: GameChooseAttrResponse) -> Option<VagabondGamePhase> {
+    commands.trigger(TTYMessageTrigger::new(MachineKind::Remote, "ATTR CHOSEN"));
     if !response.success {
-        send.send(UiEvent::ChooseAttr(None));
+        commands.trigger(ChooseAttrTrigger::new(None));
     }
 
     response.success.then_some(VagabondGamePhase::Wait(WaitKind::All))
 }
 
-fn recv_resources(mut commands: Commands, response: GameResourcesMessage, send: &mut EventWriter<UiEvent>) -> Option<VagabondGamePhase> {
-    commands.trigger(TTYMessageEvent::new(MachineKind::Local, "PLAY CARDS"));
-    send.send(UiEvent::PlayerErg(response.player_state_view.erg));
-    send.send(UiEvent::PlayerState(response.player_state_view));
-    send.send(UiEvent::Resources(response.local_erg, response.remote_erg, response.remote_attr, response.remote_kind));
+fn recv_resources(commands: &mut Commands, response: GameResourcesMessage) -> Option<VagabondGamePhase> {
+    commands.trigger(TTYMessageTrigger::new(MachineKind::Local, "PLAY CARDS"));
+    commands.trigger(PlayerErgTrigger::new(response.player_state_view.erg));
+    commands.trigger(ResourcesTrigger::new(&response));
+    commands.trigger(PlayerStateTrigger::new(response.player_state_view));
     Some(VagabondGamePhase::Play)
 }
 
-fn recv_play_card(mut commands: Commands, response: GamePlayCardResponse) -> Option<VagabondGamePhase> {
+fn recv_play_card(commands: &mut Commands, response: GamePlayCardResponse) -> Option<VagabondGamePhase> {
     let success = response.success.iter().all(|&success| success);
-    commands.trigger(TTYMessageEvent::new(MachineKind::Remote, "CARDS PLAYED"));
+    commands.trigger(TTYMessageTrigger::new(MachineKind::Remote, "CARDS PLAYED"));
     success.then_some(VagabondGamePhase::Wait(WaitKind::All))
 }
 
-fn recv_resolve_cards(mut commands: Commands, _response: GameResolveCardsMessage) -> Option<VagabondGamePhase> {
-    commands.trigger(TTYMessageEvent::new(MachineKind::Local, "DRAW CARDS"));
+fn recv_resolve_cards(commands: &mut Commands, _response: GameResolveCardsMessage) -> Option<VagabondGamePhase> {
+    commands.trigger(TTYMessageTrigger::new(MachineKind::Local, "DRAW CARDS"));
     Some(VagabondGamePhase::Draw)
 }
 
-fn recv_end_turn(mut commands: Commands, response: GameEndTurnResponse) -> Option<VagabondGamePhase> {
-    commands.trigger(TTYMessageEvent::new(MachineKind::Remote, "END TURN"));
+fn recv_end_turn(commands: &mut Commands, response: GameEndTurnResponse) -> Option<VagabondGamePhase> {
+    commands.trigger(TTYMessageTrigger::new(MachineKind::Remote, "END TURN"));
     response.success.then_some(VagabondGamePhase::Wait(WaitKind::All))
 }
 
-fn recv_tick(mut commands: Commands, response: GameTickMessage, context: &mut GameplayContext) -> Option<VagabondGamePhase> {
-    commands.trigger(TTYMessageEvent::new(MachineKind::Local, "START TURN"));
+fn recv_tick(commands: &mut Commands, response: GameTickMessage, context: &mut GameplayContext) -> Option<VagabondGamePhase> {
+    commands.trigger(TTYMessageTrigger::new(MachineKind::Local, "START TURN"));
     context.reset(response.tick);
     Some(VagabondGamePhase::Start)
 }
 
-fn recv_end_game(mut commands: Commands, _response: GameEndGameResponse) -> Option<VagabondGamePhase> {
-    commands.trigger(TTYMessageEvent::new(MachineKind::Local, "END GAME"));
+fn recv_end_game(commands: &mut Commands, _response: GameEndGameResponse) -> Option<VagabondGamePhase> {
+    commands.trigger(TTYMessageTrigger::new(MachineKind::Local, "END GAME"));
     None
 }
 
-fn recv_update_state(response: GameUpdateStateResponse, send: &mut EventWriter<UiEvent>) -> Option<VagabondGamePhase> {
-    send.send(UiEvent::PlayerErg(response.player_state.erg));
-    send.send(UiEvent::PlayerState(response.player_state));
-    send.send(UiEvent::MachineStateUpdate(response.local_machine, response.remote_machine));
+fn recv_update_state(commands: &mut Commands, response: GameUpdateStateResponse) -> Option<VagabondGamePhase> {
+    commands.trigger(PlayerErgTrigger::new(response.player_state.erg));
+    commands.trigger(PlayerStateTrigger::new(response.player_state));
+    commands.trigger(MachineStateTrigger::new(response.local_machine, response.remote_machine));
+    commands.trigger(MissionTrigger::new(response.mission));
     None
 }
 
-pub fn gameplay_exit(
+fn gameplay_exit(
     // bevy system
     mut commands: Commands,
     mut slm: ResMut<ScreenLayoutManager>,

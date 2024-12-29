@@ -1,0 +1,21 @@
+mod choose_attr;
+mod game_phase;
+mod machine_info;
+mod machine_state;
+mod mission;
+mod player_erg;
+mod player_state;
+mod resources;
+mod roll;
+mod tty_message;
+
+pub(crate) use choose_attr::ChooseAttrTrigger;
+pub(crate) use game_phase::GamePhaseTrigger;
+pub(crate) use machine_info::MachineInfoTrigger;
+pub(crate) use machine_state::MachineStateTrigger;
+pub(crate) use mission::MissionTrigger;
+pub(crate) use player_erg::PlayerErgTrigger;
+pub(crate) use player_state::PlayerStateTrigger;
+pub(crate) use resources::ResourcesTrigger;
+pub(crate) use roll::RollTrigger;
+pub(crate) use tty_message::TTYMessageTrigger;

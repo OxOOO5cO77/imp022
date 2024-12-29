@@ -104,7 +104,7 @@ fn login_ui_setup(
     mut slm: ResMut<ScreenLayoutManager>,
     for_slm: (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>, ResMut<Assets<FrameMaterial>>),
 ) {
-    let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, for_slm);
+    let (layout, _) = slm.build(&mut commands, SCREEN_LAYOUT, &am, for_slm);
 
     commands.entity(layout.entity("connected_icon")).insert(ConnectedIcon);
 

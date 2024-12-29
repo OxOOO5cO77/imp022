@@ -543,7 +543,7 @@ impl ScreenLayoutManager {
     }
 
     #[allow(clippy::type_complexity)]
-    pub(crate) fn build(&mut self, commands: &mut Commands, layout_name: &str, am: &AtlasManager, (asset_server, mut meshes, mut materials_color, mut materials_frame): (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>, ResMut<Assets<FrameMaterial>>)) -> &ScreenLayout {
+    pub(crate) fn build(&mut self, commands: &mut Commands, layout_name: &str, am: &AtlasManager, (asset_server, mut meshes, mut materials_color, mut materials_frame): (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>, ResMut<Assets<FrameMaterial>>)) -> (&ScreenLayout, Entity) {
         let base_id = commands
             .spawn(ScreenLayoutContainer::default())
             .with_children(|parent| {
@@ -569,7 +569,7 @@ impl ScreenLayoutManager {
             self.ui_entity_map.insert(layout_name.to_string(), ui_id);
         }
 
-        self.layout_map.get(layout_name).unwrap()
+        (self.layout_map.get(layout_name).unwrap(), base_id)
     }
 
     pub(crate) fn destroy(&mut self, mut commands: Commands, layout_name: &str) {

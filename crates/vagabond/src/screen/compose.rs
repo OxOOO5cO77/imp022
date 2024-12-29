@@ -3,6 +3,7 @@ use crate::manager::{AtlasManager, DataManager, ScreenLayout, ScreenLayoutManage
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::card_layout::{CardLayout, CardPopulateEvent};
 use crate::screen::card_tooltip::{on_update_tooltip, CardTooltip, UpdateCardTooltipEvent};
+use crate::screen::compose_init::ComposeInitHandoff;
 use crate::screen::util::on_out_generic;
 use crate::system::ui_effects::{Glower, Hider, SetColorEvent, TextTip, UiFxTrackedColor, UiFxTrackedSize};
 use crate::system::AppState;
@@ -21,43 +22,10 @@ pub struct ComposePlugin;
 impl Plugin for ComposePlugin {
     fn build(&self, app: &mut App) {
         app //
-            .add_event::<FinishPlayer>()
-            .add_event::<PopulatePlayerUi>()
-            .add_systems(OnEnter(AppState::ComposeInit), compose_init_enter)
-            .add_systems(Update, compose_init_update.run_if(in_state(AppState::ComposeInit)))
             .add_systems(OnEnter(AppState::Compose), compose_enter)
-            .add_systems(Update, (finish_player, populate_bio_ui, populate_deck_ui, commit_button_ui, compose_update).run_if(in_state(AppState::Compose)))
+            .add_systems(Update, compose_update.run_if(in_state(AppState::Compose)))
             .add_systems(PostUpdate, populate_part_layouts.run_if(in_state(AppState::Compose)))
             .add_systems(OnExit(AppState::Compose), compose_exit);
-    }
-}
-
-#[derive(Resource)]
-struct ComposeInitHandoff {
-    parts: [VagabondPart; 8],
-}
-
-fn compose_init_enter(
-    // bevy system
-    gate: ResMut<GateIFace>,
-) {
-    gate.send_game_activate();
-}
-
-fn compose_init_update(
-    // bevy system
-    mut commands: Commands,
-    mut gate: ResMut<GateIFace>,
-    mut app_state: ResMut<NextState<AppState>>,
-    dm: Res<DataManager>,
-) {
-    if let Ok(GateCommand::GameActivate(response)) = gate.grx.try_recv() {
-        let init_handoff = ComposeInitHandoff {
-            parts: response.parts.map(|part| dm.convert_part(&part).unwrap_or_default()),
-        };
-        gate.game_id = response.game_id;
-        commands.insert_resource(init_handoff);
-        app_state.set(AppState::Compose)
     }
 }
 
@@ -77,7 +45,7 @@ struct ComposeContext {
 }
 
 #[derive(Event)]
-struct FinishPlayer;
+struct FinishPlayerTrigger;
 
 #[derive(Component)]
 struct CardHeader(usize);
@@ -251,7 +219,14 @@ fn compose_enter(
     let parts = init_handoff.parts.clone();
     commands.remove_resource::<ComposeInitHandoff>();
 
-    let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, for_slm);
+    let (layout, base_id) = slm.build(&mut commands, SCREEN_LAYOUT, &am, for_slm);
+
+    commands.entity(base_id).with_children(|parent| {
+        parent.spawn(Observer::new(on_finish_player));
+        parent.spawn(Observer::new(on_populate_bio_ui));
+        parent.spawn(Observer::new(on_populate_deck_ui));
+        parent.spawn(Observer::new(on_commit_button_ui));
+    });
 
     let container = commands.entity(layout.entity("text_tip")).insert_text_tip_container(layout.entity("text_tip/text")).id();
     commands.entity(layout.entity("attributes/a")).insert_text_tip(container, "Analyze");
@@ -470,8 +445,8 @@ fn handle_empty(empty: Entity, original: Entity, mut holder_q: Query<(&mut PartH
 fn on_part_drop(
     //
     event: Trigger<Pointer<DragDrop>>,
+    mut commands: Commands,
     mut holder_q: Query<(&mut PartHolder, &Slot)>,
-    mut send: EventWriter<FinishPlayer>,
     draggable: Res<Draggable>,
 ) {
     if !draggable.active {
@@ -485,20 +460,20 @@ fn on_part_drop(
 
     handle_empty(event.target, original, holder_q);
 
-    send.send(FinishPlayer);
+    commands.trigger(FinishPlayerTrigger);
 }
 
 fn on_click_commit(
     //
     _event: Trigger<Pointer<Click>>,
+    mut commands: Commands,
     mut context: ResMut<ComposeContext>,
-    mut send: EventWriter<FinishPlayer>,
 ) {
     if context.state != ComposeState::Ready {
         return;
     }
     context.state = ComposeState::Committed;
-    send.send(FinishPlayer);
+    commands.trigger(FinishPlayerTrigger);
 }
 
 fn on_over_commit(
@@ -583,82 +558,76 @@ fn populate_part_layouts(
     }
 }
 
-fn commit_button_ui(
+fn on_commit_button_ui(
     // bevy system
+    event: Trigger<PopulatePlayerUi>,
     mut commands: Commands,
-    mut read: EventReader<PopulatePlayerUi>,
     mut glower_q: Query<(Entity, &UiFxTrackedColor, Option<&Glower>), With<CommitButton>>,
 ) {
-    if let Some(event) = read.read().last() {
-        if let Ok((entity, source_color, glower)) = glower_q.get_single_mut() {
-            match event {
-                PopulatePlayerUi::Hide => {
-                    if let Some(glower) = glower {
-                        glower.remove(&mut commands, entity);
-                    }
+    if let Ok((entity, source_color, glower)) = glower_q.get_single_mut() {
+        match *event {
+            PopulatePlayerUi::Hide => {
+                if let Some(glower) = glower {
+                    glower.remove(&mut commands, entity);
                 }
-                PopulatePlayerUi::Show(_) => {
-                    commands.entity(entity).insert(Glower::new(source_color.color, bevy::color::palettes::basic::GREEN, GLOWER_COMMIT_SPEED));
-                }
-            };
-        }
+            }
+            PopulatePlayerUi::Show(_) => {
+                commands.entity(entity).insert(Glower::new(source_color.color, bevy::color::palettes::basic::GREEN, GLOWER_COMMIT_SPEED));
+            }
+        };
     }
 }
 
-fn populate_deck_ui(
+fn on_populate_deck_ui(
     // bevy system
+    event: Trigger<PopulatePlayerUi>,
     mut commands: Commands,
-    mut read: EventReader<PopulatePlayerUi>,
     header_q: Query<(Entity, &CardHeader)>,
     gutter_q: Query<Entity, With<DeckGutterGroup>>,
     context: Res<ComposeContext>,
 ) {
-    if let Some(event) = read.read().last() {
-        let visibility = match event {
-            PopulatePlayerUi::Hide => {
-                commands.trigger_targets(CardPopulateEvent::default(), header_q.iter().map(|(e, _)| e).collect::<Vec<_>>());
-                Visibility::Hidden
-            }
-            PopulatePlayerUi::Show(_) => {
-                for (idx, card) in context.deck.iter().enumerate() {
-                    if let Some((entity, _)) = header_q.iter().find(|(_, h)| h.0 == idx) {
-                        commands.entity(entity).trigger(CardPopulateEvent::new(Some(card.clone()), context.attributes));
-                    }
-                }
-                Visibility::Visible
-            }
-        };
-        if let Ok(gutter) = gutter_q.get_single() {
-            commands.entity(gutter).insert(visibility);
+    let visibility = match *event {
+        PopulatePlayerUi::Hide => {
+            commands.trigger_targets(CardPopulateEvent::default(), header_q.iter().map(|(e, _)| e).collect::<Vec<_>>());
+            Visibility::Hidden
         }
+        PopulatePlayerUi::Show(_) => {
+            for (idx, card) in context.deck.iter().enumerate() {
+                if let Some((entity, _)) = header_q.iter().find(|(_, h)| h.0 == idx) {
+                    commands.entity(entity).trigger(CardPopulateEvent::new(Some(card.clone()), context.attributes));
+                }
+            }
+            Visibility::Visible
+        }
+    };
+    if let Ok(gutter) = gutter_q.get_single() {
+        commands.entity(gutter).insert(visibility);
     }
 }
 
-fn populate_bio_ui(
+fn on_populate_bio_ui(
     // bevy system
+    event: Trigger<PopulatePlayerUi>,
     mut commands: Commands,
-    mut read: EventReader<PopulatePlayerUi>,
     mut info_q: Query<(&mut Text2d, &InfoKind), Without<CardLayout>>,
     bio_q: Query<Entity, With<PlayerBioGroup>>,
 ) {
-    if let Some(event) = read.read().last() {
-        let visibility = match event {
-            PopulatePlayerUi::Hide => Visibility::Hidden,
-            PopulatePlayerUi::Show(data) => {
-                for (mut info, info_kind) in info_q.iter_mut() {
-                    match info_kind {
-                        InfoKind::Name => *info = data.player_bio.name.clone().into(),
-                        InfoKind::ID => *info = data.player_bio.id.clone().into(),
-                        InfoKind::Birthplace => *info = data.player_bio.birthplace().clone().into(),
-                        InfoKind::Age => *info = data.player_bio.age().to_string().into(),
-                    }
+    let visibility = match &*event {
+        PopulatePlayerUi::Hide => Visibility::Hidden,
+        PopulatePlayerUi::Show(data) => {
+            for (mut info, info_kind) in info_q.iter_mut() {
+                match info_kind {
+                    InfoKind::Name => *info = data.player_bio.name.clone().into(),
+                    InfoKind::ID => *info = data.player_bio.id.clone().into(),
+                    InfoKind::Birthplace => *info = data.player_bio.birthplace().clone().into(),
+                    InfoKind::Age => *info = data.player_bio.age().to_string().into(),
                 }
-                Visibility::Visible
             }
-        };
-        if let Ok(bio) = bio_q.get_single() {
-            commands.entity(bio).insert(visibility);
+            Visibility::Visible
         }
+    };
+    if let Ok(bio) = bio_q.get_single() {
+        commands.entity(bio).insert(visibility);
     }
 }
 
@@ -670,57 +639,55 @@ fn attributes_from_holder(holder: &PartHolder) -> AttributeValues {
     AttributeValues::from_array(holder.part.as_ref().map(|o| o.values).unwrap_or_default())
 }
 
-fn finish_player(
+fn on_finish_player(
     // bevy system
-    mut read: EventReader<FinishPlayer>,
-    mut send: EventWriter<PopulatePlayerUi>,
+    _event: Trigger<FinishPlayerTrigger>,
+    mut commands: Commands,
     holder_q: Query<(&PartHolder, &Slot)>,
     gate: Res<GateIFace>,
     mut context: ResMut<ComposeContext>,
 ) {
-    if read.read().last().is_some() {
-        let mut parts = [0, 0, 0, 0, 0, 0, 0, 0];
+    let mut parts = [0, 0, 0, 0, 0, 0, 0, 0];
 
-        for (holder, holder_kind) in holder_q.iter() {
-            if let Some(idx) = match holder_kind {
-                Slot::StatRow(row) => match row {
-                    StatRowKind::Analyze => {
-                        context.attributes.analyze = attributes_from_holder(holder);
-                        Some(0)
-                    }
-                    StatRowKind::Breach => {
-                        context.attributes.breach = attributes_from_holder(holder);
-                        Some(1)
-                    }
-                    StatRowKind::Compute => {
-                        context.attributes.compute = attributes_from_holder(holder);
-                        Some(2)
-                    }
-                    StatRowKind::Disrupt => {
-                        context.attributes.disrupt = attributes_from_holder(holder);
-                        Some(3)
-                    }
-                    StatRowKind::Build => Some(5),
-                    StatRowKind::Detail => Some(7),
-                },
-                Slot::Build => Some(4),
-                Slot::Detail => Some(6),
-                Slot::Card => None,
-                Slot::Empty(_) => None,
-            } {
-                parts[idx] = seed_from_holder(holder);
-            }
+    for (holder, holder_kind) in holder_q.iter() {
+        if let Some(idx) = match holder_kind {
+            Slot::StatRow(row) => match row {
+                StatRowKind::Analyze => {
+                    context.attributes.analyze = attributes_from_holder(holder);
+                    Some(0)
+                }
+                StatRowKind::Breach => {
+                    context.attributes.breach = attributes_from_holder(holder);
+                    Some(1)
+                }
+                StatRowKind::Compute => {
+                    context.attributes.compute = attributes_from_holder(holder);
+                    Some(2)
+                }
+                StatRowKind::Disrupt => {
+                    context.attributes.disrupt = attributes_from_holder(holder);
+                    Some(3)
+                }
+                StatRowKind::Build => Some(5),
+                StatRowKind::Detail => Some(7),
+            },
+            Slot::Build => Some(4),
+            Slot::Detail => Some(6),
+            Slot::Card => None,
+            Slot::Empty(_) => None,
+        } {
+            parts[idx] = seed_from_holder(holder);
         }
+    }
 
-        if parts.iter().all(|&o| o != 0) {
-            if context.state == ComposeState::Build {
-                context.state = ComposeState::Ready;
-            }
-            gate.send_game_build(parts, context.state == ComposeState::Committed);
-        } else {
-            context.state = ComposeState::Build;
-            send.send(PopulatePlayerUi::Hide);
+    if parts.iter().all(|&o| o != 0) {
+        if context.state == ComposeState::Build {
+            context.state = ComposeState::Ready;
         }
+        gate.send_game_build(parts, context.state == ComposeState::Committed);
+    } else {
+        context.state = ComposeState::Build;
+        commands.trigger(PopulatePlayerUi::Hide);
     }
 }
 
@@ -734,7 +701,6 @@ fn compose_update(
     // bevy system
     mut commands: Commands,
     mut gate: ResMut<GateIFace>,
-    mut send: EventWriter<PopulatePlayerUi>,
     wm: Res<WarehouseManager>,
     dm: Res<DataManager>,
     mut app_state: ResMut<NextState<AppState>>,
@@ -756,9 +722,9 @@ fn compose_update(
                     let data = PopulatePlayerUiData {
                         player_bio,
                     };
-                    send.send(PopulatePlayerUi::Show(data));
+                    commands.trigger(PopulatePlayerUi::Show(data));
                 } else {
-                    send.send(PopulatePlayerUi::Hide);
+                    commands.trigger(PopulatePlayerUi::Hide);
                 }
             }
             Err(err) => println!("Error: {err}"),
