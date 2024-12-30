@@ -1,20 +1,25 @@
 use bevy::prelude::*;
 
-use hall::data::core::{AttributeValues, Attributes};
-use vagabond::data::{VagabondCard, VagabondPart};
-use warehouse::data::player_bio::PlayerBio;
+use vagabond::data::VagabondPart;
 
-use crate::manager::{AtlasManager, DataManager, ScreenLayout, ScreenLayoutManager, ScreenLayoutManagerParams, WarehouseManager};
+use crate::manager::{AtlasManager, DataManager, ScreenLayoutManager, ScreenLayoutManagerParams, WarehouseManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::compose_init::ComposeInitHandoff;
-use crate::screen::shared::{on_out_reset_color, on_update_tooltip, CardLayout, CardPopulateEvent, CardTooltip, UpdateCardTooltipEvent};
+use crate::screen::compose_main::{components::*, events::*, resources::*, systems::*};
+use crate::screen::shared::{on_out_reset_color, on_update_tooltip, CardLayout, CardTooltip, UpdateCardTooltipEvent};
 use crate::system::ui_effects::{Glower, Hider, SetColorEvent, TextTip, UiFxTrackedColor, UiFxTrackedSize};
 use crate::system::AppState;
+
+pub(crate) use resources::ComposeHandoff;
+
+mod components;
+mod events;
+mod resources;
+mod systems;
 
 const SCREEN_LAYOUT: &str = "compose";
 
 const GLOWER_DROP_TARGET_SPEED: f32 = 4.0;
-const GLOWER_COMMIT_SPEED: f32 = 8.0;
 
 pub struct ComposeMainPlugin;
 
@@ -26,151 +31,6 @@ impl Plugin for ComposeMainPlugin {
             .add_systems(PostUpdate, populate_part_layouts.run_if(in_state(AppState::Compose)))
             .add_systems(OnExit(AppState::Compose), compose_exit);
     }
-}
-
-#[derive(Default, PartialEq)]
-enum ComposeState {
-    #[default]
-    Build,
-    Ready,
-    Committed,
-}
-
-#[derive(Resource, Default)]
-struct ComposeContext {
-    state: ComposeState,
-    deck: Vec<VagabondCard>,
-    attributes: Attributes,
-}
-
-#[derive(Event)]
-struct FinishPlayerTrigger;
-
-#[derive(Component)]
-struct CardHeader {
-    index: usize,
-}
-
-impl CardHeader {
-    fn new(index: usize) -> Self {
-        Self {
-            index,
-        }
-    }
-}
-
-struct PopulatePlayerUiData {
-    player_bio: PlayerBio,
-}
-
-#[derive(Event)]
-enum PopulatePlayerUi {
-    Hide,
-    Show(PopulatePlayerUiData),
-}
-
-#[derive(Debug, Copy, Clone)]
-enum StatRowKind {
-    Analyze,
-    Breach,
-    Compute,
-    Disrupt,
-    Build,
-    Detail,
-}
-
-#[derive(Debug, Component)]
-enum Slot {
-    StatRow(StatRowKind),
-    Build,
-    Detail,
-    Card,
-    Empty(Entity),
-}
-
-#[derive(Component, Default)]
-struct PartHolder {
-    part: Option<VagabondPart>,
-}
-
-impl PartHolder {
-    fn new(part: VagabondPart) -> Self {
-        Self {
-            part: Some(part),
-        }
-    }
-}
-
-#[derive(Component)]
-struct PlayerBioGroup;
-
-#[derive(Component)]
-struct DeckGutterGroup;
-
-#[derive(Component)]
-enum InfoKind {
-    Name,
-    ID,
-    Birthplace,
-    Age,
-}
-
-#[derive(Component)]
-struct PartLayout {
-    build: [Entity; 4],
-    detail: [Entity; 4],
-    values: [Entity; 4],
-}
-
-impl PartLayout {
-    fn new() -> Self {
-        Self {
-            build: [Entity::PLACEHOLDER; 4],
-            detail: [Entity::PLACEHOLDER; 4],
-            values: [Entity::PLACEHOLDER; 4],
-        }
-    }
-}
-
-#[derive(Component)]
-struct CommitButton;
-
-#[derive(Resource)]
-struct Draggable {
-    drag: Entity,
-    active: bool,
-}
-
-impl Draggable {
-    fn new(drag: Entity) -> Self {
-        Self {
-            drag,
-            active: false,
-        }
-    }
-}
-
-fn make_full_part_layout(commands: &mut Commands, layout: &ScreenLayout, name: &str) -> PartLayout {
-    let mut part_layout = PartLayout::new();
-    let ant = commands.entity(layout.entity(&format!("{}/ant", name))).id();
-    let brd = commands.entity(layout.entity(&format!("{}/brd", name))).id();
-    let cpu = commands.entity(layout.entity(&format!("{}/cpu", name))).id();
-    let dsk = commands.entity(layout.entity(&format!("{}/dsk", name))).id();
-    part_layout.build = [ant, brd, cpu, dsk];
-
-    let ins = commands.entity(layout.entity(&format!("{}/ins", name))).id();
-    let rol = commands.entity(layout.entity(&format!("{}/rol", name))).id();
-    let loc = commands.entity(layout.entity(&format!("{}/loc", name))).id();
-    let dis = commands.entity(layout.entity(&format!("{}/dis", name))).id();
-    part_layout.detail = [ins, rol, loc, dis];
-
-    let a = commands.entity(layout.entity(&format!("{}/a", name))).id();
-    let b = commands.entity(layout.entity(&format!("{}/b", name))).id();
-    let c = commands.entity(layout.entity(&format!("{}/c", name))).id();
-    let d = commands.entity(layout.entity(&format!("{}/d", name))).id();
-    part_layout.values = [a, b, c, d];
-
-    part_layout
 }
 
 trait PartEntityCommandsExtension {
@@ -229,12 +89,7 @@ fn compose_enter(
 
     let (layout, base_id) = slm.build(&mut commands, SCREEN_LAYOUT, &am, &mut slm_params);
 
-    commands.entity(base_id).with_children(|parent| {
-        parent.spawn(Observer::new(on_finish_player));
-        parent.spawn(Observer::new(on_populate_bio_ui));
-        parent.spawn(Observer::new(on_populate_deck_ui));
-        parent.spawn(Observer::new(on_commit_button_ui));
-    });
+    commands.entity(base_id).with_children(ComposeSystems::observe);
 
     let container = commands.entity(layout.entity("text_tip")).insert_text_tip_container(layout.entity("text_tip/text")).id();
     commands.entity(layout.entity("attributes/a")).insert_text_tip(container, "Analyze");
@@ -304,7 +159,7 @@ fn compose_enter(
 
     for (index, part) in parts.iter().enumerate() {
         let name = format!("part{}", index);
-        let part_layout = make_full_part_layout(&mut commands, layout, &name);
+        let part_layout = PartLayout::populate_full(&mut commands, layout, &name);
 
         let part_entity = commands //
             .entity(layout.entity(&name))
@@ -333,13 +188,13 @@ fn compose_enter(
 
     commands.entity(layout.entity("commit")).observe_commit_button();
 
-    let draggable_layout = make_full_part_layout(&mut commands, layout, "draggable");
+    let draggable_layout = PartLayout::populate_full(&mut commands, layout, "draggable");
     let draggable = commands //
         .entity(layout.entity("draggable"))
         .insert((Slot::Card, draggable_layout, PartHolder::default())) // no PickableBehavior::default()!
         .insert(Visibility::Hidden)
         .id();
-    commands.insert_resource(Draggable::new(draggable));
+    commands.insert_resource(DraggedPart::new(draggable));
 
     commands.insert_resource(ComposeContext::default());
 }
@@ -349,9 +204,9 @@ fn on_part_drag_start(
     event: Trigger<Pointer<DragStart>>,
     mut commands: Commands,
     mut holder_q: Query<(Entity, Option<&UiFxTrackedColor>, &Slot, &mut PartHolder)>,
-    mut draggable: ResMut<Draggable>,
+    mut draggable: ResMut<DraggedPart>,
 ) {
-    if let Ok([(_, _, _, mut holder), (_, _, _, mut drag_holder)]) = holder_q.get_many_mut([event.target, draggable.drag]) {
+    if let Ok([(_, _, _, mut holder), (_, _, _, mut drag_holder)]) = holder_q.get_many_mut([event.target, draggable.entity]) {
         if holder.part.is_none() {
             draggable.active = false;
             return;
@@ -365,7 +220,7 @@ fn on_part_drag_start(
     }
 
     for (entity, source_color, slot, holder) in &holder_q {
-        if entity != draggable.drag {
+        if entity != draggable.entity {
             let glow = match slot {
                 Slot::Card => continue,
                 Slot::Empty(_) => Srgba::new(0.7, 0.7, 0.0, 1.0),
@@ -384,13 +239,13 @@ fn on_part_drag(
     //
     event: Trigger<Pointer<Drag>>,
     mut draggable_q: Query<&mut Transform, With<PartHolder>>,
-    draggable: Res<Draggable>,
+    draggable: Res<DraggedPart>,
 ) {
     if !draggable.active {
         return;
     }
 
-    if let Ok(mut transform) = draggable_q.get_mut(draggable.drag) {
+    if let Ok(mut transform) = draggable_q.get_mut(draggable.entity) {
         transform.translation = event.pointer_location.position.extend(100.0);
         transform.translation.y = -transform.translation.y;
     }
@@ -401,7 +256,7 @@ fn on_part_drag_end(
     event: Trigger<Pointer<DragEnd>>,
     mut commands: Commands,
     mut holder_q: Query<(&mut PartHolder, &Slot)>,
-    mut draggable: ResMut<Draggable>,
+    mut draggable: ResMut<DraggedPart>,
     mut glower_q: Query<(Entity, &Glower), Without<CommitButton>>,
 ) {
     if !draggable.active {
@@ -409,7 +264,7 @@ fn on_part_drag_end(
     }
 
     let mut original = Entity::PLACEHOLDER;
-    if let Ok([mut target, mut drag]) = holder_q.get_many_mut([event.target, draggable.drag]) {
+    if let Ok([mut target, mut drag]) = holder_q.get_many_mut([event.target, draggable.entity]) {
         original = handle_swap(None, &mut target.0, &mut drag.0, target.1);
     }
 
@@ -455,14 +310,14 @@ fn on_part_drop(
     event: Trigger<Pointer<DragDrop>>,
     mut commands: Commands,
     mut holder_q: Query<(&mut PartHolder, &Slot)>,
-    draggable: Res<Draggable>,
+    draggable: Res<DraggedPart>,
 ) {
     if !draggable.active {
         return;
     }
 
     let mut original = Entity::PLACEHOLDER;
-    if let Ok([(mut source, _), (mut target, slot), (mut drag, _)]) = holder_q.get_many_mut([event.dropped, event.target, draggable.drag]) {
+    if let Ok([(mut source, _), (mut target, slot), (mut drag, _)]) = holder_q.get_many_mut([event.dropped, event.target, draggable.entity]) {
         original = handle_swap(Some(&mut source), &mut target, &mut drag, slot);
     }
 
@@ -568,145 +423,6 @@ fn populate_part_layouts(
     }
 }
 
-fn on_commit_button_ui(
-    // bevy system
-    event: Trigger<PopulatePlayerUi>,
-    mut commands: Commands,
-    mut glower_q: Query<(Entity, &UiFxTrackedColor, Option<&Glower>), With<CommitButton>>,
-) {
-    if let Ok((entity, source_color, glower)) = glower_q.get_single_mut() {
-        match *event {
-            PopulatePlayerUi::Hide => {
-                if let Some(glower) = glower {
-                    glower.remove(&mut commands, entity);
-                }
-            }
-            PopulatePlayerUi::Show(_) => {
-                commands.entity(entity).insert(Glower::new(source_color.color, bevy::color::palettes::basic::GREEN, GLOWER_COMMIT_SPEED));
-            }
-        };
-    }
-}
-
-fn on_populate_deck_ui(
-    // bevy system
-    event: Trigger<PopulatePlayerUi>,
-    mut commands: Commands,
-    header_q: Query<(Entity, &CardHeader)>,
-    gutter_q: Query<Entity, With<DeckGutterGroup>>,
-    context: Res<ComposeContext>,
-) {
-    let visibility = match *event {
-        PopulatePlayerUi::Hide => {
-            commands.trigger_targets(CardPopulateEvent::default(), header_q.iter().map(|(e, _)| e).collect::<Vec<_>>());
-            Visibility::Hidden
-        }
-        PopulatePlayerUi::Show(_) => {
-            for (idx, card) in context.deck.iter().enumerate() {
-                if let Some((entity, _)) = header_q.iter().find(|(_, h)| h.index == idx) {
-                    commands.entity(entity).trigger(CardPopulateEvent::new(Some(card.clone()), context.attributes));
-                }
-            }
-            Visibility::Visible
-        }
-    };
-    if let Ok(gutter) = gutter_q.get_single() {
-        commands.entity(gutter).insert(visibility);
-    }
-}
-
-fn on_populate_bio_ui(
-    // bevy system
-    event: Trigger<PopulatePlayerUi>,
-    mut commands: Commands,
-    mut info_q: Query<(&mut Text2d, &InfoKind), Without<CardLayout>>,
-    bio_q: Query<Entity, With<PlayerBioGroup>>,
-) {
-    let visibility = match &*event {
-        PopulatePlayerUi::Hide => Visibility::Hidden,
-        PopulatePlayerUi::Show(data) => {
-            for (mut info, info_kind) in info_q.iter_mut() {
-                match info_kind {
-                    InfoKind::Name => *info = data.player_bio.name.clone().into(),
-                    InfoKind::ID => *info = data.player_bio.id.clone().into(),
-                    InfoKind::Birthplace => *info = data.player_bio.birthplace().clone().into(),
-                    InfoKind::Age => *info = data.player_bio.age().to_string().into(),
-                }
-            }
-            Visibility::Visible
-        }
-    };
-    if let Ok(bio) = bio_q.get_single() {
-        commands.entity(bio).insert(visibility);
-    }
-}
-
-fn seed_from_holder(holder: &PartHolder) -> u64 {
-    holder.part.as_ref().map(|o| o.seed).unwrap_or_default()
-}
-
-fn attributes_from_holder(holder: &PartHolder) -> AttributeValues {
-    AttributeValues::from_array(holder.part.as_ref().map(|o| o.values).unwrap_or_default())
-}
-
-fn on_finish_player(
-    // bevy system
-    _event: Trigger<FinishPlayerTrigger>,
-    mut commands: Commands,
-    holder_q: Query<(&PartHolder, &Slot)>,
-    gate: Res<GateIFace>,
-    mut context: ResMut<ComposeContext>,
-) {
-    let mut parts = [0, 0, 0, 0, 0, 0, 0, 0];
-
-    for (holder, holder_kind) in holder_q.iter() {
-        if let Some(idx) = match holder_kind {
-            Slot::StatRow(row) => match row {
-                StatRowKind::Analyze => {
-                    context.attributes.analyze = attributes_from_holder(holder);
-                    Some(0)
-                }
-                StatRowKind::Breach => {
-                    context.attributes.breach = attributes_from_holder(holder);
-                    Some(1)
-                }
-                StatRowKind::Compute => {
-                    context.attributes.compute = attributes_from_holder(holder);
-                    Some(2)
-                }
-                StatRowKind::Disrupt => {
-                    context.attributes.disrupt = attributes_from_holder(holder);
-                    Some(3)
-                }
-                StatRowKind::Build => Some(5),
-                StatRowKind::Detail => Some(7),
-            },
-            Slot::Build => Some(4),
-            Slot::Detail => Some(6),
-            Slot::Card => None,
-            Slot::Empty(_) => None,
-        } {
-            parts[idx] = seed_from_holder(holder);
-        }
-    }
-
-    if parts.iter().all(|&o| o != 0) {
-        if context.state == ComposeState::Build {
-            context.state = ComposeState::Ready;
-        }
-        gate.send_game_build(parts, context.state == ComposeState::Committed);
-    } else {
-        context.state = ComposeState::Build;
-        commands.trigger(PopulatePlayerUi::Hide);
-    }
-}
-
-#[derive(Resource)]
-pub(crate) struct ComposeHandoff {
-    pub(crate) local_name: String,
-    pub(crate) local_id: String,
-}
-
 fn compose_update(
     // bevy system
     mut commands: Commands,
@@ -729,10 +445,7 @@ fn compose_update(
                     context.deck = dm.convert_deck(gate_response.deck);
                     context.deck.sort_by_key(|c| (std::cmp::Reverse(c.rarity), c.set, c.number));
 
-                    let data = PopulatePlayerUiData {
-                        player_bio,
-                    };
-                    commands.trigger(PopulatePlayerUi::Show(data));
+                    commands.trigger(PopulatePlayerUi::Show(player_bio));
                 } else {
                     commands.trigger(PopulatePlayerUi::Hide);
                 }
