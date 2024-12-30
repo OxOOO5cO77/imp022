@@ -44,7 +44,7 @@ impl GameMissionNodePlayerViewExt for GameMissionNodePlayerView {
     }
 }
 
-pub(crate) fn on_out_generic(
+pub(crate) fn on_out_reset_color(
     //
     event: Trigger<Pointer<Out>>,
     mut commands: Commands,

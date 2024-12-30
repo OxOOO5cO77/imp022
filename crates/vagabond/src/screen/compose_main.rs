@@ -7,7 +7,7 @@ use warehouse::data::player_bio::PlayerBio;
 use crate::manager::{AtlasManager, DataManager, ScreenLayout, ScreenLayoutManager, ScreenLayoutManagerParams, WarehouseManager};
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::compose_init::ComposeInitHandoff;
-use crate::screen::shared::{on_out_generic, on_update_tooltip, CardLayout, CardPopulateEvent, CardTooltip, UpdateCardTooltipEvent};
+use crate::screen::shared::{on_out_reset_color, on_update_tooltip, CardLayout, CardPopulateEvent, CardTooltip, UpdateCardTooltipEvent};
 use crate::system::ui_effects::{Glower, Hider, SetColorEvent, TextTip, UiFxTrackedColor, UiFxTrackedSize};
 use crate::system::AppState;
 
@@ -206,7 +206,7 @@ impl PartEntityCommandsExtension for &mut EntityCommands<'_> {
             .insert((CommitButton, PickingBehavior::default()))
             .observe(on_click_commit)
             .observe(on_over_commit)
-            .observe(on_out_generic)
+            .observe(on_out_reset_color)
     }
     fn observe_card_header(self, index: usize) -> Self {
         self //
