@@ -8,7 +8,17 @@ use crate::screen::shared::card_layout::CardPopulateEvent;
 use crate::system::ui_effects::UiFxTrackedSize;
 
 #[derive(Resource)]
-pub(crate) struct CardTooltip(pub(crate) Entity);
+pub(crate) struct CardTooltip {
+    pub(crate) entity: Entity,
+}
+
+impl CardTooltip {
+    pub fn new(entity: Entity) -> Self {
+        Self {
+            entity,
+        }
+    }
+}
 
 #[derive(Event)]
 pub(crate) struct UpdateCardTooltipEvent {

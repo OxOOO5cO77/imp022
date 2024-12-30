@@ -109,7 +109,17 @@ impl GameplayContext {
 }
 
 #[derive(Component)]
-struct PhaseIcon(VagabondGamePhase);
+struct PhaseIcon {
+    phase: VagabondGamePhase,
+}
+
+impl PhaseIcon {
+    fn new(phase: VagabondGamePhase) -> Self {
+        Self {
+            phase,
+        }
+    }
+}
 
 #[derive(Component)]
 struct RemoteAttrText(usize);
@@ -129,7 +139,17 @@ enum PlayerStateText {
 }
 
 #[derive(Component)]
-struct MachineQueueItem(DelayType);
+struct MachineQueueItem {
+    delay: DelayType,
+}
+
+impl MachineQueueItem {
+    fn new(delay: DelayType) -> Self {
+        Self {
+            delay,
+        }
+    }
+}
 
 #[derive(Component)]
 enum MachineTextKind {
@@ -142,7 +162,17 @@ enum MachineTextKind {
 struct MachineText(MachineTextKind);
 
 #[derive(Component)]
-struct MachineRunning(usize);
+struct MachineRunning {
+    index: usize,
+}
+
+impl MachineRunning {
+    fn new(index: usize) -> Self {
+        Self {
+            index,
+        }
+    }
+}
 
 #[derive(Component, Copy, Clone, Hash, Eq, PartialEq)]
 enum MachineKind {
@@ -156,7 +186,17 @@ struct MachineInfo {
 }
 
 #[derive(Component)]
-struct MissionNodeDisplay(MissionNodeKind);
+struct MissionNodeDisplay {
+    kind: MissionNodeKind,
+}
+
+impl MissionNodeDisplay {
+    fn new(kind: MissionNodeKind) -> Self {
+        Self {
+            kind,
+        }
+    }
+}
 
 #[derive(Component)]
 struct TTYMessageText {
@@ -177,7 +217,17 @@ impl TTYMessageText {
 struct AttributeRow(AttributeKind);
 
 #[derive(Component)]
-struct HandCard(usize);
+struct HandCard {
+    index: usize,
+}
+
+impl HandCard {
+    fn new(slot: usize) -> Self {
+        Self {
+            index: slot,
+        }
+    }
+}
 
 trait PickableEntityCommandsExtension {
     fn observe_pickable_row(self, kind: AttributeKind) -> Self;
@@ -204,20 +254,20 @@ impl PickableEntityCommandsExtension for &mut EntityCommands<'_> {
     }
     fn observe_hand_card(self, hand_index: usize) -> Self {
         self //
-            .insert((HandCard(hand_index), PickingBehavior::default()))
+            .insert((HandCard::new(hand_index), PickingBehavior::default()))
             .observe(on_card_drag_start)
             .observe(on_card_drag)
             .observe(on_card_drag_end)
     }
     fn observe_process(self, kind: MachineKind, queue_index: DelayType) -> Self {
         self //
-            .insert((kind, MachineQueueItem(queue_index), PickingBehavior::default()))
+            .insert((kind, MachineQueueItem::new(queue_index), PickingBehavior::default()))
             .observe(on_over_process)
             .observe(on_out_process)
     }
     fn observe_running(self, kind: MachineKind, running_index: usize) -> Self {
         self //
-            .insert((kind, MachineRunning(running_index), PickingBehavior::default()))
+            .insert((kind, MachineRunning::new(running_index), PickingBehavior::default()))
             .observe(on_over_process)
             .observe(on_out_process)
     }
@@ -295,10 +345,10 @@ fn gameplay_enter(
     commands.entity(layout.entity("deck")).insert(PlayerStateText::Deck);
     commands.entity(layout.entity("heap")).insert(PlayerStateText::Heap);
 
-    commands.entity(layout.entity("phase_start")).insert(PhaseIcon(VagabondGamePhase::Start)).insert_text_tip(container, "Start");
-    commands.entity(layout.entity("phase_pick")).insert(PhaseIcon(VagabondGamePhase::Pick)).insert_text_tip(container, "Pick");
-    commands.entity(layout.entity("phase_play")).insert(PhaseIcon(VagabondGamePhase::Play)).insert_text_tip(container, "Play");
-    commands.entity(layout.entity("phase_draw")).insert(PhaseIcon(VagabondGamePhase::Draw)).insert_text_tip(container, "Draw");
+    commands.entity(layout.entity("phase_start")).insert(PhaseIcon::new(VagabondGamePhase::Start)).insert_text_tip(container, "Start");
+    commands.entity(layout.entity("phase_pick")).insert(PhaseIcon::new(VagabondGamePhase::Pick)).insert_text_tip(container, "Pick");
+    commands.entity(layout.entity("phase_play")).insert(PhaseIcon::new(VagabondGamePhase::Play)).insert_text_tip(container, "Play");
+    commands.entity(layout.entity("phase_draw")).insert(PhaseIcon::new(VagabondGamePhase::Draw)).insert_text_tip(container, "Draw");
 
     commands.entity(layout.entity("next")).observe_next_button();
 
@@ -347,12 +397,12 @@ fn gameplay_enter(
     ];
 
     for (kind, node) in NODES {
-        commands.entity(layout.entity(node)).insert((MissionNodeDisplay(*kind), Visibility::Hidden));
+        commands.entity(layout.entity(node)).insert((MissionNodeDisplay::new(*kind), Visibility::Hidden));
     }
 
     let tooltip = CardLayout::build(&mut commands, layout, "tooltip");
     let tooltip_id = commands.entity(tooltip).insert(Visibility::Hidden).observe(on_update_tooltip).id();
-    commands.insert_resource(CardTooltip(tooltip_id));
+    commands.insert_resource(CardTooltip::new(tooltip_id));
 
     commands.remove_resource::<GameplayInitHandoff>();
     commands.insert_resource(GameplayContext::default());
@@ -509,7 +559,7 @@ fn on_card_drag_start(
     let target = event.target;
 
     if let Ok((layout, sprite, transform, hand, tracker)) = sprite_q.get(target) {
-        let card = context.hand.get(hand.0).cloned();
+        let card = context.hand.get(hand.index).cloned();
         if tracker.is_none() && card.as_ref().is_none_or(|card| card.cost > context.cached_state.erg[map_kind_to_index(card.kind)]) {
             if let Some(frame) = layout.frame {
                 if let Ok((source_color, blink)) = bg_q.get(frame) {
@@ -535,7 +585,7 @@ fn on_card_drag_start(
                     context.cached_state.erg[map_kind_to_index(card.kind)] += card.cost;
                     commands.trigger(PlayerErgTrigger::new(context.cached_state.erg));
                 }
-                context.card_picks.remove(&(hand.0 as CardIdxType));
+                context.card_picks.remove(&(hand.index as CardIdxType));
                 indicator.target = None;
                 indicator.offset = offset;
                 commands.entity(entity).insert(IndicatorActive);
@@ -587,8 +637,8 @@ fn on_card_drop(
         indicator.target = machine_q.get_mut(dropped_on).ok().copied();
         if let Some(target) = indicator.target {
             if let Ok(hand) = hand_q.get(indicator.parent) {
-                context.add_card_pick(hand.0, target);
-                if let Some((kind, cost)) = context.hand.get_mut(hand.0).map(|card| (card.kind, card.cost)) {
+                context.add_card_pick(hand.index, target);
+                if let Some((kind, cost)) = context.hand.get_mut(hand.index).map(|card| (card.kind, card.cost)) {
                     context.cached_state.erg[map_kind_to_index(kind)] -= cost;
                     commands.trigger(PlayerErgTrigger::new(context.cached_state.erg));
                 }
@@ -610,8 +660,8 @@ fn on_over_process(
             MachineKind::Local => &context.cached_local,
             MachineKind::Remote => &context.cached_remote,
         };
-        let card = cached.queue.iter().find(|(_, d)| queue_item.0 == *d).map(|(c, _)| c.card.clone());
-        commands.trigger_targets(UpdateCardTooltipEvent::new(event.pointer_location.position, card, Attributes::from_arrays(context.cached_state.attr)), tooltip.0);
+        let card = cached.queue.iter().find(|(_, d)| queue_item.delay == *d).map(|(c, _)| c.card.clone());
+        commands.trigger_targets(UpdateCardTooltipEvent::new(event.pointer_location.position, card, Attributes::from_arrays(context.cached_state.attr)), tooltip.entity);
     }
 }
 
@@ -621,7 +671,7 @@ fn on_out_process(
     mut commands: Commands,
     tooltip: Res<CardTooltip>,
 ) {
-    commands.entity(tooltip.0).insert(Visibility::Hidden);
+    commands.entity(tooltip.entity).insert(Visibility::Hidden);
 }
 
 fn cleanup_indicator(commands: &mut Commands, indicator: Entity, parent: Entity) {
@@ -679,7 +729,7 @@ fn on_hand_ui_update(
     context: Res<GameplayContext>,
 ) {
     for (entity, hand) in &hand_q {
-        let card = event.state.hand.get(hand.0).and_then(|o| dm.convert_card(o));
+        let card = event.state.hand.get(hand.index).and_then(|o| dm.convert_card(o));
         commands.entity(entity).trigger(CardPopulateEvent::new(card, Attributes::from_arrays(context.cached_state.attr)));
     }
 }
@@ -702,7 +752,7 @@ fn on_phase_ui_update(
     mut sprite_q: Query<(&mut Sprite, &PhaseIcon)>,
 ) {
     for (mut sprite, icon) in sprite_q.iter_mut() {
-        let color = if event.phase == icon.0 {
+        let color = if event.phase == icon.phase {
             bevy::color::palettes::css::CHARTREUSE
         } else {
             Srgba::new(0.2, 0.2, 0.2, 1.0)
@@ -869,14 +919,14 @@ fn on_machine_ui_update_state(
         }
     }
 
-    for (machine_component, mut sprite, MachineQueueItem(index)) in sprite_q.iter_mut() {
+    for (machine_component, mut sprite, queue_item) in sprite_q.iter_mut() {
         let (machine, player_owned) = if *machine_component == MachineKind::Local {
             (&event.local, true)
         } else {
             (&event.remote, false)
         };
 
-        sprite.color = if let Some(process) = machine.queue.iter().find(|(_, delay)| delay == index).map(|(item, _)| item) {
+        sprite.color = if let Some(process) = machine.queue.iter().find(|(_, delay)| *delay == queue_item.delay).map(|(item, _)| item) {
             if process.local == player_owned {
                 bevy::color::palettes::basic::GREEN
             } else {
@@ -894,7 +944,7 @@ fn on_machine_ui_update_state(
         } else {
             &event.remote
         };
-        let card = machine.running.get(running.0).and_then(|process| dm.convert_card(&process.player_card));
+        let card = machine.running.get(running.index).and_then(|process| dm.convert_card(&process.player_card));
         commands.entity(entity).trigger(CardPopulateEvent::new(card, Attributes::from_arrays(context.cached_state.attr)));
     }
 }
@@ -906,7 +956,7 @@ fn on_mission_ui_update(
     display_q: Query<(Entity, &MissionNodeDisplay)>,
 ) {
     for (entity, display) in &display_q {
-        let visibility = if event.mission.node.kind == display.0 {
+        let visibility = if event.mission.node.kind == display.kind {
             Visibility::Visible
         } else {
             Visibility::Hidden

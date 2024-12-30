@@ -47,7 +47,17 @@ struct ComposeContext {
 struct FinishPlayerTrigger;
 
 #[derive(Component)]
-struct CardHeader(usize);
+struct CardHeader {
+    index: usize,
+}
+
+impl CardHeader {
+    fn new(index: usize) -> Self {
+        Self {
+            index,
+        }
+    }
+}
 
 struct PopulatePlayerUiData {
     player_bio: PlayerBio,
@@ -200,7 +210,7 @@ impl PartEntityCommandsExtension for &mut EntityCommands<'_> {
     }
     fn observe_card_header(self, index: usize) -> Self {
         self //
-            .insert((CardHeader(index), PickingBehavior::default()))
+            .insert((CardHeader::new(index), PickingBehavior::default()))
             .observe(on_over_header)
             .observe(on_out_header)
     }
@@ -312,7 +322,7 @@ fn compose_enter(
 
     let tooltip = CardLayout::build(&mut commands, layout, "tooltip");
     let tooltip_id = commands.entity(tooltip).insert(Visibility::Hidden).observe(on_update_tooltip).id();
-    commands.insert_resource(CardTooltip(tooltip_id));
+    commands.insert_resource(CardTooltip::new(tooltip_id));
 
     commands.entity(layout.entity("gutter")).insert((DeckGutterGroup, Visibility::Hidden));
     for index in 0..40 {
@@ -490,13 +500,15 @@ fn on_over_header(
     tooltip_q: Query<(&Transform, &UiFxTrackedSize)>,
     tooltip: Res<CardTooltip>,
     context: Res<ComposeContext>,
+    window_q: Query<&Window>,
 ) {
+    let window = window_q.single();
     if let Ok((header_transform, header)) = header_q.get(event.target) {
-        if let Ok((tooltip_transform, tooltip_size)) = tooltip_q.get(tooltip.0) {
-            let new_y = (header_transform.translation.y + (tooltip_size.y / 2.0)).clamp(-1080.0 + tooltip_size.y, 0.0);
+        if let Ok((tooltip_transform, tooltip_size)) = tooltip_q.get(tooltip.entity) {
+            let new_y = (header_transform.translation.y + (tooltip_size.y / 2.0)).clamp(-window.height() + tooltip_size.y, 0.0);
             let position = Vec2::new(tooltip_transform.translation.x, -new_y);
-            let card = context.deck.get(header.0).cloned();
-            commands.entity(tooltip.0).remove::<Hider>().trigger(UpdateCardTooltipEvent::new(position, card, context.attributes));
+            let card = context.deck.get(header.index).cloned();
+            commands.entity(tooltip.entity).remove::<Hider>().trigger(UpdateCardTooltipEvent::new(position, card, context.attributes));
         }
     }
 }
@@ -507,7 +519,7 @@ fn on_out_header(
     mut commands: Commands,
     tooltip: Res<CardTooltip>,
 ) {
-    commands.entity(tooltip.0).insert(Hider::new(0.25, Visibility::Hidden));
+    commands.entity(tooltip.entity).insert(Hider::new(0.25, Visibility::Hidden));
 }
 
 fn populate_part_layouts(
@@ -591,7 +603,7 @@ fn on_populate_deck_ui(
         }
         PopulatePlayerUi::Show(_) => {
             for (idx, card) in context.deck.iter().enumerate() {
-                if let Some((entity, _)) = header_q.iter().find(|(_, h)| h.0 == idx) {
+                if let Some((entity, _)) = header_q.iter().find(|(_, h)| h.index == idx) {
                     commands.entity(entity).trigger(CardPopulateEvent::new(Some(card.clone()), context.attributes));
                 }
             }
