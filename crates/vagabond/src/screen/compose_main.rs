@@ -1,25 +1,24 @@
-use crate::gfx::FrameMaterial;
-use crate::manager::{AtlasManager, DataManager, ScreenLayout, ScreenLayoutManager, WarehouseManager};
-use crate::network::client_gate::{GateCommand, GateIFace};
-use crate::screen::card_layout::{CardLayout, CardPopulateEvent};
-use crate::screen::card_tooltip::{on_update_tooltip, CardTooltip, UpdateCardTooltipEvent};
-use crate::screen::compose_init::ComposeInitHandoff;
-use crate::screen::util::on_out_generic;
-use crate::system::ui_effects::{Glower, Hider, SetColorEvent, TextTip, UiFxTrackedColor, UiFxTrackedSize};
-use crate::system::AppState;
 use bevy::prelude::*;
+
 use hall::data::core::{AttributeValues, Attributes};
 use vagabond::data::{VagabondCard, VagabondPart};
 use warehouse::data::player_bio::PlayerBio;
+
+use crate::manager::{AtlasManager, DataManager, ScreenLayout, ScreenLayoutManager, ScreenLayoutManagerParams, WarehouseManager};
+use crate::network::client_gate::{GateCommand, GateIFace};
+use crate::screen::compose_init::ComposeInitHandoff;
+use crate::screen::shared::{on_out_generic, on_update_tooltip, CardLayout, CardPopulateEvent, CardTooltip, UpdateCardTooltipEvent};
+use crate::system::ui_effects::{Glower, Hider, SetColorEvent, TextTip, UiFxTrackedColor, UiFxTrackedSize};
+use crate::system::AppState;
 
 const SCREEN_LAYOUT: &str = "compose";
 
 const GLOWER_DROP_TARGET_SPEED: f32 = 4.0;
 const GLOWER_COMMIT_SPEED: f32 = 8.0;
 
-pub struct ComposePlugin;
+pub struct ComposeMainPlugin;
 
-impl Plugin for ComposePlugin {
+impl Plugin for ComposeMainPlugin {
     fn build(&self, app: &mut App) {
         app //
             .add_systems(OnEnter(AppState::Compose), compose_enter)
@@ -207,19 +206,18 @@ impl PartEntityCommandsExtension for &mut EntityCommands<'_> {
     }
 }
 
-#[allow(clippy::type_complexity)]
 fn compose_enter(
     // bevy system
     mut commands: Commands,
     init_handoff: Res<ComposeInitHandoff>,
     am: Res<AtlasManager>,
     mut slm: ResMut<ScreenLayoutManager>,
-    for_slm: (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>, ResMut<Assets<FrameMaterial>>),
+    mut slm_params: ScreenLayoutManagerParams,
 ) {
     let parts = init_handoff.parts.clone();
     commands.remove_resource::<ComposeInitHandoff>();
 
-    let (layout, base_id) = slm.build(&mut commands, SCREEN_LAYOUT, &am, for_slm);
+    let (layout, base_id) = slm.build(&mut commands, SCREEN_LAYOUT, &am, &mut slm_params);
 
     commands.entity(base_id).with_children(|parent| {
         parent.spawn(Observer::new(on_finish_player));

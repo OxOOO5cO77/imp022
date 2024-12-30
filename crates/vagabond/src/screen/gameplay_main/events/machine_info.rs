@@ -1,4 +1,4 @@
-use crate::screen::gameplay::{MachineInfo, MachineKind};
+use crate::screen::gameplay_main::{MachineInfo, MachineKind};
 use bevy::prelude::Event;
 
 #[derive(Event)]

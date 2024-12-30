@@ -1,14 +1,17 @@
-use crate::gfx::FrameMaterial;
-use crate::manager::AtlasManager;
-use crate::system::ui_effects::{UiFxTrackedColor, UiFxTrackedSize};
+use std::collections::HashMap;
+use std::f32::consts::PI;
+use std::path::{Path, PathBuf};
+
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::sprite::{Anchor, MeshMaterial2d};
 use bevy::text::TextBounds;
 use bevy::ui::FocusPolicy;
 use bevy_simple_text_input::{TextInput, TextInputInactive, TextInputSettings, TextInputTextColor, TextInputTextFont};
-use std::collections::HashMap;
-use std::f32::consts::PI;
-use std::path::{Path, PathBuf};
+
+use crate::gfx::FrameMaterial;
+use crate::manager::AtlasManager;
+use crate::system::ui_effects::{UiFxTrackedColor, UiFxTrackedSize};
 
 #[derive(Resource)]
 pub(crate) struct ScreenLayoutManager {
@@ -79,6 +82,14 @@ struct LayoutElement {
 struct UiInputBoxElement {
     text_element: TextElement,
     password: bool,
+}
+
+#[derive(SystemParam)]
+pub(crate) struct ScreenLayoutManagerParams<'w> {
+    assets: Res<'w, AssetServer>,
+    meshes: ResMut<'w, Assets<Mesh>>,
+    materials_color: ResMut<'w, Assets<ColorMaterial>>,
+    materials_frame: ResMut<'w, Assets<FrameMaterial>>,
 }
 
 impl ScreenLayout {
@@ -245,8 +256,6 @@ struct ScreenLayoutContainer {
     visibility: Visibility,
     inherited_visibility: InheritedVisibility,
 }
-
-type BevyAssetsForBuildLayout<'a> = (&'a AssetServer, &'a mut Assets<Mesh>, &'a mut Assets<ColorMaterial>, &'a mut Assets<FrameMaterial>);
 
 impl ScreenLayoutManager {
     pub(crate) fn new(path: impl AsRef<Path>) -> Result<Self, std::io::Error> {
@@ -488,7 +497,7 @@ impl ScreenLayoutManager {
         }
     }
 
-    fn build_layout(&self, layout_name: &str, parent: &mut ChildBuilder, base_name: &str, am: &AtlasManager, (asset_server, meshes, materials_color, materials_frame): BevyAssetsForBuildLayout) -> Vec<(String, Entity)> {
+    fn build_layout(&self, layout_name: &str, parent: &mut ChildBuilder, base_name: &str, am: &AtlasManager, slm_params: &mut ScreenLayoutManagerParams) -> Vec<(String, Entity)> {
         let mut entities = Vec::new();
         let layout = self.layout_map.get(layout_name).unwrap();
 
@@ -496,10 +505,10 @@ impl ScreenLayoutManager {
             let full_name = Self::make_name(base_name, name);
             let id = match element {
                 Element::Shape(e) => match e.kind {
-                    ShapeKind::Rect => Self::spawn_shape_bundle_rect(parent, e, meshes, materials_color),
-                    ShapeKind::CapsuleX => Self::spawn_shape_bundle_capsule_x(parent, e, meshes, materials_color),
-                    ShapeKind::Frame => Self::spawn_shape_bundle_frame(parent, e, 0.0, meshes, materials_frame),
-                    ShapeKind::DashFrame => Self::spawn_shape_bundle_frame(parent, e, 8.0, meshes, materials_frame),
+                    ShapeKind::Rect => Self::spawn_shape_bundle_rect(parent, e, &mut slm_params.meshes, &mut slm_params.materials_color),
+                    ShapeKind::CapsuleX => Self::spawn_shape_bundle_capsule_x(parent, e, &mut slm_params.meshes, &mut slm_params.materials_color),
+                    ShapeKind::Frame => Self::spawn_shape_bundle_frame(parent, e, 0.0, &mut slm_params.meshes, &mut slm_params.materials_frame),
+                    ShapeKind::DashFrame => Self::spawn_shape_bundle_frame(parent, e, 8.0, &mut slm_params.meshes, &mut slm_params.materials_frame),
                 },
                 Element::Sprite(e) => {
                     if let Some(sprite) = Self::spawn_sprite_bundle(parent, e, am) {
@@ -508,13 +517,13 @@ impl ScreenLayoutManager {
                         continue;
                     }
                 }
-                Element::Text(e) => Self::spawn_text_bundle(parent, e, asset_server),
+                Element::Text(e) => Self::spawn_text_bundle(parent, e, &slm_params.assets),
                 Element::Layout(e) => {
                     let container = Self::make_container_bundle(e);
                     parent
                         .spawn(container)
                         .with_children(|parent| {
-                            let nested_entities = self.build_layout(&e.layout, parent, &full_name, am, (asset_server, meshes, materials_color, materials_frame));
+                            let nested_entities = self.build_layout(&e.layout, parent, &full_name, am, slm_params);
                             entities.extend(nested_entities);
                         })
                         .id()
@@ -542,12 +551,11 @@ impl ScreenLayoutManager {
         entities
     }
 
-    #[allow(clippy::type_complexity)]
-    pub(crate) fn build(&mut self, commands: &mut Commands, layout_name: &str, am: &AtlasManager, (asset_server, mut meshes, mut materials_color, mut materials_frame): (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>, ResMut<Assets<FrameMaterial>>)) -> (&ScreenLayout, Entity) {
+    pub(crate) fn build(&mut self, commands: &mut Commands, layout_name: &str, am: &AtlasManager, slm_params: &mut ScreenLayoutManagerParams) -> (&ScreenLayout, Entity) {
         let base_id = commands
             .spawn(ScreenLayoutContainer::default())
             .with_children(|parent| {
-                let entities = self.build_layout(layout_name, parent, "", am, (&asset_server, &mut meshes, &mut materials_color, &mut materials_frame));
+                let entities = self.build_layout(layout_name, parent, "", am, slm_params);
                 if let Some(layout) = self.layout_map.get_mut(layout_name) {
                     layout.entity_map = entities.into_iter().collect();
                 }
@@ -560,7 +568,7 @@ impl ScreenLayoutManager {
             let ui_id = commands
                 .spawn(Self::ui_base())
                 .with_children(|parent| {
-                    let entities = self.build_ui_layer(layout_name, parent, &asset_server);
+                    let entities = self.build_ui_layer(layout_name, parent, &slm_params.assets);
                     if let Some(layout) = self.layout_map.get_mut(layout_name) {
                         layout.entity_map.extend(entities);
                     }

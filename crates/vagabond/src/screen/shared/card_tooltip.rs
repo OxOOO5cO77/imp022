@@ -4,7 +4,7 @@ use bevy::prelude::{Commands, Entity, Event, Query, Resource, Transform, Trigger
 use hall::data::core::Attributes;
 use vagabond::data::VagabondCard;
 
-use crate::screen::card_layout::CardPopulateEvent;
+use crate::screen::shared::card_layout::CardPopulateEvent;
 use crate::system::ui_effects::UiFxTrackedSize;
 
 #[derive(Resource)]

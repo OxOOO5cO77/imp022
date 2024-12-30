@@ -155,7 +155,7 @@ impl Atlas {
         let layout_file = std::fs::read_to_string(layout_path).map_err(AtlasManagerError::Io)?;
 
         let mut components = path.components();
-        components.next();  // drop "assets/"
+        components.next(); // drop "assets/"
         let image_path = components.as_path().with_extension("png");
         let image_handle = asset_server.load(image_path);
 
@@ -180,7 +180,7 @@ mod test {
     #[test]
     fn test_atlas_manager() -> Result<(), AtlasManagerError> {
         let layout_file = // test case
-"gameplay:1024,1024
+            "gameplay_main:1024,1024
 064x064:2,2,64,64
 236x312:734,56,236,312
 364x200:368,168,364,200
@@ -189,10 +189,10 @@ mod test {
             ;
         let (atlas_name, map, _layout) = parse_file(layout_file)?;
 
-        assert_eq!(atlas_name, "gameplay");
+        assert_eq!(atlas_name, "gameplay_main");
         assert_eq!(map.len(), 5);
         assert!(map.contains_key("998x540"));
-        assert!(!map.contains_key("gameplay"));
+        assert!(!map.contains_key("gameplay_main"));
         Ok(())
     }
 }

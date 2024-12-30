@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use hall::message::GameUpdateStateResponse;
 
 use crate::network::client_gate::{GateCommand, GateIFace};
-use crate::screen::compose::ComposeHandoff;
+use crate::screen::compose_main::ComposeHandoff;
 use crate::system::AppState;
 
 pub struct GameplayInitPlugin;

@@ -1,4 +1,4 @@
-use crate::screen::gameplay::VagabondGamePhase;
+use crate::screen::gameplay_main::VagabondGamePhase;
 use bevy::prelude::Event;
 
 #[derive(Event)]

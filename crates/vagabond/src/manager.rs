@@ -10,7 +10,7 @@ pub(crate) use crate::manager::atlas_manager::AtlasManager;
 use crate::manager::atlas_manager::AtlasManagerPlugin;
 pub(crate) use crate::manager::data_manager::DataManager;
 pub(crate) use crate::manager::network_manager::NetworkManager;
-pub(crate) use crate::manager::screen_layout_manager::{ScreenLayout, ScreenLayoutManager};
+pub(crate) use crate::manager::screen_layout_manager::{ScreenLayout, ScreenLayoutManager, ScreenLayoutManagerParams};
 pub(crate) use crate::manager::warehouse_manager::WarehouseManager;
 
 pub(super) struct ManagerPlugins;

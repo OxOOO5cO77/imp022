@@ -1,38 +1,28 @@
-use std::mem::discriminant;
-
 use bevy::prelude::*;
 use bevy_simple_text_input::{TextInputCursorPos, TextInputInactive, TextInputSubmitEvent, TextInputValue};
 use tokio::sync::mpsc;
 
 use shared_net::AuthType;
 
-use crate::gfx::FrameMaterial;
-use crate::manager::{AtlasManager, NetworkManager, ScreenLayoutManager};
+use crate::manager::{AtlasManager, NetworkManager, ScreenLayoutManager, ScreenLayoutManagerParams};
 use crate::network::client_drawbridge;
 use crate::network::client_drawbridge::{AuthInfo, DrawbridgeClient, DrawbridgeIFace};
-use crate::network::client_gate::{GateClient, GateCommand, GateIFace};
 use crate::system::AppState;
 
 const SCREEN_LAYOUT: &str = "login";
 
-pub struct LoginPlugin;
+pub struct LoginDrawbridgePlugin;
 
-impl Plugin for LoginPlugin {
+impl Plugin for LoginDrawbridgePlugin {
     fn build(&self, app: &mut App) {
         app //
             .add_systems(OnEnter(AppState::LoginDrawbridge), drawbridge_enter)
             .add_systems(OnEnter(AppState::LoginDrawbridge), login_ui_setup.after(drawbridge_enter))
             .add_systems(Update, drawbridge_update.run_if(in_state(AppState::LoginDrawbridge)))
             .add_systems(Update, textedit_update.run_if(in_state(AppState::LoginDrawbridge)))
-            .add_systems(OnExit(AppState::LoginDrawbridge), drawbridge_exit)
-            .add_systems(OnEnter(AppState::LoginGate), gate_enter)
-            .add_systems(Update, gate_update.run_if(in_state(AppState::LoginGate)))
-            .add_systems(OnExit(AppState::LoginGate), login_exit);
+            .add_systems(OnExit(AppState::LoginDrawbridge), drawbridge_exit);
     }
 }
-
-#[derive(Component)]
-struct LoginScreen;
 
 #[derive(Component)]
 struct ConnectedIcon;
@@ -44,9 +34,9 @@ struct LoginContext {
 }
 
 #[derive(Resource)]
-struct DrawbridgeHandoff {
-    iface: String,
-    auth: AuthType,
+pub(crate) struct DrawbridgeHandoff {
+    pub(crate) iface: String,
+    pub(crate) auth: AuthType,
 }
 
 impl DrawbridgeHandoff {
@@ -95,16 +85,15 @@ impl TextInputExt for &mut EntityCommands<'_> {
     }
 }
 
-#[allow(clippy::type_complexity)]
 fn login_ui_setup(
     // bevy system
     mut commands: Commands,
     drawbridge: Res<DrawbridgeIFace>,
     am: Res<AtlasManager>,
     mut slm: ResMut<ScreenLayoutManager>,
-    for_slm: (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>, ResMut<Assets<FrameMaterial>>),
+    mut slm_params: ScreenLayoutManagerParams,
 ) {
-    let (layout, _) = slm.build(&mut commands, SCREEN_LAYOUT, &am, for_slm);
+    let (layout, _) = slm.build(&mut commands, SCREEN_LAYOUT, &am, &mut slm_params);
 
     commands.entity(layout.entity("connected_icon")).insert(ConnectedIcon);
 
@@ -161,59 +150,6 @@ fn drawbridge_exit(
     // bevy system
     mut commands: Commands,
 ) {
-    commands.remove_resource::<DrawbridgeIFace>();
-}
-
-fn gate_enter(
-    // bevy system
-    mut commands: Commands,
-    handoff: Res<DrawbridgeHandoff>,
-    mut net: ResMut<NetworkManager>,
-) {
-    let (gtx, to_gate_rx) = mpsc::unbounded_channel();
-    let (from_gate_tx, from_gate_rx) = mpsc::unbounded_channel();
-    let gate = GateIFace {
-        game_id: 0,
-        auth: handoff.auth,
-        gtx,
-        grx: from_gate_rx,
-    };
-
-    if let Some(task) = &net.current_task {
-        task.abort();
-    }
-    net.current_task = GateClient::start(handoff.iface.clone(), from_gate_tx, to_gate_rx, &net.runtime);
-
-    commands.remove_resource::<DrawbridgeHandoff>();
-    commands.insert_resource(gate);
-}
-
-fn gate_update(
-    // bevy system
-    mut app_state: ResMut<NextState<AppState>>,
-    mut gate: ResMut<GateIFace>,
-    mut sprite_q: Query<&mut Sprite, With<ConnectedIcon>>,
-) {
-    if let Ok(gate_command) = gate.grx.try_recv() {
-        if let Ok(mut sprite) = sprite_q.get_single_mut() {
-            sprite.color = bevy::color::palettes::css::GREEN.into()
-        }
-        match gate_command {
-            GateCommand::Hello => app_state.set(AppState::ComposeInit),
-            _ => println!("[Login] Unexpected command received {:?}", discriminant(&gate_command)),
-        }
-    }
-}
-
-fn login_exit(
-    // bevy system
-    mut commands: Commands,
-    login_q: Query<Entity, With<LoginScreen>>,
-    mut slm: ResMut<ScreenLayoutManager>,
-) {
-    for e in &login_q {
-        commands.entity(e).despawn_recursive();
-    }
     commands.remove_resource::<LoginContext>();
-    slm.destroy(commands, SCREEN_LAYOUT);
+    commands.remove_resource::<DrawbridgeIFace>();
 }

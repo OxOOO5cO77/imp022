@@ -9,21 +9,17 @@ use hall::data::player::PlayerStatePlayerView;
 use hall::message::*;
 use vagabond::data::{VagabondCard, VagabondMachine, VagabondProcess};
 
-use crate::gfx::FrameMaterial;
-use crate::manager::{AtlasManager, DataManager, ScreenLayoutManager};
+use crate::manager::{AtlasManager, DataManager, ScreenLayoutManager, ScreenLayoutManagerParams};
 use crate::network::client_gate::{GateCommand, GateIFace};
-use crate::screen::card_layout::{CardLayout, CardPopulateEvent};
-use crate::screen::card_tooltip::{on_update_tooltip, CardTooltip, UpdateCardTooltipEvent};
-use crate::screen::gameplay::events::*;
 use crate::screen::gameplay_init::GameplayInitHandoff;
-use crate::screen::util;
-use crate::screen::util::{GameMissionNodePlayerViewExt, KindIconSize};
+use crate::screen::gameplay_main::events::*;
+use crate::screen::shared::{on_out_generic, on_update_tooltip, replace_kind_icon, CardLayout, CardPopulateEvent, CardTooltip, GameMissionNodePlayerViewExt, KindIconSize, UpdateCardTooltipEvent};
 use crate::system::ui_effects::{Blinker, Glower, SetColorEvent, TextTip, UiFxTrackedColor};
 use crate::system::AppState;
 
 mod events;
 
-const SCREEN_LAYOUT: &str = "gameplay";
+const SCREEN_LAYOUT: &str = "gameplay_main";
 
 const BLINKER_COUNT: f32 = 2.0;
 const BLINKER_SPEED: f32 = 24.0;
@@ -34,9 +30,9 @@ const HAND_SIZE: usize = 5;
 const RUNNING_PROGRAM_COUNT: usize = 6;
 const TTY_MESSAGE_COUNT: usize = 9;
 
-pub struct GameplayPlugin;
+pub struct GameplayMainPlugin;
 
-impl Plugin for GameplayPlugin {
+impl Plugin for GameplayMainPlugin {
     fn build(&self, app: &mut App) {
         app //
             .add_systems(OnEnter(AppState::Gameplay), gameplay_enter)
@@ -197,14 +193,14 @@ impl PickableEntityCommandsExtension for &mut EntityCommands<'_> {
             .insert((AttributeRow(kind), PickingBehavior::default()))
             .observe(on_click_attr)
             .observe(on_over_attr)
-            .observe(util::on_out_generic)
+            .observe(on_out_generic)
     }
     fn observe_next_button(self) -> Self {
         self //
             .insert(PickingBehavior::default())
             .observe(on_click_next)
             .observe(on_over_next)
-            .observe(util::on_out_generic)
+            .observe(on_out_generic)
     }
     fn observe_hand_card(self, hand_index: usize) -> Self {
         self //
@@ -227,16 +223,15 @@ impl PickableEntityCommandsExtension for &mut EntityCommands<'_> {
     }
 }
 
-#[allow(clippy::type_complexity)]
 fn gameplay_enter(
     // bevy system
     mut commands: Commands,
     mut handoff: ResMut<GameplayInitHandoff>,
     am: Res<AtlasManager>,
     mut slm: ResMut<ScreenLayoutManager>,
-    for_slm: (Res<AssetServer>, ResMut<Assets<Mesh>>, ResMut<Assets<ColorMaterial>>, ResMut<Assets<FrameMaterial>>),
+    mut slm_params: ScreenLayoutManagerParams,
 ) {
-    let (layout, base_id) = slm.build(&mut commands, SCREEN_LAYOUT, &am, for_slm);
+    let (layout, base_id) = slm.build(&mut commands, SCREEN_LAYOUT, &am, &mut slm_params);
 
     // spawn observers
     commands.entity(base_id).with_children(|parent| {
@@ -249,7 +244,6 @@ fn gameplay_enter(
         parent.spawn(Observer::new(on_erg_ui_update));
         parent.spawn(Observer::new(on_phase_ui_update));
         parent.spawn(Observer::new(on_local_state_update_player));
-        parent.spawn(Observer::new(on_local_state_update_machine));
         parent.spawn(Observer::new(on_mission_ui_update));
         parent.spawn(Observer::new(on_local_ui_update_attr));
         parent.spawn(Observer::new(on_local_ui_update_player));
@@ -744,16 +738,6 @@ fn on_local_state_update_player(
     context.hand = event.state.hand.iter().filter_map(|card| dm.convert_card(card)).collect();
 }
 
-fn on_local_state_update_machine(
-    // bevy system
-    event: Trigger<MachineStateTrigger>,
-    mut context: ResMut<GameplayContext>,
-    dm: Res<DataManager>,
-) {
-    context.cached_local = cache_game_machine(&event.local, &dm);
-    context.cached_remote = cache_game_machine(&event.remote, &dm);
-}
-
 fn on_local_ui_update_player(
     // bevy system
     event: Trigger<PlayerStateTrigger>,
@@ -840,7 +824,7 @@ fn on_remote_ui_update_resources(
         *color = bevy::color::palettes::basic::RED.into();
     }
     if let Ok((entity, mut sprite)) = icon_q.get_single_mut() {
-        util::replace_kind_icon(&mut sprite, event.remote_kind, KindIconSize::Large, &am);
+        replace_kind_icon(&mut sprite, event.remote_kind, KindIconSize::Large, &am);
         commands.entity(entity).insert(Visibility::Visible);
     }
 }
@@ -869,8 +853,11 @@ fn on_machine_ui_update_state(
     mut sprite_q: Query<(&MachineKind, &mut Sprite, &MachineQueueItem)>,
     running_q: Query<(Entity, &MachineKind, &MachineRunning)>,
     dm: Res<DataManager>,
-    context: Res<GameplayContext>,
+    mut context: ResMut<GameplayContext>,
 ) {
+    context.cached_local = cache_game_machine(&event.local, &dm);
+    context.cached_remote = cache_game_machine(&event.remote, &dm);
+
     for (machine_component, mut text, MachineText(kind)) in text_q.iter_mut() {
         if let MachineTextKind::Vitals(index) = kind {
             let machine = if *machine_component == MachineKind::Local {

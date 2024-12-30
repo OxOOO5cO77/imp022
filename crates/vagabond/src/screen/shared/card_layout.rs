@@ -1,6 +1,6 @@
 use crate::manager::{AtlasManager, ScreenLayout};
-use crate::screen::util;
-use crate::screen::util::KindIconSize;
+use crate::screen::shared::util;
+use crate::screen::shared::util::KindIconSize;
 use crate::system::ui_effects::UiFxTrackedColor;
 use bevy::color::Color;
 use bevy::prelude::{Commands, Component, Entity, Event, Query, Res, Sprite, Text2d, Trigger, Visibility, With};
