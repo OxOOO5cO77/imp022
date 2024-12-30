@@ -6,6 +6,7 @@ use tokio::sync::mpsc;
 use crate::manager::{NetworkManager, ScreenLayoutManager};
 use crate::network::client_gate::{GateClient, GateCommand, GateIFace};
 use crate::screen::login_drawbridge::DrawbridgeHandoff;
+use crate::screen::shared::AppScreenExt;
 use crate::system::AppState;
 
 const SCREEN_LAYOUT: &str = "login";
@@ -14,10 +15,7 @@ pub struct LoginGatePlugin;
 
 impl Plugin for LoginGatePlugin {
     fn build(&self, app: &mut App) {
-        app //
-            .add_systems(OnEnter(AppState::LoginGate), gate_enter)
-            .add_systems(Update, gate_update.run_if(in_state(AppState::LoginGate)))
-            .add_systems(OnExit(AppState::LoginGate), login_gate_exit);
+        app.build_screen(AppState::LoginGate, gate_enter, gate_update, login_gate_exit);
     }
 }
 

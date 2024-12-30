@@ -6,7 +6,7 @@ use crate::manager::{AtlasManager, DataManager, ScreenLayoutManager, ScreenLayou
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::compose_init::ComposeInitHandoff;
 use crate::screen::compose_main::{components::*, events::*, resources::*, systems::*};
-use crate::screen::shared::{on_out_reset_color, on_update_tooltip, CardLayout, CardTooltip, UpdateCardTooltipEvent};
+use crate::screen::shared::{on_out_reset_color, on_update_tooltip, AppScreenExt, CardLayout, CardTooltip, UpdateCardTooltipEvent};
 use crate::system::ui_effects::{Glower, Hider, SetColorEvent, TextTip, UiFxTrackedColor, UiFxTrackedSize};
 use crate::system::AppState;
 
@@ -25,11 +25,7 @@ pub struct ComposeMainPlugin;
 
 impl Plugin for ComposeMainPlugin {
     fn build(&self, app: &mut App) {
-        app //
-            .add_systems(OnEnter(AppState::Compose), compose_enter)
-            .add_systems(Update, compose_update.run_if(in_state(AppState::Compose)))
-            .add_systems(PostUpdate, populate_part_layouts.run_if(in_state(AppState::Compose)))
-            .add_systems(OnExit(AppState::Compose), compose_exit);
+        app.build_screen_with_post_update(AppState::Compose, compose_enter, compose_update, populate_part_layouts, compose_exit);
     }
 }
 

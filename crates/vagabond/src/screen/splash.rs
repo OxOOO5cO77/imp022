@@ -1,17 +1,16 @@
 use std::time::Duration;
 
-use crate::system::AppState;
 use bevy::prelude::*;
 use bevy::ui::Val::Percent;
+
+use crate::screen::shared::AppScreenExt;
+use crate::system::AppState;
 
 pub struct SplashPlugin;
 
 impl Plugin for SplashPlugin {
     fn build(&self, app: &mut App) {
-        app //
-            .add_systems(OnEnter(AppState::Splash), splash_enter)
-            .add_systems(Update, splash_update.run_if(in_state(AppState::Splash)))
-            .add_systems(OnExit(AppState::Splash), splash_exit);
+        app.build_screen(AppState::Splash, splash_enter, splash_update, splash_exit);
     }
 }
 

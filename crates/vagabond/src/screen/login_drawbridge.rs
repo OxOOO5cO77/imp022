@@ -7,6 +7,7 @@ use shared_net::AuthType;
 use crate::manager::{AtlasManager, NetworkManager, ScreenLayoutManager, ScreenLayoutManagerParams};
 use crate::network::client_drawbridge;
 use crate::network::client_drawbridge::{AuthInfo, DrawbridgeClient, DrawbridgeIFace};
+use crate::screen::shared::AppScreenExt;
 use crate::system::AppState;
 
 const SCREEN_LAYOUT: &str = "login";
@@ -15,12 +16,7 @@ pub struct LoginDrawbridgePlugin;
 
 impl Plugin for LoginDrawbridgePlugin {
     fn build(&self, app: &mut App) {
-        app //
-            .add_systems(OnEnter(AppState::LoginDrawbridge), drawbridge_enter)
-            .add_systems(OnEnter(AppState::LoginDrawbridge), login_ui_setup.after(drawbridge_enter))
-            .add_systems(Update, drawbridge_update.run_if(in_state(AppState::LoginDrawbridge)))
-            .add_systems(Update, textedit_update.run_if(in_state(AppState::LoginDrawbridge)))
-            .add_systems(OnExit(AppState::LoginDrawbridge), drawbridge_exit);
+        app.build_screen(AppState::LoginDrawbridge, (drawbridge_enter, login_ui_setup).chain(), (drawbridge_update, textedit_update), drawbridge_exit);
     }
 }
 

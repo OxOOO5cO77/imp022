@@ -9,7 +9,7 @@ use crate::manager::{AtlasManager, ScreenLayoutManager, ScreenLayoutManagerParam
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::gameplay_init::GameplayInitHandoff;
 use crate::screen::gameplay_main::{components::*, events::*, resources::*, systems::*};
-use crate::screen::shared::{on_out_reset_color, on_update_tooltip, CardLayout, CardTooltip, GameMissionNodePlayerViewExt, UpdateCardTooltipEvent};
+use crate::screen::shared::{on_out_reset_color, on_update_tooltip, AppScreenExt, CardLayout, CardTooltip, GameMissionNodePlayerViewExt, UpdateCardTooltipEvent};
 use crate::system::ui_effects::{Blinker, SetColorEvent, TextTip, UiFxTrackedColor};
 use crate::system::AppState;
 
@@ -33,11 +33,7 @@ pub struct GameplayMainPlugin;
 
 impl Plugin for GameplayMainPlugin {
     fn build(&self, app: &mut App) {
-        app //
-            .add_systems(OnEnter(AppState::Gameplay), gameplay_enter)
-            .add_systems(Update, gameplay_update.run_if(in_state(AppState::Gameplay)))
-            .add_systems(PostUpdate, cleanup_indicator_post_update.run_if(in_state(AppState::Gameplay)))
-            .add_systems(OnExit(AppState::Gameplay), gameplay_exit);
+        app.build_screen_with_post_update(AppState::Gameplay, gameplay_enter, gameplay_update, cleanup_indicator_post_update, gameplay_exit);
     }
 }
 
