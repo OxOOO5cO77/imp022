@@ -757,9 +757,9 @@ fn on_local_state_update_machine(
 fn on_local_ui_update_player(
     // bevy system
     event: Trigger<PlayerStateTrigger>,
-    mut text_q: Query<(&mut Text2d, &mut TextColor, &PlayerStateText)>,
+    mut text_q: Query<(&mut Text2d, &PlayerStateText)>,
 ) {
-    for (mut text, _, state_text) in text_q.iter_mut() {
+    for (mut text, state_text) in text_q.iter_mut() {
         match state_text {
             PlayerStateText::Attribute(row, col) => *text = format!("{}", event.state.attr[*row][*col]).into(),
             PlayerStateText::Deck => *text = event.state.deck.to_string().into(),
@@ -773,7 +773,7 @@ fn on_local_ui_update_attr(
     // bevy system
     event: Trigger<ChooseAttrTrigger>,
     mut commands: Commands,
-    mut text_q: Query<(&mut Text2d, &mut TextColor, &PlayerStateText)>,
+    mut text_q: Query<(&mut TextColor, &PlayerStateText)>,
     mut row_q: Query<(Entity, &UiFxTrackedColor, Option<&Glower>), With<AttributeRow>>,
     mut context: ResMut<GameplayContext>,
 ) {
@@ -794,7 +794,7 @@ fn on_local_ui_update_attr(
         }
     }
 
-    for (_, mut color, state_text) in text_q.iter_mut() {
+    for (mut color, state_text) in text_q.iter_mut() {
         if let PlayerStateText::Attribute(row, _) = state_text {
             *color = if let Some(kind) = event.kind {
                 if *row == map_kind_to_index(kind) {
