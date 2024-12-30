@@ -29,12 +29,12 @@ fn gate_enter(
     mut net: ResMut<NetworkManager>,
 ) {
     let (gtx, to_gate_rx) = mpsc::unbounded_channel();
-    let (from_gate_tx, from_gate_rx) = mpsc::unbounded_channel();
+    let (from_gate_tx, grx) = mpsc::unbounded_channel();
     let gate = GateIFace {
         game_id: 0,
         auth: handoff.auth,
         gtx,
-        grx: from_gate_rx,
+        grx,
     };
 
     if let Some(task) = &net.current_task {

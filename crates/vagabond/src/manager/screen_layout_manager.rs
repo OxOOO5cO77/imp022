@@ -551,7 +551,7 @@ impl ScreenLayoutManager {
         entities
     }
 
-    pub(crate) fn build(&mut self, commands: &mut Commands, layout_name: &str, am: &AtlasManager, slm_params: &mut ScreenLayoutManagerParams) -> (&ScreenLayout, Entity) {
+    pub(crate) fn build(&mut self, commands: &mut Commands, layout_name: &str, am: &AtlasManager, slm_params: &mut ScreenLayoutManagerParams, observe: Option<fn(&mut ChildBuilder)>) -> &ScreenLayout {
         let base_id = commands
             .spawn(ScreenLayoutContainer::default())
             .with_children(|parent| {
@@ -577,7 +577,11 @@ impl ScreenLayoutManager {
             self.ui_entity_map.insert(layout_name.to_string(), ui_id);
         }
 
-        (self.layout_map.get(layout_name).unwrap(), base_id)
+        if let Some(observe_fn) = observe {
+            commands.entity(base_id).with_children(observe_fn);
+        }
+
+        self.layout_map.get(layout_name).unwrap()
     }
 
     pub(crate) fn destroy(&mut self, mut commands: Commands, layout_name: &str) {

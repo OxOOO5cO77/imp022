@@ -83,9 +83,7 @@ fn compose_enter(
     let parts = init_handoff.parts.clone();
     commands.remove_resource::<ComposeInitHandoff>();
 
-    let (layout, base_id) = slm.build(&mut commands, SCREEN_LAYOUT, &am, &mut slm_params);
-
-    commands.entity(base_id).with_children(ComposeSystems::observe);
+    let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, &mut slm_params, Some(ComposeSystems::observe));
 
     let container = commands.entity(layout.entity("text_tip")).insert_text_tip_container(layout.entity("text_tip/text")).id();
     commands.entity(layout.entity("attributes/a")).insert_text_tip(container, "Analyze");

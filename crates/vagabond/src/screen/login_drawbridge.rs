@@ -89,18 +89,18 @@ fn login_ui_setup(
     mut slm: ResMut<ScreenLayoutManager>,
     mut slm_params: ScreenLayoutManagerParams,
 ) {
-    let (layout, _) = slm.build(&mut commands, SCREEN_LAYOUT, &am, &mut slm_params);
+    let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, &mut slm_params, None);
 
     commands.entity(layout.entity("connected_icon")).insert(ConnectedIcon);
 
     let username = commands.entity(layout.entity("username")).with_text(&drawbridge.username, true).id();
     let password = commands.entity(layout.entity("password")).with_text(&drawbridge.password, false).id();
 
-    let tracker = LoginContext {
+    let context = LoginContext {
         username,
         password,
     };
-    commands.insert_resource(tracker)
+    commands.insert_resource(context)
 }
 
 fn textedit_update(

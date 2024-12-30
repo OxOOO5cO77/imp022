@@ -107,10 +107,7 @@ fn gameplay_enter(
     mut slm: ResMut<ScreenLayoutManager>,
     mut slm_params: ScreenLayoutManagerParams,
 ) {
-    let (layout, base_id) = slm.build(&mut commands, SCREEN_LAYOUT, &am, &mut slm_params);
-
-    // spawn observers
-    commands.entity(base_id).with_children(GameplaySystems::observe);
+    let layout = slm.build(&mut commands, SCREEN_LAYOUT, &am, &mut slm_params, Some(GameplaySystems::observe));
 
     let container = commands.entity(layout.entity("text_tip")).insert_text_tip_container(layout.entity("text_tip/text")).id();
     commands.entity(layout.entity("attributes/a")).insert_text_tip(container, "Analyze");
