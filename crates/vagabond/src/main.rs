@@ -11,11 +11,14 @@ mod network;
 mod screen;
 mod system;
 
+const WINDOW_WIDTH: f32 = 1920.0;
+const WINDOW_HEIGHT: f32 = 1080.0;
+
 fn main() -> AppExit {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                resolution: WindowResolution::new(1920.0, 1080.0).with_scale_factor_override(1.0),
+                resolution: WindowResolution::new(WINDOW_WIDTH, WINDOW_HEIGHT).with_scale_factor_override(1.0),
                 title: "Vagabond".to_string(),
                 ..default()
             }),
@@ -32,6 +35,6 @@ fn main() -> AppExit {
 }
 
 fn setup(mut commands: Commands) {
-    let transform = Transform::from_translation(Vec3::new(960.0, -540.0, 0.0));
+    let transform = Transform::from_translation(Vec3::new(WINDOW_WIDTH / 2.0, -WINDOW_HEIGHT / 2.0, 0.0));
     commands.spawn((Camera2d, transform));
 }

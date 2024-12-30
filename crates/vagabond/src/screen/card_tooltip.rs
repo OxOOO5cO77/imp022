@@ -1,8 +1,11 @@
-use crate::screen::card_layout::CardPopulateEvent;
 use bevy::math::{Vec2, Vec3};
-use bevy::prelude::{Commands, Entity, Event, Query, Resource, Transform, Trigger};
+use bevy::prelude::{Commands, Entity, Event, Query, Resource, Transform, Trigger, Window};
+
 use hall::data::core::Attributes;
 use vagabond::data::VagabondCard;
+
+use crate::screen::card_layout::CardPopulateEvent;
+use crate::system::ui_effects::UiFxTrackedSize;
 
 #[derive(Resource)]
 pub(crate) struct CardTooltip(pub(crate) Entity);
@@ -15,11 +18,11 @@ pub(crate) struct UpdateCardTooltipEvent {
 }
 
 impl UpdateCardTooltipEvent {
-    pub(crate) fn new(position: Vec2, card: Option<VagabondCard>, attributes: &Attributes) -> Self {
+    pub(crate) fn new(position: Vec2, card: Option<VagabondCard>, attr: Attributes) -> Self {
         Self {
             position,
             card,
-            attr: attributes.clone(),
+            attr,
         }
     }
 }
@@ -28,11 +31,16 @@ pub(crate) fn on_update_tooltip(
     // bevy system
     event: Trigger<UpdateCardTooltipEvent>,
     mut commands: Commands,
-    mut tooltip_q: Query<&mut Transform>,
+    mut tooltip_q: Query<(&mut Transform, &UiFxTrackedSize)>,
+    window_q: Query<&Window>,
 ) {
     let target = event.entity();
-    if let Ok(mut transform) = tooltip_q.get_mut(target) {
-        transform.translation = Vec3::new(event.position.x, -event.position.y, transform.translation.z);
-        commands.entity(target).trigger(CardPopulateEvent::new(event.card.clone(), event.attr.clone()));
+    let window = window_q.single();
+
+    if let Ok((mut transform, tooltip_size)) = tooltip_q.get_mut(target) {
+        let x = event.position.x.clamp(0.0, window.width() - tooltip_size.x);
+        let y = event.position.y.clamp(0.0, window.height() - tooltip_size.y);
+        transform.translation = Vec3::new(x, -y, transform.translation.z);
+        commands.entity(target).trigger(CardPopulateEvent::new(event.card.clone(), event.attr));
     }
 }

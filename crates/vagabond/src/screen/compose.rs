@@ -498,7 +498,7 @@ fn on_over_header(
             let new_y = (header_transform.translation.y + (tooltip_size.y / 2.0)).clamp(-1080.0 + tooltip_size.y, 0.0);
             let position = Vec2::new(tooltip_transform.translation.x, -new_y);
             let card = context.deck.get(header.0).cloned();
-            commands.entity(tooltip.0).remove::<Hider>().trigger(UpdateCardTooltipEvent::new(position, card, &context.attributes));
+            commands.entity(tooltip.0).remove::<Hider>().trigger(UpdateCardTooltipEvent::new(position, card, context.attributes));
         }
     }
 }

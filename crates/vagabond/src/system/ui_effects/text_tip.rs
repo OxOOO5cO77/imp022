@@ -1,7 +1,7 @@
 use crate::system::ui_effects::{Hider, UiFxTrackedSize};
 use bevy::math::Vec3;
 use bevy::picking::PickingBehavior;
-use bevy::prelude::{Commands, Component, Entity, EntityCommands, Out, Over, Pointer, Query, Transform, Trigger, Visibility};
+use bevy::prelude::{Commands, Component, Entity, EntityCommands, Out, Over, Pointer, Query, Transform, Trigger, Visibility, Window};
 use bevy::text::Text2d;
 
 const TEXT_TIP_DELAY_SHOW: f32 = 2.0;
@@ -60,14 +60,16 @@ fn on_over_text_tip(
     text_tip_q: Query<&TextTipComponent>,
     mut container_q: Query<(&mut Transform, &UiFxTrackedSize, &TextTipContainer)>,
     mut text_q: Query<&mut Text2d>,
+    window_q: Query<&Window>,
 ) {
+    let window = window_q.single();
     if let Ok(text_tip) = text_tip_q.get(event.target) {
         if let Ok((mut container_transform, container_size, container)) = container_q.get_mut(text_tip.container_entity) {
             if let Ok(mut text) = text_q.get_mut(container.text_entity) {
                 *text = text_tip.text.clone().into();
             }
-            let x = event.pointer_location.position.x.clamp(0.0, 1920.0 - container_size.x);
-            let y = event.pointer_location.position.y.clamp(0.0, 1080.0 - container_size.y);
+            let x = event.pointer_location.position.x.clamp(0.0, window.width() - container_size.x);
+            let y = event.pointer_location.position.y.clamp(0.0, window.height() - container_size.y);
             container_transform.translation = Vec3::new(x, -y, container_transform.translation.z);
 
             commands.entity(text_tip.container_entity).insert(Hider::new(TEXT_TIP_DELAY_SHOW, Visibility::Visible));

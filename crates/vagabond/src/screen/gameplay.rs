@@ -617,7 +617,7 @@ fn on_over_process(
             MachineKind::Remote => &context.cached_remote,
         };
         let card = cached.queue.iter().find(|(_, d)| queue_item.0 == *d).map(|(c, _)| c.card.clone());
-        commands.trigger_targets(UpdateCardTooltipEvent::new(event.pointer_location.position, card, &Attributes::from_arrays(context.cached_state.attr)), tooltip.0);
+        commands.trigger_targets(UpdateCardTooltipEvent::new(event.pointer_location.position, card, Attributes::from_arrays(context.cached_state.attr)), tooltip.0);
     }
 }
 
