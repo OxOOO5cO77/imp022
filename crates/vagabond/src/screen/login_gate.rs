@@ -14,8 +14,13 @@ const SCREEN_LAYOUT: &str = "login";
 pub struct LoginGatePlugin;
 
 impl Plugin for LoginGatePlugin {
+    //noinspection Duplicates
     fn build(&self, app: &mut App) {
-        app.build_screen(AppState::LoginGate, gate_enter, gate_update, login_gate_exit);
+        app //
+            .add_screen(AppState::LoginGate)
+            .with_enter(gate_enter)
+            .with_update(gate_update)
+            .with_exit(login_gate_exit);
     }
 }
 

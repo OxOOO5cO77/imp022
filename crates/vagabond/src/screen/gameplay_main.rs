@@ -1,13 +1,13 @@
-use std::cmp::PartialEq;
-
 use bevy::prelude::*;
-
 use hall::data::core::{AttributeKind, Attributes, DelayType, MissionNodeKind};
 use hall::message::*;
+use std::cmp::PartialEq;
+use std::collections::HashMap;
 
 use crate::manager::{AtlasManager, ScreenLayoutManager, ScreenLayoutManagerParams};
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::gameplay_init::GameplayInitHandoff;
+use crate::screen::gameplay_main::nodes::*;
 use crate::screen::gameplay_main::{components::*, events::*, resources::*, systems::*};
 use crate::screen::shared::{on_out_reset_color, on_update_tooltip, AppScreenExt, CardLayout, CardTooltip, GameMissionNodePlayerViewExt, UpdateCardTooltipEvent};
 use crate::system::ui_effects::{Blinker, SetColorEvent, TextTip, UiFxTrackedColor};
@@ -15,6 +15,7 @@ use crate::system::AppState;
 
 mod components;
 mod events;
+mod nodes;
 mod resources;
 mod systems;
 
@@ -32,8 +33,14 @@ const TTY_MESSAGE_COUNT: usize = 9;
 pub struct GameplayMainPlugin;
 
 impl Plugin for GameplayMainPlugin {
+    //noinspection Duplicates
     fn build(&self, app: &mut App) {
-        app.build_screen_with_post_update(AppState::Gameplay, gameplay_enter, gameplay_update, cleanup_indicator_post_update, gameplay_exit);
+        app //
+            .add_screen(AppState::Gameplay)
+            .with_enter(gameplay_enter)
+            .with_update(gameplay_update)
+            .with_post_update(cleanup_indicator_post_update)
+            .with_exit(gameplay_exit);
     }
 }
 
@@ -196,15 +203,18 @@ fn gameplay_enter(
         commands.entity(layout.entity(&format!("r_tty{}", msg_index))).insert(TTYMessageText::new(MachineKind::Remote, msg_index));
     }
 
-    const NODES: &[(MissionNodeKind, &str)] = &[
+    const NODES: &[(&str, MissionNodeKind)] = &[
         //
-        (MissionNodeKind::AccessPoint, "node_a"),
-        (MissionNodeKind::Backend, "node_b"),
+        ("node_a", MissionNodeKind::AccessPoint),
+        ("node_b", MissionNodeKind::Backend),
     ];
-
-    for (kind, node) in NODES {
-        commands.entity(layout.entity(node)).insert((MissionNodeDisplay::new(*kind), Visibility::Hidden));
-    }
+    let base_node = BaseNode::build_layout(&mut commands, layout, "node");
+    let layouts = NODES.iter().map(|(name, kind)| (*kind, MissionNodeLayouts::build_layout(&mut commands, layout, name, *kind))).collect::<HashMap<_, _>>();
+    let node_layouts = NodeLayouts {
+        base_node,
+        layouts,
+    };
+    commands.insert_resource(node_layouts);
 
     let tooltip = CardLayout::build(&mut commands, layout, "tooltip");
     let tooltip_id = commands.entity(tooltip).insert(Visibility::Hidden).observe(on_update_tooltip).id();

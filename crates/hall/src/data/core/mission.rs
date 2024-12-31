@@ -1,10 +1,12 @@
 use num_enum::{FromPrimitive, IntoPrimitive};
 use serde::{Deserialize, Serialize};
+use shared_net::Bufferable;
+use shared_net::VSizedBuffer;
 
 pub type MissionIdType = u8;
 
 #[repr(u8)]
-#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug, FromPrimitive, IntoPrimitive)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Debug, FromPrimitive, IntoPrimitive)]
 pub enum MissionNodeKind {
     #[num_enum(default)]
     AccessPoint,
@@ -50,7 +52,9 @@ pub struct MissionNodeLink {
     pub state: MissionNodeLinkState,
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
-pub struct MissionNodeContent {}
+#[derive(Bufferable, Default, Clone, PartialEq, Serialize, Deserialize, Debug)]
+pub struct MissionNodeContent {
+    pub log: bool,
+}
 
 pub type MissionNodeIdType = u8;

@@ -3,23 +3,38 @@ use bevy::app::{App, PostUpdate, Update};
 use bevy::prelude::{in_state, IntoSystemConfigs, OnEnter, OnExit};
 
 pub(crate) trait AppScreenExt {
-    fn build_screen<E, U, X>(&mut self, app_state: AppState, enter: impl IntoSystemConfigs<E>, update: impl IntoSystemConfigs<U>, exit: impl IntoSystemConfigs<X>);
-    fn build_screen_with_post_update<E, U, P, X>(&mut self, app_state: AppState, enter: impl IntoSystemConfigs<E>, update: impl IntoSystemConfigs<U>, post_update: impl IntoSystemConfigs<P>, exit: impl IntoSystemConfigs<X>);
+    fn add_screen(&mut self, app_state: AppState) -> ScreenBuilder;
 }
 
 impl AppScreenExt for App {
-    fn build_screen<E, U, X>(&mut self, app_state: AppState, enter: impl IntoSystemConfigs<E>, update: impl IntoSystemConfigs<U>, exit: impl IntoSystemConfigs<X>) {
-        self //
-            .add_systems(OnEnter(app_state), enter)
-            .add_systems(Update, update.run_if(in_state(app_state)))
-            .add_systems(OnExit(app_state), exit);
+    fn add_screen(&mut self, app_state: AppState) -> ScreenBuilder {
+        ScreenBuilder {
+            app: self,
+            app_state,
+        }
     }
+}
 
-    fn build_screen_with_post_update<E, U, P, X>(&mut self, app_state: AppState, enter: impl IntoSystemConfigs<E>, update: impl IntoSystemConfigs<U>, post_update: impl IntoSystemConfigs<P>, exit: impl IntoSystemConfigs<X>) {
-        self //
-            .add_systems(OnEnter(app_state), enter)
-            .add_systems(Update, update.run_if(in_state(app_state)))
-            .add_systems(PostUpdate, post_update.run_if(in_state(app_state)))
-            .add_systems(OnExit(app_state), exit);
+pub(crate) struct ScreenBuilder<'a> {
+    app: &'a mut App,
+    app_state: AppState,
+}
+
+impl ScreenBuilder<'_> {
+    pub(crate) fn with_enter<T>(self, enter: impl IntoSystemConfigs<T>) -> Self {
+        self.app.add_systems(OnEnter(self.app_state), enter);
+        self
+    }
+    pub(crate) fn with_update<T>(self, update: impl IntoSystemConfigs<T>) -> Self {
+        self.app.add_systems(Update, update.run_if(in_state(self.app_state)));
+        self
+    }
+    pub(crate) fn with_post_update<T>(self, post_update: impl IntoSystemConfigs<T>) -> Self {
+        self.app.add_systems(PostUpdate, post_update.run_if(in_state(self.app_state)));
+        self
+    }
+    pub(crate) fn with_exit<T>(self, exit: impl IntoSystemConfigs<T>) -> Self {
+        self.app.add_systems(OnExit(self.app_state), exit);
+        self
     }
 }

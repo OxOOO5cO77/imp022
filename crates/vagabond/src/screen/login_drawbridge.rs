@@ -15,8 +15,13 @@ const SCREEN_LAYOUT: &str = "login";
 pub struct LoginDrawbridgePlugin;
 
 impl Plugin for LoginDrawbridgePlugin {
+    //noinspection Duplicates
     fn build(&self, app: &mut App) {
-        app.build_screen(AppState::LoginDrawbridge, (drawbridge_enter, login_ui_setup).chain(), (drawbridge_update, textedit_update), drawbridge_exit);
+        app //
+            .add_screen(AppState::LoginDrawbridge)
+            .with_enter((drawbridge_enter, login_ui_setup).chain())
+            .with_update((drawbridge_update, textedit_update))
+            .with_exit(drawbridge_exit);
     }
 }
 

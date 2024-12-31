@@ -4,15 +4,18 @@ use hall::message::GameUpdateStateResponse;
 
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::compose_main::ComposeHandoff;
+use crate::screen::shared::AppScreenExt;
 use crate::system::AppState;
 
 pub struct GameplayInitPlugin;
 
 impl Plugin for GameplayInitPlugin {
+    //noinspection Duplicates
     fn build(&self, app: &mut App) {
         app //
-            .add_systems(OnEnter(AppState::GameplayInit), gameplay_init_enter)
-            .add_systems(Update, gameplay_init_update.run_if(in_state(AppState::GameplayInit)));
+            .add_screen(AppState::GameplayInit)
+            .with_enter(gameplay_init_enter)
+            .with_update(gameplay_init_update);
     }
 }
 

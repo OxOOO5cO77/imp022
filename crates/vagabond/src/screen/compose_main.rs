@@ -24,8 +24,14 @@ const GLOWER_DROP_TARGET_SPEED: f32 = 4.0;
 pub struct ComposeMainPlugin;
 
 impl Plugin for ComposeMainPlugin {
+    //noinspection Duplicates
     fn build(&self, app: &mut App) {
-        app.build_screen_with_post_update(AppState::Compose, compose_enter, compose_update, populate_part_layouts, compose_exit);
+        app //
+            .add_screen(AppState::Compose)
+            .with_enter(compose_enter)
+            .with_update(compose_update)
+            .with_post_update(populate_part_layouts)
+            .with_exit(compose_exit);
     }
 }
 

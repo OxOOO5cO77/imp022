@@ -1,0 +1,9 @@
+#main_frame:frame%734,508@16,16,0!blue
+#link_n:frame%160,120@24,28,1!blue
+#link_e:frame%160,120@582,28,1!blue
+#link_w:frame%160,120@24,392,1!blue
+#link_s:frame%160,120@582,392,1!blue
+#content1:frame%218,120@766,16,0!blue
+#content2:frame%218,120@766,145,0!blue
+#content3:frame%218,120@766,274,0!blue
+#content4:frame%218,120@766,403,0!blue

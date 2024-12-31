@@ -9,8 +9,13 @@ use crate::system::AppState;
 pub struct SplashPlugin;
 
 impl Plugin for SplashPlugin {
+    //noinspection Duplicates
     fn build(&self, app: &mut App) {
-        app.build_screen(AppState::Splash, splash_enter, splash_update, splash_exit);
+        app //
+            .add_screen(AppState::Splash)
+            .with_enter(splash_enter)
+            .with_update(splash_update)
+            .with_exit(splash_exit);
     }
 }
 

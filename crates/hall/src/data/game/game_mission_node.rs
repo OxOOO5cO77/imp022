@@ -29,8 +29,9 @@ impl GameMissionNode {
 pub struct GameMissionNodePlayerView {
     pub id: MissionNodeIdType,
     pub kind: MissionNodeKind,
-    state: MissionNodeState,
-    links: Vec<MissionNodeLink>,
+    pub state: MissionNodeState,
+    pub links: Vec<MissionNodeLink>,
+    pub content: Vec<MissionNodeContent>,
     pub remote: RemoteIdType,
 }
 
@@ -41,6 +42,7 @@ impl From<&GameMissionNode> for GameMissionNodePlayerView {
             kind: value.kind,
             state: value.state,
             links: value.links.clone(),
+            content: value.content.clone(),
             remote: value.remote,
         }
     }
@@ -166,24 +168,27 @@ impl Bufferable for GameMissionNodePlayerView {
     fn push_into(&self, buf: &mut VSizedBuffer) {
         let packed = self.pack_mission();
         packed.push_into(buf);
+        self.content.push_into(buf);
         self.remote.push_into(buf);
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
         let packed = PackedMissionType::pull_from(buf);
         let (id, kind, state, links) = Self::unpack_mission(packed);
+        let content = <Vec<MissionNodeContent>>::pull_from(buf);
         let remote = RemoteIdType::pull_from(buf);
         Self {
             id,
             kind,
             state,
             links,
+            content,
             remote,
         }
     }
 
     fn size_in_buffer(&self) -> usize {
-        size_of::<PackedMissionType>() + self.remote.size_in_buffer()
+        size_of::<PackedMissionType>() + self.content.size_in_buffer() + self.remote.size_in_buffer()
     }
 }
 
@@ -216,6 +221,7 @@ impl GameMissionNodePlayerView {
                     state: MissionNodeLinkState::Closed,
                 },
             ],
+            content: Vec::new(),
             remote: 12345678901234567890,
         }
     }

@@ -13,8 +13,9 @@ $color:phase_dim=grey2
 &r_tty1:code.10.left%368,20@26,170,1!tty_old|-
 &r_tty0:code.10.left%368,20@26,190,1!tty_new|-
 #map:dash_frame%1000,540@460,20,0!red
-/node_a:node_a%1000,540@460,20,1
-/node_b:node_b%1000,540@460,20,1
+/node:node%1000,540@460,20,1
+/node_a:node_a%1000,540@460,20,2
+/node_b:node_b%1000,540@460,20,2
 #l_tty_bg:dash_frame%372,200@1528,20,0!grey6
 &l_tty8:code.10.left%368,20@1534,30,1!tty_old|-
 &l_tty7:code.10.left%368,20@1534,50,1!tty_old|-

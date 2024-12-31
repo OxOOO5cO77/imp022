@@ -4,15 +4,18 @@ use vagabond::data::VagabondPart;
 
 use crate::manager::DataManager;
 use crate::network::client_gate::{GateCommand, GateIFace};
+use crate::screen::shared::AppScreenExt;
 use crate::system::AppState;
 
 pub struct ComposeInitPlugin;
 
 impl Plugin for ComposeInitPlugin {
+    //noinspection Duplicates
     fn build(&self, app: &mut App) {
         app //
-            .add_systems(OnEnter(AppState::ComposeInit), compose_init_enter)
-            .add_systems(Update, compose_init_update.run_if(in_state(AppState::ComposeInit)));
+            .add_screen(AppState::ComposeInit)
+            .with_enter(compose_init_enter)
+            .with_update(compose_init_update);
     }
 }
 
