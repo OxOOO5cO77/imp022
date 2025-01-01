@@ -23,6 +23,7 @@ impl GameplaySystems {
         parent.spawn(Observer::new(erg::on_erg_ui_update));
         parent.spawn(Observer::new(phase::on_phase_ui_update));
         parent.spawn(Observer::new(mission::on_mission_ui_update));
+        parent.spawn(Observer::new(mission::on_mission_phase_update));
         parent.spawn(Observer::new(local::on_local_state_update_player));
         parent.spawn(Observer::new(local::on_local_ui_update_attr));
         parent.spawn(Observer::new(local::on_local_ui_update_player));

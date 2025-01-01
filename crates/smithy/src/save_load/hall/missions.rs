@@ -14,14 +14,17 @@ fn make_hall_mission_node(mission_node_instance: &DbMissionNode) -> HallMissionN
 }
 
 fn make_hall_mission(mission_instance: &DbMission) -> HallMission {
+    let mut node = mission_instance.node.iter().map(make_hall_mission_node).collect::<Vec<_>>();
+    node.sort_by_key(|n| n.id);
     HallMission {
         id: mission_instance.mission_id,
-        node: mission_instance.node.iter().map(make_hall_mission_node).collect(),
+        node,
         objective: vec![],
     }
 }
 
 pub(crate) fn output_missions_for_hall(missions: &[DbMission]) -> Result<(), Error> {
-    let hall_missions = missions.iter().map(make_hall_mission).collect::<Vec<_>>();
+    let mut hall_missions = missions.iter().map(make_hall_mission).collect::<Vec<_>>();
+    hall_missions.sort_by_key(|m| m.id);
     save_data_single(hall_missions, "output/hall_missions.ron")
 }

@@ -1,3 +1,4 @@
+use crate::screen::gameplay_main::nodes::MissionNodeAction;
 use crate::screen::gameplay_main::{MachineKind, VagabondGamePhase};
 use bevy::prelude::Resource;
 use hall::data::core::{AttributeKind, MissionNodeIdType};
@@ -14,6 +15,7 @@ pub(crate) struct GameplayContext {
     pub(crate) attr_pick: Option<AttributeKind>,
     pub(crate) card_picks: HashMap<CardIdxType, CardTarget>,
     pub(crate) current_remote: MissionNodeIdType,
+    pub(crate) node_action: Option<MissionNodeAction>,
     pub(crate) hand: Vec<VagabondCard>,
     pub(crate) tty: HashMap<MachineKind, VecDeque<String>>,
     pub(crate) cached_state: PlayerStatePlayerView,
@@ -29,6 +31,7 @@ impl Default for GameplayContext {
             attr_pick: None,
             card_picks: Default::default(),
             current_remote: 1,
+            node_action: None,
             hand: Default::default(),
             tty: Default::default(),
             cached_state: Default::default(),

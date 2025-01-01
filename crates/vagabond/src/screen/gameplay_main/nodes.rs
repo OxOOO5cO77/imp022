@@ -1,12 +1,21 @@
-use crate::manager::ScreenLayout;
-use crate::screen::gameplay_main::components::{MissionNodeContentButton, MissionNodeDisplay, MissionNodeLinkButton};
-use crate::screen::shared::on_out_reset_color;
-use bevy::prelude::{info, Click, Commands, Entity, EntityCommands, Over, PickingBehavior, Pointer, Query, Trigger, Visibility};
+use bevy::ecs::system::IntoObserverSystem;
+use bevy::prelude::*;
+
 use hall::data::core::{MissionNodeContent, MissionNodeKind, MissionNodeLink, MissionNodeLinkDir};
 use hall::data::game::GameMissionNodePlayerView;
 
+use crate::manager::ScreenLayout;
+use crate::screen::gameplay_main::components::{MissionNodeContentButton, MissionNodeDisplay, MissionNodeLinkButton};
+use crate::screen::gameplay_main::resources::GameplayContext;
+use crate::screen::shared::on_out_reset_color;
+use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor};
+
 mod access_point;
 mod backend;
+
+pub(super) enum MissionNodeAction {
+    Link(Entity, MissionNodeLinkDir, Srgba),
+}
 
 pub(super) enum MissionNodeLayouts {
     MissionNodeA(access_point::AccessPoint),
@@ -38,12 +47,26 @@ trait NodeLinkEntityCommandsExt {
     fn observe_link_button(self) -> Self;
 }
 
+#[derive(Component)]
+pub(crate) struct NodeLocalObserver;
+
+// local copy of observe to decorate observers with NodeLocalObserver to easily dispose before reactivation
+fn local_observe<E: Event, B: Bundle, M>(observer: impl IntoObserverSystem<E, B, M>) -> impl EntityCommand {
+    move |entity: Entity, world: &mut World| {
+        if let Ok(mut world_entity) = world.get_entity_mut(entity) {
+            world_entity.world_scope(|w| {
+                w.spawn(Observer::new(observer).with_entity(entity)).insert(NodeLocalObserver);
+            });
+        }
+    }
+}
+
 impl NodeLinkEntityCommandsExt for &mut EntityCommands<'_> {
     fn observe_link_button(self) -> Self {
         self //
-            .observe(BaseNode::on_click_link)
-            .observe(BaseNode::on_over_link)
-            .observe(on_out_reset_color)
+            .queue(local_observe(BaseNode::on_click_link))
+            .queue(local_observe(BaseNode::on_over_link))
+            .queue(local_observe(on_out_reset_color))
     }
 }
 
@@ -73,7 +96,7 @@ impl BaseNode {
             commands.entity(self.link[idx]).insert(Self::node_link_visible(&node.links, *dir)).observe_link_button();
         }
         for (idx, e) in self.content.iter().enumerate() {
-            commands.entity(*e).insert(Self::node_content_visible(&node.content, idx)).observe_link_button();
+            commands.entity(*e).insert(Self::node_content_visible(&node.content, idx));
         }
     }
 
@@ -93,19 +116,52 @@ impl BaseNode {
         }
     }
 
+    pub(crate) fn deselect(
+        //
+        commands: &mut Commands,
+        context: &GameplayContext,
+    ) {
+        match &context.node_action {
+            Some(MissionNodeAction::Link(entity, _, color)) => {
+                commands.entity(*entity).trigger(SetColorEvent::new(*entity, *color)).insert(UiFxTrackedColor::from(*color));
+            }
+            None => {}
+        }
+    }
+
     fn on_click_link(
         //
         event: Trigger<Pointer<Click>>,
-        button_q: Query<&MissionNodeLinkButton>,
+        mut commands: Commands,
+        button_q: Query<(&MissionNodeLinkButton, &UiFxTrackedColor)>,
+        mut context: ResMut<GameplayContext>,
     ) {
-        if let Ok(button) = button_q.get(event.target) {
-            info!("button: {:?}", button.dir);
+        if let Ok((button, new_color)) = button_q.get(event.target) {
+            let (new_action, old_color) = match context.node_action {
+                Some(MissionNodeAction::Link(_, current_dir, old_color)) if current_dir == button.dir => (None, Some(old_color)),
+                _ => {
+                    Self::deselect(&mut commands, &context);
+                    (Some(MissionNodeAction::Link(event.target, button.dir, new_color.color)), None)
+                }
+            };
+
+            context.node_action = new_action;
+
+            let color = if context.node_action.is_some() {
+                bevy::color::palettes::basic::GREEN
+            } else {
+                old_color.unwrap_or(bevy::color::palettes::basic::BLUE)
+            };
+
+            commands.entity(event.target).trigger(SetColorEvent::new(event.target, color)).insert(UiFxTrackedColor::from(color));
         }
     }
 
     fn on_over_link(
         //
-        _event: Trigger<Pointer<Over>>,
+        event: Trigger<Pointer<Over>>,
+        mut commands: Commands,
     ) {
+        commands.entity(event.target).trigger(SetColorEvent::new(event.target, bevy::color::palettes::basic::WHITE));
     }
 }
