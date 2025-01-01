@@ -31,7 +31,7 @@ async fn warehouse_main() -> Result<(), std::io::Error> {
 
     info!("State Initialized");
 
-    let routes = Router::new().route("/player/:seed", get(route::player::get)).with_state(state);
+    let routes = Router::new().route("/player/{seed}", get(route::player::get)).with_state(state);
 
     let listener = TcpListener::bind("0.0.0.0:23235").await?;
 

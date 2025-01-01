@@ -9,5 +9,5 @@ authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 proc-macro = true
 
 [dependencies]
-quote = { version = "1.0.37" }
-syn = { version = "2.0.91", features = ["full"] }
+quote = { version = "1.0.38" }
+syn = { version = "2.0.93", features = ["full"] }
