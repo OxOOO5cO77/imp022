@@ -37,6 +37,7 @@ impl From<&MissionNodeAction> for MissionNodeIntent {
 }
 
 pub(super) enum MissionNodeLayouts {
+    Unknown,
     MissionNodeA(access_point::AccessPoint),
     MissionNodeB(backend::Backend),
     MissionNodeC(control::Control),
@@ -51,7 +52,7 @@ impl MissionNodeLayouts {
     pub(super) fn build_layout(commands: &mut Commands, layout: &ScreenLayout, name: &str, kind: MissionNodeKind) -> Self {
         commands.entity(layout.entity(name)).insert(MissionNodeDisplay::new(kind));
         match kind {
-            MissionNodeKind::Unknown => unimplemented!(),
+            MissionNodeKind::Unknown => MissionNodeLayouts::Unknown,
             MissionNodeKind::AccessPoint => MissionNodeLayouts::MissionNodeA(access_point::AccessPoint::build_layout(commands, layout, name, kind)),
             MissionNodeKind::Backend => MissionNodeLayouts::MissionNodeB(backend::Backend::build_layout(commands, layout, name, kind)),
             MissionNodeKind::Control => MissionNodeLayouts::MissionNodeC(control::Control::build_layout(commands, layout, name, kind)),
@@ -105,10 +106,14 @@ impl BaseNode {
             ("link_w", MissionNodeLinkDir::West),
             ("link_s", MissionNodeLinkDir::South),
         ];
-        let link = LINKS.map(|(link, dir)| commands.entity(layout.entity(&format!("{}/{}", name, link))).insert((MissionNodeLinkButton::new(dir), PickingBehavior::default())).id());
+        for (link, dir) in LINKS {
+            commands.entity(layout.entity(&format!("{name}/{link}/frame"))).insert((MissionNodeLinkButton::new(*dir), PickingBehavior::default()));
+        }
+
+        let link = LINKS.map(|(link, _)| layout.entity(&format!("{name}/{link}")));
 
         const CONTENT: &[&str; 4] = &["content1", "content2", "content3", "content4"];
-        let content = CONTENT.map(|content| commands.entity(layout.entity(&format!("{}/{}", name, content))).insert((MissionNodeContentButton, PickingBehavior::default())).id());
+        let content = CONTENT.map(|content| commands.entity(layout.entity(&format!("{name}/{content}"))).insert((MissionNodeContentButton, PickingBehavior::default())).id());
 
         Self {
             link,

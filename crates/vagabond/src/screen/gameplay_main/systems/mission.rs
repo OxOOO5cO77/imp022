@@ -40,6 +40,7 @@ pub(super) fn on_mission_ui_update(
             node_layouts.base_node.activate(&mut commands, &event.mission.current_node);
             if let Some(layout) = node_layouts.layouts.get(&display.kind) {
                 match layout {
+                    MissionNodeLayouts::Unknown => {}
                     MissionNodeLayouts::MissionNodeA(access_point) => access_point.activate(&mut commands, &event.mission.current_node),
                     MissionNodeLayouts::MissionNodeB(backend) => backend.activate(&mut commands, &event.mission.current_node),
                     MissionNodeLayouts::MissionNodeC(control) => control.activate(&mut commands, &event.mission.current_node),
