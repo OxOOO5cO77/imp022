@@ -16,6 +16,12 @@ $color:phase_dim=grey2
 /node:node%1000,540@460,20,1
 /node_a:node_a%1000,540@460,20,2
 /node_b:node_b%1000,540@460,20,2
+/node_c:node_c%1000,540@460,20,2
+/node_d:node_d%1000,540@460,20,2
+/node_e:node_e%1000,540@460,20,2
+/node_f:node_f%1000,540@460,20,2
+/node_g:node_g%1000,540@460,20,2
+/node_h:node_h%1000,540@460,20,2
 #l_tty_bg:dash_frame%372,200@1528,20,0!grey6
 &l_tty8:code.10.left%368,20@1534,30,1!tty_old|-
 &l_tty7:code.10.left%368,20@1534,50,1!tty_old|-

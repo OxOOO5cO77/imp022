@@ -6,14 +6,14 @@ use hall::data::game::GameMissionNodePlayerView;
 
 use crate::manager::ScreenLayout;
 
-pub(crate) struct AccessPoint {}
+pub(crate) struct Database {}
 
-impl AccessPoint {
+impl Database {
     pub(super) fn build_layout(_commands: &mut Commands, _layout: &ScreenLayout, _name: &str, _kind: MissionNodeKind) -> Self {
         Self {}
     }
 
     pub(crate) fn activate(&self, _commands: &mut Commands, _node: &GameMissionNodePlayerView) {
-        info!("Activating access point");
+        info!("Activating database");
     }
 }

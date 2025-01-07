@@ -42,6 +42,12 @@ pub(super) fn on_mission_ui_update(
                 match layout {
                     MissionNodeLayouts::MissionNodeA(access_point) => access_point.activate(&mut commands, &event.mission.current_node),
                     MissionNodeLayouts::MissionNodeB(backend) => backend.activate(&mut commands, &event.mission.current_node),
+                    MissionNodeLayouts::MissionNodeC(control) => control.activate(&mut commands, &event.mission.current_node),
+                    MissionNodeLayouts::MissionNodeD(database) => database.activate(&mut commands, &event.mission.current_node),
+                    MissionNodeLayouts::MissionNodeE(engine) => engine.activate(&mut commands, &event.mission.current_node),
+                    MissionNodeLayouts::MissionNodeF(frontend) => frontend.activate(&mut commands, &event.mission.current_node),
+                    MissionNodeLayouts::MissionNodeG(gateway) => gateway.activate(&mut commands, &event.mission.current_node),
+                    MissionNodeLayouts::MissionNodeH(hardware) => hardware.activate(&mut commands, &event.mission.current_node),
                 }
             }
             Visibility::Visible

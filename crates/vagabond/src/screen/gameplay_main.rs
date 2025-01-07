@@ -209,6 +209,12 @@ fn gameplay_enter(
         //
         ("node_a", MissionNodeKind::AccessPoint),
         ("node_b", MissionNodeKind::Backend),
+        ("node_c", MissionNodeKind::Control),
+        ("node_d", MissionNodeKind::Database),
+        ("node_e", MissionNodeKind::Engine),
+        ("node_f", MissionNodeKind::Frontend),
+        ("node_g", MissionNodeKind::Gateway),
+        ("node_h", MissionNodeKind::Hardware),
     ];
     let base_node = BaseNode::build_layout(&mut commands, layout, "node");
     let layouts = NODES.iter().map(|(name, kind)| (*kind, MissionNodeLayouts::build_layout(&mut commands, layout, name, *kind))).collect::<HashMap<_, _>>();

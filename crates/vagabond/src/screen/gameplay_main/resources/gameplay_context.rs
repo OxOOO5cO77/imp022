@@ -1,7 +1,7 @@
 use std::collections::{HashMap, VecDeque};
 
 use bevy::prelude::Resource;
-use hall::data::core::{AttributeKind, MissionNodeIdType};
+use hall::data::core::AttributeKind;
 use hall::data::game::{GameMissionPlayerView, TickType};
 use hall::data::player::PlayerStatePlayerView;
 use hall::message::{CardIdxType, CardTarget};
@@ -10,7 +10,7 @@ use vagabond::data::{VagabondCard, VagabondMachine};
 use crate::screen::gameplay_main::nodes::MissionNodeAction;
 use crate::screen::gameplay_main::{MachineKind, VagabondGamePhase};
 
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub(crate) struct GameplayContext {
     pub(crate) player_id: String,
     pub(crate) tick: TickType,
@@ -23,28 +23,7 @@ pub(crate) struct GameplayContext {
     pub(crate) cached_state: PlayerStatePlayerView,
     pub(crate) cached_local: VagabondMachine,
     pub(crate) cached_remote: VagabondMachine,
-    pub(crate) current_remote: MissionNodeIdType,
     pub(crate) cached_mission: GameMissionPlayerView,
-}
-
-impl Default for GameplayContext {
-    fn default() -> Self {
-        Self {
-            player_id: Default::default(),
-            tick: Default::default(),
-            phase: Default::default(),
-            attr_pick: None,
-            card_picks: Default::default(),
-            node_action: MissionNodeAction::None,
-            hand: Default::default(),
-            tty: Default::default(),
-            cached_state: Default::default(),
-            cached_local: Default::default(),
-            cached_remote: Default::default(),
-            current_remote: 1,
-            cached_mission: Default::default(),
-        }
-    }
 }
 
 impl GameplayContext {
@@ -58,7 +37,7 @@ impl GameplayContext {
         let card_idx = index as CardIdxType;
         let card_target = match target {
             MachineKind::Local => CardTarget::Local,
-            MachineKind::Remote => CardTarget::Remote(self.current_remote),
+            MachineKind::Remote => CardTarget::Remote(self.cached_mission.current_node.id),
         };
         self.card_picks.insert(card_idx, card_target);
     }

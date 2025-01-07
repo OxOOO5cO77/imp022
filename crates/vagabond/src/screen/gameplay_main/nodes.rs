@@ -13,6 +13,12 @@ use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor};
 
 mod access_point;
 mod backend;
+mod control;
+mod database;
+mod engine;
+mod frontend;
+mod gateway;
+mod hardware;
 
 #[derive(Default)]
 pub(super) enum MissionNodeAction {
@@ -33,6 +39,12 @@ impl From<&MissionNodeAction> for MissionNodeIntent {
 pub(super) enum MissionNodeLayouts {
     MissionNodeA(access_point::AccessPoint),
     MissionNodeB(backend::Backend),
+    MissionNodeC(control::Control),
+    MissionNodeD(database::Database),
+    MissionNodeE(engine::Engine),
+    MissionNodeF(frontend::Frontend),
+    MissionNodeG(gateway::Gateway),
+    MissionNodeH(hardware::Hardware),
 }
 
 impl MissionNodeLayouts {
@@ -42,12 +54,12 @@ impl MissionNodeLayouts {
             MissionNodeKind::Unknown => unimplemented!(),
             MissionNodeKind::AccessPoint => MissionNodeLayouts::MissionNodeA(access_point::AccessPoint::build_layout(commands, layout, name, kind)),
             MissionNodeKind::Backend => MissionNodeLayouts::MissionNodeB(backend::Backend::build_layout(commands, layout, name, kind)),
-            MissionNodeKind::Control => unimplemented!(),
-            MissionNodeKind::Database => unimplemented!(),
-            MissionNodeKind::Engine => unimplemented!(),
-            MissionNodeKind::Frontend => unimplemented!(),
-            MissionNodeKind::Gateway => unimplemented!(),
-            MissionNodeKind::Hardware => unimplemented!(),
+            MissionNodeKind::Control => MissionNodeLayouts::MissionNodeC(control::Control::build_layout(commands, layout, name, kind)),
+            MissionNodeKind::Database => MissionNodeLayouts::MissionNodeD(database::Database::build_layout(commands, layout, name, kind)),
+            MissionNodeKind::Engine => MissionNodeLayouts::MissionNodeE(engine::Engine::build_layout(commands, layout, name, kind)),
+            MissionNodeKind::Frontend => MissionNodeLayouts::MissionNodeF(frontend::Frontend::build_layout(commands, layout, name, kind)),
+            MissionNodeKind::Gateway => MissionNodeLayouts::MissionNodeG(gateway::Gateway::build_layout(commands, layout, name, kind)),
+            MissionNodeKind::Hardware => MissionNodeLayouts::MissionNodeH(hardware::Hardware::build_layout(commands, layout, name, kind)),
         }
     }
 }
