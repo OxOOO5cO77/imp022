@@ -74,7 +74,7 @@ fn process_courtyard(context: HallContext, tx: UnboundedSender<RoutedMessage>, m
     let result = match command {
         op::Command::GameBuild => handle_recv(&context, tx, buf, logic::recv_game_build),
         op::Command::GameActivate => handle_recv(&context, tx, buf, logic::recv_game_activate),
-        op::Command::GameStartTurn => handle_recv(&context, tx, buf, logic::recv_game_start_turn),
+        op::Command::GameChooseIntent => handle_recv(&context, tx, buf, logic::recv_game_choose_intent),
         op::Command::GameChooseAttr => handle_recv(&context, tx, buf, logic::recv_game_choose_attr),
         op::Command::GamePlayCard => handle_recv(&context, tx, buf, logic::recv_game_play_card),
         op::Command::GameEndTurn => handle_recv(&context, tx, buf, logic::recv_game_end_turn),

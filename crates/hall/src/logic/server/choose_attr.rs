@@ -1,8 +1,8 @@
-use crate::network::broadcaster::Broadcaster;
 use hall::data::game::{GamePhase, GameState};
 use hall::data::player::PlayerStatePlayerView;
 use hall::message::GameResourcesMessage;
-use shared_net::op;
+
+use crate::network::broadcaster::Broadcaster;
 
 pub(crate) fn handle_choose_attr(game: &mut GameState, bx: &mut Broadcaster) {
     let mut rng = rand::rng();
@@ -10,7 +10,7 @@ pub(crate) fn handle_choose_attr(game: &mut GameState, bx: &mut Broadcaster) {
     for (id, user) in users.iter_mut() {
         if let Some(player) = user.player.as_ref() {
             if let Some(kind) = user.state.resolve_kind {
-                if let Some(remote_id) = mission.remote_from_node(user.mission_state.node) {
+                if let Some(remote_id) = mission.get_node(user.mission_state.current()).map(|n| n.remote) {
                     if let Some(remote) = remotes.get(&remote_id) {
                         let (remote_attr, remote_kind) = remote.choose_attr(&mut rng);
                         let (local_erg, remote_erg) = GameState::resolve_matchups(erg_roll, &player.attributes.get_values(kind), &remote_attr);
@@ -31,5 +31,5 @@ pub(crate) fn handle_choose_attr(game: &mut GameState, bx: &mut Broadcaster) {
             }
         }
     }
-    game.set_phase(GamePhase::CardPlay, op::Command::GamePlayCard);
+    game.set_phase(GamePhase::CardPlay);
 }

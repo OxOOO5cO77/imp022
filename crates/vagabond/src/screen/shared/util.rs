@@ -15,6 +15,7 @@ pub(crate) trait GameMissionNodePlayerViewExt {
 impl GameMissionNodePlayerViewExt for GameMissionNodePlayerView {
     fn as_str(&self) -> &'static str {
         match self.kind {
+            MissionNodeKind::Unknown => "???",
             MissionNodeKind::AccessPoint => "Access Point",
             MissionNodeKind::Backend => "Backend",
             MissionNodeKind::Control => "Control",

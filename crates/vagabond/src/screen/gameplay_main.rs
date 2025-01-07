@@ -1,8 +1,10 @@
-use bevy::prelude::*;
-use hall::data::core::{AttributeKind, Attributes, DelayType, MissionNodeKind};
-use hall::message::*;
 use std::cmp::PartialEq;
 use std::collections::HashMap;
+
+use bevy::prelude::*;
+
+use hall::data::core::{AttributeKind, Attributes, DelayType, MissionNodeKind};
+use hall::message::*;
 
 use crate::manager::{AtlasManager, ScreenLayoutManager, ScreenLayoutManagerParams};
 use crate::network::client_gate::{GateCommand, GateIFace};
@@ -220,28 +222,33 @@ fn gameplay_enter(
     let tooltip_id = commands.entity(tooltip).insert(Visibility::Hidden).observe(on_update_tooltip).id();
     commands.insert_resource(CardTooltip::new(tooltip_id));
 
-    commands.remove_resource::<GameplayInitHandoff>();
-    commands.insert_resource(GameplayContext::default());
+    let context = GameplayContext {
+        player_id: handoff.id.clone(),
+        ..default()
+    };
+    commands.insert_resource(context);
 
     let initial_response = handoff.initial_response.take().unwrap();
+
     let local_name = handoff.name.clone();
-    let local_id = handoff.id.clone();
-    let remote_name = initial_response.mission.node.as_str().to_string();
-    let remote_id = initial_response.mission.node.make_id();
+    let player_id = handoff.id.clone();
+
+    let remote_name = initial_response.mission.current_node.as_str();
+    let remote_id = initial_response.mission.current_node.make_id();
+    update_mission_info(&mut commands, remote_name, &remote_id, &player_id);
+
     recv_update_state(&mut commands, *initial_response);
 
-    commands.trigger(TTYMessageTrigger::new(MachineKind::Local, &format!("Connected to {}", remote_id)));
-    commands.trigger(TTYMessageTrigger::new(MachineKind::Remote, &format!("Connection from {}", handoff.id)));
-
-    commands.trigger(MachineInfoTrigger::new(MachineKind::Local, local_name, local_id));
-    commands.trigger(MachineInfoTrigger::new(MachineKind::Remote, remote_name, remote_id));
+    commands.trigger(MachineInfoTrigger::new(MachineKind::Local, local_name, handoff.id.clone()));
 
     commands.trigger(GamePhaseTrigger::new(VagabondGamePhase::Start));
+
+    commands.remove_resource::<GameplayInitHandoff>();
 }
 
 fn on_click_next(_event: Trigger<Pointer<Click>>, mut context: ResMut<GameplayContext>, gate: Res<GateIFace>) {
     let wait = match context.phase {
-        VagabondGamePhase::Start => gate.send_game_start_turn(),
+        VagabondGamePhase::Start => gate.send_game_choose_intent((&context.node_action).into()),
         VagabondGamePhase::Pick => gate.send_game_choose_attr(context.attr_pick),
         VagabondGamePhase::Play => gate.send_game_play_cards(&context.card_picks),
         VagabondGamePhase::Draw => gate.send_game_end_turn(),
@@ -488,7 +495,7 @@ fn gameplay_update(
     mut context: ResMut<GameplayContext>,
 ) {
     let new_phase = match gate.grx.try_recv() {
-        Ok(GateCommand::GameStartTurn(gate_response)) => recv_start_turn(&mut commands, *gate_response),
+        Ok(GateCommand::GameChooseIntent(gate_response)) => recv_choose_intent(&mut commands, *gate_response),
         Ok(GateCommand::GameRoll(gate_response)) => recv_roll(&mut commands, *gate_response),
         Ok(GateCommand::GameChooseAttr(gate_response)) => recv_choose_attr(&mut commands, *gate_response),
         Ok(GateCommand::GameResources(gate_response)) => recv_resources(&mut commands, *gate_response),
@@ -497,6 +504,7 @@ fn gameplay_update(
         Ok(GateCommand::GameEndTurn(gate_response)) => recv_end_turn(&mut commands, *gate_response),
         Ok(GateCommand::GameTick(gate_response)) => recv_tick(&mut commands, *gate_response, &mut context),
         Ok(GateCommand::GameEndGame(gate_response)) => recv_end_game(&mut commands, *gate_response),
+        Ok(GateCommand::GameUpdateMission(gate_response)) => recv_update_mission(&mut commands, *gate_response, &context),
         Ok(GateCommand::GameUpdateState(gate_response)) => recv_update_state(&mut commands, *gate_response),
         Ok(_) => None,
         Err(_) => None,
@@ -507,7 +515,7 @@ fn gameplay_update(
     }
 }
 
-fn recv_start_turn(commands: &mut Commands, response: GameStartTurnResponse) -> Option<VagabondGamePhase> {
+fn recv_choose_intent(commands: &mut Commands, response: GameChooseIntentResponse) -> Option<VagabondGamePhase> {
     commands.trigger(TTYMessageTrigger::new(MachineKind::Remote, "TURN STARTED"));
     response.success.then_some(VagabondGamePhase::Wait(WaitKind::All))
 }
@@ -560,6 +568,23 @@ fn recv_tick(commands: &mut Commands, response: GameTickMessage, context: &mut G
 
 fn recv_end_game(commands: &mut Commands, _response: GameEndGameResponse) -> Option<VagabondGamePhase> {
     commands.trigger(TTYMessageTrigger::new(MachineKind::Local, "END GAME"));
+    None
+}
+
+fn update_mission_info(commands: &mut Commands, remote_name: &str, remote_id: &str, player_id: &str) {
+    commands.trigger(TTYMessageTrigger::new(MachineKind::Local, &format!("Connected to {}", remote_id)));
+    commands.trigger(TTYMessageTrigger::new(MachineKind::Remote, &format!("Connection from {}", player_id)));
+
+    commands.trigger(MachineInfoTrigger::new(MachineKind::Remote, remote_name.to_string(), remote_id.to_string()));
+}
+
+fn recv_update_mission(commands: &mut Commands, response: GameUpdateMissionMessage, context: &GameplayContext) -> Option<VagabondGamePhase> {
+    if response.new {
+        let remote_name = context.cached_mission.current_node.as_str();
+        let remote_id = context.cached_mission.current_node.make_id();
+
+        update_mission_info(commands, remote_name, &remote_id, &context.player_id);
+    }
     None
 }
 

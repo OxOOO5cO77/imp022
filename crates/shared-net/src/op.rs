@@ -137,7 +137,7 @@ pub enum Command {
     GameActivate,
     GameBuild,
     GameStartGame,
-    GameStartTurn,
+    GameChooseIntent,
     GameRoll,
     GameChooseAttr,
     GameResources,
@@ -145,6 +145,7 @@ pub enum Command {
     GameResolveCards,
     GameEndTurn,
     GameTick,
+    GameUpdateMission,
     GameUpdateState,
     GameEndGame,
 }

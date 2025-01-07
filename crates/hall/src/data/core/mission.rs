@@ -6,9 +6,10 @@ use shared_net::VSizedBuffer;
 pub type MissionIdType = u8;
 
 #[repr(u8)]
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Debug, FromPrimitive, IntoPrimitive)]
+#[derive(Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Debug, FromPrimitive, IntoPrimitive)]
 pub enum MissionNodeKind {
-    #[num_enum(default)]
+    #[default]
+    Unknown,
     AccessPoint,
     Backend,
     Control,
@@ -20,9 +21,9 @@ pub enum MissionNodeKind {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug, FromPrimitive, IntoPrimitive)]
+#[derive(Default, Clone, Copy, PartialEq, Serialize, Deserialize, Debug, FromPrimitive, IntoPrimitive)]
 pub enum MissionNodeState {
-    #[num_enum(default)]
+    #[default]
     Unknown,
     Known,
 }

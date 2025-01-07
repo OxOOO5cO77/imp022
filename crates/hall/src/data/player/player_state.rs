@@ -1,4 +1,4 @@
-use crate::data::core::{AttributeKind, AttributeValueType, Attributes, ErgType};
+use crate::data::core::{AttributeKind, AttributeValueType, Attributes, ErgType, MissionNodeIntent};
 use crate::data::hall::HallCard;
 use crate::data::player::PlayerCard;
 use crate::message::{CardTarget, PicksType};
@@ -45,6 +45,7 @@ pub struct PlayerState {
     pub play: Vec<(HallCard, CardTarget)>,
     pub command: PlayerCommandState,
     pub resolve_kind: Option<AttributeKind>,
+    pub intent: MissionNodeIntent,
 }
 
 impl PlayerState {

@@ -1,7 +1,7 @@
-use crate::data::core::{MissionIdType, MissionNodeIdType};
+use crate::data::core::{MissionIdType, MissionNodeIdType, MissionNodeState};
 use crate::data::game::game_mission_node::GameMissionNode;
 use crate::data::game::game_mission_objective::GameMissionObjective;
-use crate::data::game::{GameMissionNodePlayerView, GameMissionObjectivePlayerView, RemoteIdType};
+use crate::data::game::{GameMissionNodePlayerView, GameMissionObjectivePlayerView};
 use crate::data::hall::HallMission;
 use crate::data::player::PlayerMissionState;
 use shared_net::Bufferable;
@@ -25,22 +25,22 @@ impl From<HallMission> for GameMission {
 }
 
 impl GameMission {
-    pub fn remote_from_node(&self, node: MissionNodeIdType) -> Option<RemoteIdType> {
-        self.node.iter().find(|n| n.id == node).map(|n| n.remote)
+    pub fn get_node(&self, node: MissionNodeIdType) -> Option<&GameMissionNode> {
+        self.node.iter().find(|n| n.id == node)
     }
 }
 
-#[derive(Bufferable)]
+#[derive(Bufferable, Default)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameMissionPlayerView {
-    pub node: GameMissionNodePlayerView,
-    objective: Vec<GameMissionObjectivePlayerView>,
+    pub current_node: GameMissionNodePlayerView,
+    pub objective: Vec<GameMissionObjectivePlayerView>,
 }
 
 impl GameMissionPlayerView {
     pub fn new(mission: &GameMission, mission_state: &PlayerMissionState) -> Self {
         Self {
-            node: mission.node.iter().find(|n| n.id == mission_state.node).map(GameMissionNodePlayerView::from).unwrap(),
+            current_node: mission.node.iter().find(|n| n.id == mission_state.current()).map(|node| GameMissionNodePlayerView::new(node, MissionNodeState::Known)).unwrap(),
             objective: mission.objective.iter().map(GameMissionObjectivePlayerView::from).collect(),
         }
     }
@@ -50,7 +50,7 @@ impl GameMissionPlayerView {
 impl GameMissionPlayerView {
     pub fn test_default() -> Self {
         Self {
-            node: GameMissionNodePlayerView::test_default(),
+            current_node: GameMissionNodePlayerView::test_default(),
             objective: vec![GameMissionObjectivePlayerView::test_default(), GameMissionObjectivePlayerView::test_default(), GameMissionObjectivePlayerView::test_default()],
         }
     }

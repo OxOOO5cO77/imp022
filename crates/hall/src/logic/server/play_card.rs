@@ -1,8 +1,8 @@
-use crate::logic::client::game_update_state::all_users_update_state;
-use crate::network::broadcaster::Broadcaster;
 use hall::data::game::{GamePhase, GameState, IdType};
 use hall::message::{CardTarget, GameResolveCardsMessage};
-use shared_net::op;
+
+use crate::logic::server::update_state::all_users_update_state;
+use crate::network::broadcaster::Broadcaster;
 
 pub(crate) fn handle_play_card(game: &mut GameState, bx: &mut Broadcaster) {
     let mut all_played = Vec::new();
@@ -14,7 +14,7 @@ pub(crate) fn handle_play_card(game: &mut GameState, bx: &mut Broadcaster) {
             let played = match target {
                 CardTarget::Local => (IdType::Local(*user_id), card, IdType::Local(*user_id)),
                 CardTarget::Remote(node) => {
-                    let remote = game.mission.remote_from_node(node).or_else(|| game.mission.remote_from_node(user.mission_state.node)).unwrap_or_default();
+                    let remote = game.mission.get_node(node).or_else(|| game.mission.get_node(user.mission_state.current())).map(|n| n.remote).unwrap_or_default();
                     (IdType::Local(*user_id), card, IdType::Remote(remote))
                 }
             };
@@ -23,7 +23,7 @@ pub(crate) fn handle_play_card(game: &mut GameState, bx: &mut Broadcaster) {
     }
     let _results = game.resolve_cards(all_played);
 
-    game.set_phase(GamePhase::TurnEnd, op::Command::GameEndTurn);
+    game.set_phase(GamePhase::TurnEnd);
 
     all_users_update_state(game, bx);
 

@@ -8,7 +8,7 @@ use rand::{distr::Uniform, rngs::ThreadRng, Rng};
 
 use shared_net::{op, AuthType, UserIdType};
 
-use crate::data::core::{AttributeValueType, Attributes, ErgType};
+use crate::data::core::{AttributeValueType, Attributes, ErgType, MissionNodeIntent};
 use crate::data::game::{GameMission, GamePhase, GameRemote, GameStage, GameUser};
 use crate::data::hall::{HallCard, HallMission};
 use crate::data::player::{PlayerCard, PlayerCommandState};
@@ -68,8 +68,8 @@ impl GameState {
             GameStage::Idle => false,
             GameStage::Building => self.stage == GameStage::Idle,
             GameStage::Running(phase) => match phase {
-                GamePhase::TurnStart => self.stage == GameStage::Idle || self.stage == GameStage::Running(GamePhase::TurnEnd),
-                GamePhase::ChooseAttr => self.stage == GameStage::Running(GamePhase::TurnStart),
+                GamePhase::ChooseIntent => self.stage == GameStage::Idle || self.stage == GameStage::Running(GamePhase::TurnEnd),
+                GamePhase::ChooseAttr => self.stage == GameStage::Running(GamePhase::ChooseIntent),
                 GamePhase::CardPlay => self.stage == GameStage::Running(GamePhase::ChooseAttr),
                 GamePhase::TurnEnd => self.stage == GameStage::Running(GamePhase::CardPlay),
             },
@@ -83,9 +83,9 @@ impl GameState {
         } // else log error
     }
 
-    pub fn set_phase(&mut self, phase: GamePhase, expected: op::Command) {
+    pub fn set_phase(&mut self, phase: GamePhase) {
         self.set_stage(GameStage::Running(phase));
-        self.users.iter_mut().for_each(|(_, user)| user.state.command.should_be(expected));
+        self.users.iter_mut().for_each(|(_, user)| user.state.command.should_be(phase.expected_command()));
     }
 
     pub fn get_user(&mut self, user_id_type: UserIdType) -> Option<&GameUser> {
@@ -219,6 +219,40 @@ impl GameState {
             }
         }
         result
+    }
+
+    pub fn process_intents(&mut self) -> Vec<UserIdType> {
+        let intents = self
+            .users
+            .iter() //
+            .filter(|(_, user)| self.mission.get_node(user.mission_state.current()).map(|node| node.kind.has_intent(user.state.intent)).unwrap_or(false))
+            .map(|(id, user)| (*id, user.state.intent))
+            .collect::<Vec<_>>();
+
+        let mut node_changes = Vec::new();
+        for (id, intent) in &intents {
+            match *intent {
+                MissionNodeIntent::None => {}
+                MissionNodeIntent::Link(dir) => {
+                    if let Some(user) = self.users.get_mut(id) {
+                        let link = self.mission.get_node(user.mission_state.current()).and_then(|mission| mission.links.iter().find(|n| n.direction == dir));
+                        if let Some(link) = link {
+                            user.mission_state.set_current(link.target);
+                            node_changes.push(*id);
+                        }
+                    }
+                }
+                MissionNodeIntent::AccessPoint(_) => {}
+                MissionNodeIntent::Backend(_) => {}
+                MissionNodeIntent::Control(_) => {}
+                MissionNodeIntent::Database(_) => {}
+                MissionNodeIntent::Engine(_) => {}
+                MissionNodeIntent::Frontend(_) => {}
+                MissionNodeIntent::Gateway(_) => {}
+                MissionNodeIntent::Hardware(_) => {}
+            }
+        }
+        node_changes
     }
 }
 

@@ -1,20 +1,33 @@
 use bevy::ecs::system::IntoObserverSystem;
 use bevy::prelude::*;
 
-use hall::data::core::{MissionNodeContent, MissionNodeKind, MissionNodeLink, MissionNodeLinkDir};
+use hall::data::core::{MissionNodeContent, MissionNodeIntent, MissionNodeKind, MissionNodeLink, MissionNodeLinkDir};
 use hall::data::game::GameMissionNodePlayerView;
 
 use crate::manager::ScreenLayout;
 use crate::screen::gameplay_main::components::{MissionNodeContentButton, MissionNodeDisplay, MissionNodeLinkButton};
 use crate::screen::gameplay_main::resources::GameplayContext;
+use crate::screen::gameplay_main::VagabondGamePhase;
 use crate::screen::shared::on_out_reset_color;
 use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor};
 
 mod access_point;
 mod backend;
 
+#[derive(Default)]
 pub(super) enum MissionNodeAction {
+    #[default]
+    None,
     Link(Entity, MissionNodeLinkDir, Srgba),
+}
+
+impl From<&MissionNodeAction> for MissionNodeIntent {
+    fn from(value: &MissionNodeAction) -> Self {
+        match value {
+            MissionNodeAction::None => MissionNodeIntent::None,
+            MissionNodeAction::Link(_, dir, _) => MissionNodeIntent::Link(*dir),
+        }
+    }
 }
 
 pub(super) enum MissionNodeLayouts {
@@ -26,6 +39,7 @@ impl MissionNodeLayouts {
     pub(super) fn build_layout(commands: &mut Commands, layout: &ScreenLayout, name: &str, kind: MissionNodeKind) -> Self {
         commands.entity(layout.entity(name)).insert(MissionNodeDisplay::new(kind));
         match kind {
+            MissionNodeKind::Unknown => unimplemented!(),
             MissionNodeKind::AccessPoint => MissionNodeLayouts::MissionNodeA(access_point::AccessPoint::build_layout(commands, layout, name, kind)),
             MissionNodeKind::Backend => MissionNodeLayouts::MissionNodeB(backend::Backend::build_layout(commands, layout, name, kind)),
             MissionNodeKind::Control => unimplemented!(),
@@ -122,10 +136,10 @@ impl BaseNode {
         context: &GameplayContext,
     ) {
         match &context.node_action {
-            Some(MissionNodeAction::Link(entity, _, color)) => {
+            MissionNodeAction::Link(entity, _, color) => {
                 commands.entity(*entity).trigger(SetColorEvent::new(*entity, *color)).insert(UiFxTrackedColor::from(*color));
             }
-            None => {}
+            MissionNodeAction::None => {}
         }
     }
 
@@ -136,21 +150,24 @@ impl BaseNode {
         button_q: Query<(&MissionNodeLinkButton, &UiFxTrackedColor)>,
         mut context: ResMut<GameplayContext>,
     ) {
+        if context.phase != VagabondGamePhase::Start {
+            return;
+        }
+
         if let Ok((button, new_color)) = button_q.get(event.target) {
             let (new_action, old_color) = match context.node_action {
-                Some(MissionNodeAction::Link(_, current_dir, old_color)) if current_dir == button.dir => (None, Some(old_color)),
+                MissionNodeAction::Link(_, current_dir, old_color) if current_dir == button.dir => (MissionNodeAction::None, Some(old_color)),
                 _ => {
                     Self::deselect(&mut commands, &context);
-                    (Some(MissionNodeAction::Link(event.target, button.dir, new_color.color)), None)
+                    (MissionNodeAction::Link(event.target, button.dir, new_color.color), None)
                 }
             };
 
             context.node_action = new_action;
 
-            let color = if context.node_action.is_some() {
-                bevy::color::palettes::basic::GREEN
-            } else {
-                old_color.unwrap_or(bevy::color::palettes::basic::BLUE)
+            let color = match context.node_action {
+                MissionNodeAction::None => old_color.unwrap_or(bevy::color::palettes::basic::BLUE),
+                _ => bevy::color::palettes::basic::GREEN,
             };
 
             commands.entity(event.target).trigger(SetColorEvent::new(event.target, color)).insert(UiFxTrackedColor::from(color));
@@ -161,7 +178,11 @@ impl BaseNode {
         //
         event: Trigger<Pointer<Over>>,
         mut commands: Commands,
+        context: Res<GameplayContext>,
     ) {
+        if context.phase != VagabondGamePhase::Start {
+            return;
+        }
         commands.entity(event.target).trigger(SetColorEvent::new(event.target, bevy::color::palettes::basic::WHITE));
     }
 }

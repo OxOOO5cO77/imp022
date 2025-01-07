@@ -1,5 +1,5 @@
 use num_enum::{FromPrimitive, IntoPrimitive};
-use shared_net::{Bufferable, VSizedBuffer};
+use shared_net::{op, Bufferable, VSizedBuffer};
 
 #[cfg(test)]
 use strum_macros::EnumIter;
@@ -23,10 +23,21 @@ pub enum GameStage {
 #[cfg_attr(test, derive(Debug, EnumIter))]
 pub enum GamePhase {
     #[default]
-    TurnStart,
+    ChooseIntent,
     ChooseAttr,
     CardPlay,
     TurnEnd,
+}
+
+impl GamePhase {
+    pub(crate) fn expected_command(&self) -> op::Command {
+        match self {
+            GamePhase::ChooseIntent => op::Command::GameChooseIntent,
+            GamePhase::ChooseAttr => op::Command::GameChooseAttr,
+            GamePhase::CardPlay => op::Command::GamePlayCard,
+            GamePhase::TurnEnd => op::Command::GameEndTurn,
+        }
+    }
 }
 
 impl GameStage {

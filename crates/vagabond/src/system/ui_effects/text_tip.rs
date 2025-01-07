@@ -29,8 +29,8 @@ struct TextTipComponent {
 impl TextTipComponent {
     fn new(container_entity: Entity, text: String) -> Self {
         Self {
-            container_entity,
             text,
+            container_entity,
         }
     }
 }

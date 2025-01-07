@@ -6,7 +6,7 @@ use shared_net::{Bufferable, VSizedBuffer};
 pub struct GameMissionNode {
     pub id: MissionNodeIdType,
     pub kind: MissionNodeKind,
-    pub state: MissionNodeState,
+    pub initial_state: MissionNodeState,
     pub links: Vec<MissionNodeLink>,
     pub content: Vec<MissionNodeContent>,
     pub remote: RemoteIdType,
@@ -17,7 +17,7 @@ impl GameMissionNode {
         Self {
             id: node.id,
             kind: node.kind,
-            state: node.state,
+            initial_state: node.state,
             links: node.links.clone(),
             content: node.content.clone(),
             remote,
@@ -25,6 +25,7 @@ impl GameMissionNode {
     }
 }
 
+#[derive(Default)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameMissionNodePlayerView {
     pub id: MissionNodeIdType,
@@ -35,12 +36,12 @@ pub struct GameMissionNodePlayerView {
     pub remote: RemoteIdType,
 }
 
-impl From<&GameMissionNode> for GameMissionNodePlayerView {
-    fn from(value: &GameMissionNode) -> Self {
+impl GameMissionNodePlayerView {
+    pub(crate) fn new(value: &GameMissionNode, state: MissionNodeState) -> Self {
         Self {
             id: value.id,
             kind: value.kind,
-            state: value.state,
+            state,
             links: value.links.clone(),
             content: value.content.clone(),
             remote: value.remote,

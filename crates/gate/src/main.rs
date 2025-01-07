@@ -70,6 +70,7 @@ async fn gate_main(interface: String, courtyard: String) -> Result<(), GateError
     Ok(())
 }
 
+#[rustfmt::skip]
 fn process_vagabond(context: Arc<Mutex<Gate>>, tx: UnboundedSender<RoutedMessage>, msg: IdMessage) -> bool {
     let id = msg.id;
     let mut buf = msg.buf;
@@ -77,10 +78,32 @@ fn process_vagabond(context: Arc<Mutex<Gate>>, tx: UnboundedSender<RoutedMessage
 
     match command {
         op::Command::Hello => v_hello(context, id, &mut buf),
-        op::Command::Chat | op::Command::DM => v_marshal_username(context, op::Flavor::Forum, command, &tx, &mut buf),
-        op::Command::InvGen | op::Command::InvList => v_marshal(context, op::Flavor::Archive, command, &tx, id, &mut buf),
-        op::Command::GameActivate | op::Command::GameBuild | op::Command::GameStartTurn | op::Command::GameChooseAttr | op::Command::GamePlayCard | op::Command::GameUpdateState | op::Command::GameEndTurn => v_marshal(context, op::Flavor::Hall, command, &tx, id, &mut buf),
-        op::Command::NoOp | op::Command::Register | op::Command::Authorize | op::Command::GameStartGame | op::Command::GameRoll | op::Command::GameResources | op::Command::GameResolveCards | op::Command::GameEndGame | op::Command::GameTick | op::Command::UserAttr => false,
+        op::Command::Chat
+        | op::Command::DM
+        => v_marshal_username(context, op::Flavor::Forum, command, &tx, &mut buf),
+        op::Command::InvGen
+        | op::Command::InvList
+        => v_marshal(context, op::Flavor::Archive, command, &tx, id, &mut buf),
+        op::Command::GameActivate
+        | op::Command::GameBuild
+        | op::Command::GameChooseIntent
+        | op::Command::GameChooseAttr
+        | op::Command::GamePlayCard
+        | op::Command::GameUpdateState
+        | op::Command::GameEndTurn
+        => v_marshal(context, op::Flavor::Hall, command, &tx, id, &mut buf),
+        op::Command::NoOp
+        | op::Command::Register
+        | op::Command::Authorize
+        | op::Command::GameStartGame
+        | op::Command::GameRoll
+        | op::Command::GameResources
+        | op::Command::GameResolveCards
+        | op::Command::GameEndGame
+        | op::Command::GameTick
+        | op::Command::GameUpdateMission
+        | op::Command::UserAttr
+        => false,
     }
 }
 
@@ -131,6 +154,7 @@ fn v_marshal(context: Arc<Mutex<Gate>>, flavor: op::Flavor, command: op::Command
     }
 }
 
+#[rustfmt::skip]
 fn process_courtyard(context: Arc<Mutex<Gate>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
     let command = buf.pull::<op::Command>();
 
@@ -138,8 +162,28 @@ fn process_courtyard(context: Arc<Mutex<Gate>>, tx: UnboundedSender<RoutedMessag
         op::Command::Authorize => c_authorize(context, &mut buf),
         op::Command::DM => c_marshal_name(command, context, &tx, &mut buf),
         op::Command::Chat => c_marshal_all(command, &tx, &mut buf),
-        op::Command::InvList | op::Command::GameActivate | op::Command::GameBuild | op::Command::GameStartGame | op::Command::GameStartTurn | op::Command::GameRoll | op::Command::GameChooseAttr | op::Command::GameResources | op::Command::GamePlayCard | op::Command::GameResolveCards | op::Command::GameEndTurn | op::Command::GameTick | op::Command::GameUpdateState | op::Command::GameEndGame => c_marshal_one(command, &tx, &mut buf),
-        op::Command::NoOp | op::Command::Register | op::Command::Hello | op::Command::UserAttr | op::Command::InvGen => VClientMode::Continue,
+        op::Command::InvList
+        | op::Command::GameActivate
+        | op::Command::GameBuild
+        | op::Command::GameStartGame
+        | op::Command::GameChooseIntent
+        | op::Command::GameRoll
+        | op::Command::GameChooseAttr
+        | op::Command::GameResources
+        | op::Command::GamePlayCard
+        | op::Command::GameResolveCards
+        | op::Command::GameEndTurn
+        | op::Command::GameTick
+        | op::Command::GameUpdateMission
+        | op::Command::GameUpdateState
+        | op::Command::GameEndGame
+        => c_marshal_one(command, &tx, &mut buf),
+        op::Command::NoOp
+        | op::Command::Register
+        | op::Command::Hello
+        | op::Command::UserAttr
+        | op::Command::InvGen
+        => VClientMode::Continue,
     }
 }
 

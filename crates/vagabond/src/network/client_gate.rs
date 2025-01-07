@@ -6,7 +6,7 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
-use hall::data::core::AttributeKind;
+use hall::data::core::{AttributeKind, MissionNodeIntent};
 use hall::message::*;
 use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
 use shared_net::{AuthType, Bufferable, GameIdType, PartType};
@@ -16,7 +16,7 @@ pub(crate) enum GateCommand {
     GameActivate(Box<GameActivateResponse>),
     GameBuild(Box<GameBuildResponse>),
     GameStartGame(Box<GameStartGameMessage>),
-    GameStartTurn(Box<GameStartTurnResponse>),
+    GameChooseIntent(Box<GameChooseIntentResponse>),
     GameRoll(Box<GameRollMessage>),
     GameChooseAttr(Box<GameChooseAttrResponse>),
     GameResources(Box<GameResourcesMessage>),
@@ -25,6 +25,7 @@ pub(crate) enum GateCommand {
     GameEndTurn(Box<GameEndTurnResponse>),
     GameTick(Box<GameTickMessage>),
     GameEndGame(Box<GameEndGameResponse>),
+    GameUpdateMission(Box<GameUpdateMissionMessage>),
     GameUpdateState(Box<GameUpdateStateResponse>),
 }
 
@@ -66,7 +67,7 @@ fn process_gate(context: GateClient, _tx: UnboundedSender<RoutedMessage>, mut bu
         op::Command::GameActivate => recv_response(context, &mut buf, GateCommand::GameActivate),
         op::Command::GameBuild => recv_response(context, &mut buf, GateCommand::GameBuild),
         op::Command::GameStartGame => recv_response(context, &mut buf, GateCommand::GameStartGame),
-        op::Command::GameStartTurn => recv_response(context, &mut buf, GateCommand::GameStartTurn),
+        op::Command::GameChooseIntent => recv_response(context, &mut buf, GateCommand::GameChooseIntent),
         op::Command::GameRoll => recv_response(context, &mut buf, GateCommand::GameRoll),
         op::Command::GameChooseAttr => recv_response(context, &mut buf, GateCommand::GameChooseAttr),
         op::Command::GameResources => recv_response(context, &mut buf, GateCommand::GameResources),
@@ -75,6 +76,7 @@ fn process_gate(context: GateClient, _tx: UnboundedSender<RoutedMessage>, mut bu
         op::Command::GameEndTurn => recv_response(context, &mut buf, GateCommand::GameEndTurn),
         op::Command::GameTick => recv_response(context, &mut buf, GateCommand::GameTick),
         op::Command::GameEndGame => recv_response(context, &mut buf, GateCommand::GameEndGame),
+        op::Command::GameUpdateMission => recv_response(context, &mut buf, GateCommand::GameUpdateMission),
         op::Command::GameUpdateState => recv_response(context, &mut buf, GateCommand::GameUpdateState),
         _ => VClientMode::Continue,
     }
@@ -152,9 +154,10 @@ impl GateIFace {
         self.send_request(request)
     }
 
-    pub fn send_game_start_turn(&self) -> bool {
-        let request = GameStartTurnRequest {
+    pub fn send_game_choose_intent(&self, intent: MissionNodeIntent) -> bool {
+        let request = GameChooseIntentRequest {
             game_id: self.game_id,
+            intent,
         };
 
         self.send_request(request)
