@@ -1,1 +1,1 @@
-#ap:frame%320,200@223,170,0!blue
+#frame:frame%700,342@32,32,0!blue

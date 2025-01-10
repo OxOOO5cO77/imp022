@@ -1,1 +1,1 @@
-#be:frame%320,200@223,170,0!yellow
+#frame:frame%700,342@32,32,0!blue
