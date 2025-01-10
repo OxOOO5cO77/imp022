@@ -93,8 +93,8 @@ impl BaseNode {
             let node_target = link_dir.map(|l| l.target).and_then(|target| mission.get_node(target));
             let kind = node_target.map_or(MissionNodeKind::Unknown, |n| n.kind);
             let remote_id = node_target.map_or("".to_string(), |n| n.make_id());
-            let locked = link_dir.map_or(false, |l| l.state == MissionNodeLinkState::Closed);
-            let unlocked = link_dir.map_or(false, |l| l.state == MissionNodeLinkState::Open);
+            let locked = link_dir.is_some_and(|l| l.state == MissionNodeLinkState::Closed);
+            let unlocked = link_dir.is_some_and(|l| l.state == MissionNodeLinkState::Open);
             if let Ok([mut text_title, mut text_remote_id]) = text_q.get_many_mut([link.title, link.remote_id]) {
                 *text_title = kind.as_str().into();
                 *text_remote_id = remote_id.into();

@@ -54,7 +54,7 @@ impl std::fmt::Debug for AtlasManagerError {
 
 impl AtlasManager {
     fn filter_extension(path: PathBuf) -> Option<PathBuf> {
-        path.extension().map_or(false, |ext| ext == "map").then_some(path)
+        path.extension().is_some_and(|ext| ext == "map").then_some(path)
     }
 
     fn load_all_atlas(&mut self, asset_server: &Res<AssetServer>, texture_atlas_layouts: &mut ResMut<Assets<TextureAtlasLayout>>) -> Result<(), AtlasManagerError> {
