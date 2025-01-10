@@ -22,6 +22,10 @@ impl PlayerMissionState {
         self.current_node
     }
 
+    pub fn known(&self) -> Vec<MissionNodeIdType> {
+        self.nodes.iter().filter(|(_, state)| **state == MissionNodeState::Known).map(|(id, _)| *id).collect()
+    }
+
     pub(crate) fn set_current(&mut self, node: MissionNodeIdType) -> bool {
         self.current_node = node;
         self.nodes.insert(node, MissionNodeState::Known).is_none_or(|prev| prev == MissionNodeState::Unknown)

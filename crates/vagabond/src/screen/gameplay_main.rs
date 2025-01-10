@@ -11,7 +11,7 @@ use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::gameplay_init::GameplayInitHandoff;
 use crate::screen::gameplay_main::nodes::*;
 use crate::screen::gameplay_main::{components::*, events::*, resources::*, systems::*};
-use crate::screen::shared::{on_out_reset_color, on_update_tooltip, AppScreenExt, CardLayout, CardTooltip, GameMissionNodePlayerViewExt, UpdateCardTooltipEvent};
+use crate::screen::shared::{on_out_reset_color, on_update_tooltip, AppScreenExt, CardLayout, CardTooltip, GameMissionNodePlayerViewExt, MissionNodeKindExt, UpdateCardTooltipEvent};
 use crate::system::ui_effects::{Blinker, SetColorEvent, TextTip, UiFxTrackedColor};
 use crate::system::AppState;
 
@@ -239,8 +239,9 @@ fn gameplay_enter(
     let local_name = handoff.name.clone();
     let player_id = handoff.id.clone();
 
-    let remote_name = initial_response.mission.current_node.as_str();
-    let remote_id = initial_response.mission.current_node.make_id();
+    let current_node = initial_response.mission.current();
+    let remote_name = current_node.kind.as_str();
+    let remote_id = current_node.make_id();
     update_mission_info(&mut commands, remote_name, &remote_id, &player_id);
 
     recv_update_state(&mut commands, *initial_response);
@@ -586,8 +587,9 @@ fn update_mission_info(commands: &mut Commands, remote_name: &str, remote_id: &s
 
 fn recv_update_mission(commands: &mut Commands, response: GameUpdateMissionMessage, context: &GameplayContext) -> Option<VagabondGamePhase> {
     if response.new {
-        let remote_name = context.cached_mission.current_node.as_str();
-        let remote_id = context.cached_mission.current_node.make_id();
+        let current_node = context.cached_mission.current();
+        let remote_name = current_node.kind.as_str();
+        let remote_id = current_node.make_id();
 
         update_mission_info(commands, remote_name, &remote_id, &context.player_id);
     }

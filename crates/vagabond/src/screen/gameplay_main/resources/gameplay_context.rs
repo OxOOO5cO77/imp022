@@ -37,7 +37,7 @@ impl GameplayContext {
         let card_idx = index as CardIdxType;
         let card_target = match target {
             MachineKind::Local => CardTarget::Local,
-            MachineKind::Remote => CardTarget::Remote(self.cached_mission.current_node.id),
+            MachineKind::Remote => CardTarget::Remote(self.cached_mission.current().id),
         };
         self.card_picks.insert(card_idx, card_target);
     }

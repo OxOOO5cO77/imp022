@@ -6,15 +6,13 @@ use hall::data::game::GameMissionNodePlayerView;
 use crate::manager::AtlasManager;
 use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor};
 
-pub(crate) trait GameMissionNodePlayerViewExt {
+pub(crate) trait MissionNodeKindExt {
     fn as_str(&self) -> &'static str;
-    fn kind_value(&self) -> usize;
-    fn make_id(&self) -> String;
 }
 
-impl GameMissionNodePlayerViewExt for GameMissionNodePlayerView {
+impl MissionNodeKindExt for MissionNodeKind {
     fn as_str(&self) -> &'static str {
-        match self.kind {
+        match self {
             MissionNodeKind::Unknown => "???",
             MissionNodeKind::AccessPoint => "Access Point",
             MissionNodeKind::Backend => "Backend",
@@ -26,7 +24,14 @@ impl GameMissionNodePlayerViewExt for GameMissionNodePlayerView {
             MissionNodeKind::Hardware => "Hardware",
         }
     }
+}
 
+pub(crate) trait GameMissionNodePlayerViewExt {
+    fn kind_value(&self) -> usize;
+    fn make_id(&self) -> String;
+}
+
+impl GameMissionNodePlayerViewExt for GameMissionNodePlayerView {
     fn kind_value(&self) -> usize {
         let kind: u8 = self.kind.into();
         kind as usize

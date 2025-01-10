@@ -1,18 +1,44 @@
-use bevy::prelude::{Click, Commands, Entity, EntityCommands, Over, PickingBehavior, Pointer, Query, Res, ResMut, Trigger, Visibility};
+use bevy::prelude::{Click, Commands, Entity, EntityCommands, Over, PickingBehavior, Pointer, Query, Res, ResMut, Text2d, Trigger, Visibility};
 
-use hall::data::core::{MissionNodeContent, MissionNodeLink, MissionNodeLinkDir};
-use hall::data::game::GameMissionNodePlayerView;
+use hall::data::core::{MissionNodeKind, MissionNodeLinkDir, MissionNodeLinkState};
+use hall::data::game::GameMissionPlayerView;
 
 use crate::manager::ScreenLayout;
 use crate::screen::gameplay_main::components::{MissionNodeContentButton, MissionNodeLinkButton};
 use crate::screen::gameplay_main::nodes::{local_observe, MissionNodeAction};
 use crate::screen::gameplay_main::resources::GameplayContext;
 use crate::screen::gameplay_main::VagabondGamePhase;
-use crate::screen::shared::on_out_reset_color;
+use crate::screen::shared::{on_out_reset_color, GameMissionNodePlayerViewExt, MissionNodeKindExt};
 use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor};
 
+struct BaseNodeLink {
+    container: Entity,
+    title: Entity,
+    remote_id: Entity,
+    lock: Entity,
+    unlock: Entity,
+}
+
+impl BaseNodeLink {
+    fn new(layout: &ScreenLayout, name: &str, link_name: &str) -> Self {
+        let container = layout.entity(&format!("{name}/{link_name}"));
+        let title = layout.entity(&format!("{name}/{link_name}/title"));
+        let remote_id = layout.entity(&format!("{name}/{link_name}/remote_id"));
+        let lock = layout.entity(&format!("{name}/{link_name}/lock"));
+        let unlock = layout.entity(&format!("{name}/{link_name}/unlock"));
+
+        Self {
+            container,
+            title,
+            remote_id,
+            lock,
+            unlock,
+        }
+    }
+}
+
 pub(crate) struct BaseNode {
-    link: [Entity; 4],
+    links: [BaseNodeLink; 4],
     content: [Entity; 4],
 }
 
@@ -42,37 +68,49 @@ impl BaseNode {
             commands.entity(layout.entity(&format!("{name}/{link}/frame"))).insert((MissionNodeLinkButton::new(*dir), PickingBehavior::default()));
         }
 
-        let link = LINKS.map(|(link, _)| layout.entity(&format!("{name}/{link}")));
+        let links = LINKS.map(|(link, _)| BaseNodeLink::new(layout, name, link));
 
         const CONTENT: &[&str; 4] = &["content1", "content2", "content3", "content4"];
         let content = CONTENT.map(|content| commands.entity(layout.entity(&format!("{name}/{content}"))).insert((MissionNodeContentButton, PickingBehavior::default())).id());
 
         Self {
-            link,
+            links,
             content,
         }
     }
 
-    pub(crate) fn activate(&self, commands: &mut Commands, node: &GameMissionNodePlayerView) {
+    pub(crate) fn activate(&self, commands: &mut Commands, mission: &GameMissionPlayerView, text_q: &mut Query<&mut Text2d>) {
+        let current_node = mission.current();
+
         const DIRS: &[MissionNodeLinkDir; 4] = &[MissionNodeLinkDir::North, MissionNodeLinkDir::East, MissionNodeLinkDir::West, MissionNodeLinkDir::South];
         for (idx, dir) in DIRS.iter().enumerate() {
-            commands.entity(self.link[idx]).insert(Self::node_link_visible(&node.links, *dir)).observe_link_button();
+            let visible = current_node.links.iter().any(|link| link.direction == *dir);
+            commands.entity(self.links[idx].container).insert(Self::is_visible(visible)).observe_link_button();
         }
+
+        for (idx, link) in self.links.iter().enumerate() {
+            let link_dir = current_node.links.iter().find(|l| l.direction == DIRS[idx]);
+            let node_target = link_dir.map(|l| l.target).and_then(|target| mission.get_node(target));
+            let kind = node_target.map_or(MissionNodeKind::Unknown, |n| n.kind);
+            let remote_id = node_target.map_or("".to_string(), |n| n.make_id());
+            let locked = link_dir.map_or(false, |l| l.state == MissionNodeLinkState::Closed);
+            let unlocked = link_dir.map_or(false, |l| l.state == MissionNodeLinkState::Open);
+            if let Ok([mut text_title, mut text_remote_id]) = text_q.get_many_mut([link.title, link.remote_id]) {
+                *text_title = kind.as_str().into();
+                *text_remote_id = remote_id.into();
+            }
+            commands.entity(link.lock).insert(Self::is_visible(locked));
+            commands.entity(link.unlock).insert(Self::is_visible(unlocked));
+        }
+
         for (idx, e) in self.content.iter().enumerate() {
-            commands.entity(*e).insert(Self::node_content_visible(&node.content, idx));
+            let visible = idx < current_node.content.len();
+            commands.entity(*e).insert(Self::is_visible(visible));
         }
     }
 
-    fn node_link_visible(links: &[MissionNodeLink], dir: MissionNodeLinkDir) -> Visibility {
-        if links.iter().any(|link| link.direction == dir) {
-            Visibility::Visible
-        } else {
-            Visibility::Hidden
-        }
-    }
-
-    fn node_content_visible(content: &[MissionNodeContent], idx: usize) -> Visibility {
-        if content.len() > idx {
+    fn is_visible(locked: bool) -> Visibility {
+        if locked {
             Visibility::Visible
         } else {
             Visibility::Hidden

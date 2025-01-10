@@ -1,11 +1,12 @@
-use crate::data::core::{MissionIdType, MissionNodeIdType, MissionNodeState};
+use shared_net::Bufferable;
+use shared_net::VSizedBuffer;
+
+use crate::data::core::{MissionIdType, MissionNodeIdType, MissionNodeKind};
 use crate::data::game::game_mission_node::GameMissionNode;
 use crate::data::game::game_mission_objective::GameMissionObjective;
 use crate::data::game::{GameMissionNodePlayerView, GameMissionObjectivePlayerView};
 use crate::data::hall::HallMission;
 use crate::data::player::PlayerMissionState;
-use shared_net::Bufferable;
-use shared_net::VSizedBuffer;
 
 #[derive(Default)]
 pub struct GameMission {
@@ -30,19 +31,40 @@ impl GameMission {
     }
 }
 
-#[derive(Bufferable, Default)]
+#[derive(Bufferable, Default, Clone)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameMissionPlayerView {
-    pub current_node: GameMissionNodePlayerView,
-    pub objective: Vec<GameMissionObjectivePlayerView>,
+    current_node: MissionNodeIdType,
+    node_map: Vec<GameMissionNodePlayerView>,
+    objective: Vec<GameMissionObjectivePlayerView>,
 }
+
+static UNKNOWN_NODE: GameMissionNodePlayerView = GameMissionNodePlayerView {
+    id: 0,
+    kind: MissionNodeKind::Unknown,
+    links: vec![],
+    content: vec![],
+    remote: 0,
+};
 
 impl GameMissionPlayerView {
     pub fn new(mission: &GameMission, mission_state: &PlayerMissionState) -> Self {
+        let current_node = mission_state.current();
+        let node_map = mission_state.known().iter().filter_map(|id| mission.get_node(*id)).map(GameMissionNodePlayerView::new).collect();
+        let objective = mission.objective.iter().map(GameMissionObjectivePlayerView::from).collect();
+
         Self {
-            current_node: mission.node.iter().find(|n| n.id == mission_state.current()).map(|node| GameMissionNodePlayerView::new(node, MissionNodeState::Known)).unwrap(),
-            objective: mission.objective.iter().map(GameMissionObjectivePlayerView::from).collect(),
+            current_node,
+            node_map,
+            objective,
         }
+    }
+
+    pub fn current(&self) -> &GameMissionNodePlayerView {
+        self.get_node(self.current_node).unwrap_or(&UNKNOWN_NODE)
+    }
+    pub fn get_node(&self, node: MissionNodeIdType) -> Option<&GameMissionNodePlayerView> {
+        self.node_map.iter().find(|n| n.id == node)
     }
 }
 
@@ -50,7 +72,8 @@ impl GameMissionPlayerView {
 impl GameMissionPlayerView {
     pub fn test_default() -> Self {
         Self {
-            current_node: GameMissionNodePlayerView::test_default(),
+            current_node: 4,
+            node_map: vec![GameMissionNodePlayerView::test_default(), GameMissionNodePlayerView::test_default(), GameMissionNodePlayerView::test_default()],
             objective: vec![GameMissionObjectivePlayerView::test_default(), GameMissionObjectivePlayerView::test_default(), GameMissionObjectivePlayerView::test_default()],
         }
     }

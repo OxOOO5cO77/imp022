@@ -1,7 +1,8 @@
+use shared_net::{Bufferable, VSizedBuffer};
+
 use crate::data::core::{MissionNodeContent, MissionNodeIdType, MissionNodeKind, MissionNodeLink, MissionNodeLinkDir, MissionNodeLinkState, MissionNodeState};
 use crate::data::game::RemoteIdType;
 use crate::data::hall::HallMissionNode;
-use shared_net::{Bufferable, VSizedBuffer};
 
 pub struct GameMissionNode {
     pub id: MissionNodeIdType,
@@ -25,23 +26,21 @@ impl GameMissionNode {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameMissionNodePlayerView {
     pub id: MissionNodeIdType,
     pub kind: MissionNodeKind,
-    pub state: MissionNodeState,
     pub links: Vec<MissionNodeLink>,
     pub content: Vec<MissionNodeContent>,
     pub remote: RemoteIdType,
 }
 
 impl GameMissionNodePlayerView {
-    pub(crate) fn new(value: &GameMissionNode, state: MissionNodeState) -> Self {
+    pub(crate) fn new(value: &GameMissionNode) -> Self {
         Self {
             id: value.id,
             kind: value.kind,
-            state,
             links: value.links.clone(),
             content: value.content.clone(),
             remote: value.remote,
@@ -49,77 +48,66 @@ impl GameMissionNodePlayerView {
     }
 }
 
-type PackedMissionType = u64;
+type PackedMissionNodeType = u64;
 
-const MAX_LINK_COUNT: PackedMissionType = 4;
+const MAX_LINK_COUNT: PackedMissionNodeType = 4;
 
-const BITS_FOR_ID: PackedMissionType = 8;
-const BITS_FOR_KIND: PackedMissionType = 5;
-const BITS_FOR_STATE: PackedMissionType = 1;
-const BITS_FOR_LINK_DIR: PackedMissionType = 2;
-const BITS_FOR_LINK_STATE: PackedMissionType = 1;
-const BITS_FOR_LINK_TARGET: PackedMissionType = 8;
-const BITS_FOR_LINK: PackedMissionType = BITS_FOR_LINK_DIR + BITS_FOR_LINK_STATE + BITS_FOR_LINK_TARGET;
-const BITS_FOR_LINKS: PackedMissionType = BITS_FOR_LINK * 4;
+const BITS_FOR_ID: PackedMissionNodeType = 8;
+const BITS_FOR_KIND: PackedMissionNodeType = 5;
+const BITS_FOR_LINK_DIR: PackedMissionNodeType = 2;
+const BITS_FOR_LINK_STATE: PackedMissionNodeType = 1;
+const BITS_FOR_LINK_TARGET: PackedMissionNodeType = 8;
+const BITS_FOR_LINK: PackedMissionNodeType = BITS_FOR_LINK_DIR + BITS_FOR_LINK_STATE + BITS_FOR_LINK_TARGET;
+const BITS_FOR_LINKS: PackedMissionNodeType = BITS_FOR_LINK * 4;
 
-const SHIFT_FOR_ID: PackedMissionType = 0;
-const SHIFT_FOR_KIND: PackedMissionType = SHIFT_FOR_ID + BITS_FOR_ID;
-const SHIFT_FOR_STATE: PackedMissionType = SHIFT_FOR_KIND + BITS_FOR_KIND;
-const SHIFT_FOR_LINKS: PackedMissionType = SHIFT_FOR_STATE + BITS_FOR_STATE;
-const SHIFT_FOR_LINK_DIR: PackedMissionType = 0;
-const SHIFT_FOR_LINK_STATE: PackedMissionType = SHIFT_FOR_LINK_DIR + BITS_FOR_LINK_DIR;
-const SHIFT_FOR_LINK_TARGET: PackedMissionType = SHIFT_FOR_LINK_STATE + BITS_FOR_LINK_STATE;
+const SHIFT_FOR_ID: PackedMissionNodeType = 0;
+const SHIFT_FOR_KIND: PackedMissionNodeType = SHIFT_FOR_ID + BITS_FOR_ID;
+const SHIFT_FOR_LINKS: PackedMissionNodeType = SHIFT_FOR_KIND + BITS_FOR_KIND;
+const SHIFT_FOR_LINK_DIR: PackedMissionNodeType = 0;
+const SHIFT_FOR_LINK_STATE: PackedMissionNodeType = SHIFT_FOR_LINK_DIR + BITS_FOR_LINK_DIR;
+const SHIFT_FOR_LINK_TARGET: PackedMissionNodeType = SHIFT_FOR_LINK_STATE + BITS_FOR_LINK_STATE;
 
-const MASK_FOR_ID: PackedMissionType = (1 << BITS_FOR_ID) - 1;
-const MASK_FOR_KIND: PackedMissionType = (1 << BITS_FOR_KIND) - 1;
-const MASK_FOR_STATE: PackedMissionType = (1 << BITS_FOR_STATE) - 1;
-const MASK_FOR_LINK_DIR: PackedMissionType = (1 << BITS_FOR_LINK_DIR) - 1;
-const MASK_FOR_LINK_STATE: PackedMissionType = (1 << BITS_FOR_LINK_STATE) - 1;
-const MASK_FOR_LINK_TARGET: PackedMissionType = (1 << BITS_FOR_LINK_TARGET) - 1;
-const MASK_FOR_LINKS: PackedMissionType = (1 << BITS_FOR_LINKS) - 1;
-const MASK_FOR_LINK: PackedMissionType = (1 << BITS_FOR_LINK) - 1;
+const MASK_FOR_ID: PackedMissionNodeType = (1 << BITS_FOR_ID) - 1;
+const MASK_FOR_KIND: PackedMissionNodeType = (1 << BITS_FOR_KIND) - 1;
+const MASK_FOR_LINK_DIR: PackedMissionNodeType = (1 << BITS_FOR_LINK_DIR) - 1;
+const MASK_FOR_LINK_STATE: PackedMissionNodeType = (1 << BITS_FOR_LINK_STATE) - 1;
+const MASK_FOR_LINK_TARGET: PackedMissionNodeType = (1 << BITS_FOR_LINK_TARGET) - 1;
+const MASK_FOR_LINKS: PackedMissionNodeType = (1 << BITS_FOR_LINKS) - 1;
+const MASK_FOR_LINK: PackedMissionNodeType = (1 << BITS_FOR_LINK) - 1;
 
 impl GameMissionNodePlayerView {
-    fn pack_kind(kind: MissionNodeKind) -> PackedMissionType {
+    fn pack_kind(kind: MissionNodeKind) -> PackedMissionNodeType {
         let kind: u8 = kind.into();
-        kind as PackedMissionType
+        kind as PackedMissionNodeType
     }
-    fn unpack_kind(packed: PackedMissionType) -> MissionNodeKind {
+    fn unpack_kind(packed: PackedMissionNodeType) -> MissionNodeKind {
         (packed as u8).into()
     }
 
-    fn pack_state(state: MissionNodeState) -> PackedMissionType {
-        let state: u8 = state.into();
-        state as PackedMissionType
-    }
-    fn unpack_state(packed: PackedMissionType) -> MissionNodeState {
-        (packed as u8).into()
-    }
-
-    fn pack_link_dir(dir: MissionNodeLinkDir) -> PackedMissionType {
+    fn pack_link_dir(dir: MissionNodeLinkDir) -> PackedMissionNodeType {
         let dir: u8 = dir.into();
-        dir as PackedMissionType
+        dir as PackedMissionNodeType
     }
-    fn unpack_link_dir(packed: PackedMissionType) -> MissionNodeLinkDir {
+    fn unpack_link_dir(packed: PackedMissionNodeType) -> MissionNodeLinkDir {
         (packed as u8).into()
     }
 
-    fn pack_link_state(state: MissionNodeLinkState) -> PackedMissionType {
+    fn pack_link_state(state: MissionNodeLinkState) -> PackedMissionNodeType {
         let state: u8 = state.into();
-        state as PackedMissionType
+        state as PackedMissionNodeType
     }
-    fn unpack_link_state(packed: PackedMissionType) -> MissionNodeLinkState {
+    fn unpack_link_state(packed: PackedMissionNodeType) -> MissionNodeLinkState {
         (packed as u8).into()
     }
 
-    fn pack_link(link: &MissionNodeLink) -> PackedMissionType {
+    fn pack_link(link: &MissionNodeLink) -> PackedMissionNodeType {
         let mut packed = 0;
         packed |= Self::pack_link_dir(link.direction) << SHIFT_FOR_LINK_DIR;
         packed |= Self::pack_link_state(link.state) << SHIFT_FOR_LINK_STATE;
-        packed |= (link.target as PackedMissionType) << SHIFT_FOR_LINK_TARGET;
+        packed |= (link.target as PackedMissionNodeType) << SHIFT_FOR_LINK_TARGET;
         packed
     }
-    fn unpack_link(packed: PackedMissionType) -> MissionNodeLink {
+    fn unpack_link(packed: PackedMissionNodeType) -> MissionNodeLink {
         MissionNodeLink {
             direction: Self::unpack_link_dir((packed >> SHIFT_FOR_LINK_DIR) & MASK_FOR_LINK_DIR),
             target: ((packed >> SHIFT_FOR_LINK_TARGET) & MASK_FOR_LINK_TARGET) as MissionNodeIdType,
@@ -127,14 +115,14 @@ impl GameMissionNodePlayerView {
         }
     }
 
-    fn pack_links(links: &[MissionNodeLink]) -> PackedMissionType {
+    fn pack_links(links: &[MissionNodeLink]) -> PackedMissionNodeType {
         let mut packed = 0;
         for (i, link) in links.iter().enumerate() {
-            packed |= Self::pack_link(link) << (i as PackedMissionType * BITS_FOR_LINK);
+            packed |= Self::pack_link(link) << (i as PackedMissionNodeType * BITS_FOR_LINK);
         }
         packed
     }
-    fn unpack_links(packed: PackedMissionType) -> Vec<MissionNodeLink> {
+    fn unpack_links(packed: PackedMissionNodeType) -> Vec<MissionNodeLink> {
         let mut links = Vec::new();
         for i in 0..MAX_LINK_COUNT {
             let link = Self::unpack_link((packed >> (BITS_FOR_LINK * i)) & MASK_FOR_LINK);
@@ -145,23 +133,18 @@ impl GameMissionNodePlayerView {
         links
     }
 
-    fn pack_mission(&self) -> PackedMissionType {
-        let packed_id = (self.id as PackedMissionType) << SHIFT_FOR_ID;
-        if self.state == MissionNodeState::Unknown {
-            return packed_id;
-        }
+    fn pack_mission(&self) -> PackedMissionNodeType {
+        let packed_id = (self.id as PackedMissionNodeType) << SHIFT_FOR_ID;
         let packed_kind = Self::pack_kind(self.kind) << SHIFT_FOR_KIND;
-        let packed_state = Self::pack_state(self.state) << SHIFT_FOR_STATE;
         let packed_links = Self::pack_links(&self.links) << SHIFT_FOR_LINKS;
-        packed_id | packed_kind | packed_state | packed_links
+        packed_id | packed_kind | packed_links
     }
 
-    fn unpack_mission(packed: PackedMissionType) -> (MissionNodeIdType, MissionNodeKind, MissionNodeState, Vec<MissionNodeLink>) {
+    fn unpack_mission(packed: PackedMissionNodeType) -> (MissionNodeIdType, MissionNodeKind, Vec<MissionNodeLink>) {
         let id = ((packed >> SHIFT_FOR_ID) & MASK_FOR_ID) as MissionNodeIdType;
         let kind = Self::unpack_kind((packed >> SHIFT_FOR_KIND) & MASK_FOR_KIND);
-        let state = Self::unpack_state((packed >> SHIFT_FOR_STATE) & MASK_FOR_STATE);
         let links = Self::unpack_links((packed >> SHIFT_FOR_LINKS) & MASK_FOR_LINKS);
-        (id, kind, state, links)
+        (id, kind, links)
     }
 }
 
@@ -174,14 +157,13 @@ impl Bufferable for GameMissionNodePlayerView {
     }
 
     fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let packed = PackedMissionType::pull_from(buf);
-        let (id, kind, state, links) = Self::unpack_mission(packed);
+        let packed = PackedMissionNodeType::pull_from(buf);
+        let (id, kind, links) = Self::unpack_mission(packed);
         let content = <Vec<MissionNodeContent>>::pull_from(buf);
         let remote = RemoteIdType::pull_from(buf);
         Self {
             id,
             kind,
-            state,
             links,
             content,
             remote,
@@ -189,7 +171,7 @@ impl Bufferable for GameMissionNodePlayerView {
     }
 
     fn size_in_buffer(&self) -> usize {
-        size_of::<PackedMissionType>() + self.content.size_in_buffer() + self.remote.size_in_buffer()
+        size_of::<PackedMissionNodeType>() + self.content.size_in_buffer() + self.remote.size_in_buffer()
     }
 }
 
@@ -199,7 +181,6 @@ impl GameMissionNodePlayerView {
         Self {
             id: 123,
             kind: MissionNodeKind::Frontend,
-            state: MissionNodeState::Known,
             links: vec![
                 MissionNodeLink {
                     direction: MissionNodeLinkDir::North,

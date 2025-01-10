@@ -2,7 +2,7 @@ use bevy::log::info;
 use bevy::prelude::Commands;
 
 use hall::data::core::MissionNodeKind;
-use hall::data::game::GameMissionNodePlayerView;
+use hall::data::game::GameMissionPlayerView;
 
 use crate::manager::ScreenLayout;
 
@@ -13,7 +13,7 @@ impl Hardware {
         Self {}
     }
 
-    pub(crate) fn activate(&self, _commands: &mut Commands, _node: &GameMissionNodePlayerView) {
+    pub(crate) fn activate(&self, _commands: &mut Commands, _node: &GameMissionPlayerView) {
         info!("Activating hardware");
     }
 }
