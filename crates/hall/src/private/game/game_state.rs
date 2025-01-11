@@ -4,7 +4,7 @@ use std::iter::zip;
 
 use rand::{distr::Uniform, rngs::ThreadRng, Rng};
 
-use hall::core::{AttributeValueType, Attributes, ErgType, MissionNodeIntent, Phase, RemoteIdType, Stage, TickType};
+use hall::core::{AttributeValueType, Attributes, ErgType, Phase, RemoteIdType, Stage, TickType};
 use hall::hall::{HallCard, HallMission};
 use hall::message::GameUpdateStateResponse;
 use hall::player::{PlayerCard, PlayerCommandState, PlayerStatePlayerView};
@@ -199,40 +199,6 @@ impl GameState {
             }
         }
         result
-    }
-
-    pub(crate) fn process_intents(&mut self) -> Vec<UserIdType> {
-        let intents = self
-            .users
-            .iter() //
-            .filter(|(_, user)| self.mission.get_node(user.mission_state.current()).map(|node| node.kind.has_intent(user.state.intent)).unwrap_or(false))
-            .map(|(id, user)| (*id, user.state.intent))
-            .collect::<Vec<_>>();
-
-        let mut node_changes = Vec::new();
-        for (id, intent) in &intents {
-            match *intent {
-                MissionNodeIntent::None => {}
-                MissionNodeIntent::Link(dir) => {
-                    if let Some(user) = self.users.get_mut(id) {
-                        let link = self.mission.get_node(user.mission_state.current()).and_then(|mission| mission.links.iter().find(|n| n.direction == dir));
-                        if let Some(link) = link {
-                            user.mission_state.set_current(link.target);
-                            node_changes.push(*id);
-                        }
-                    }
-                }
-                MissionNodeIntent::AccessPoint(_) => {}
-                MissionNodeIntent::Backend(_) => {}
-                MissionNodeIntent::Control(_) => {}
-                MissionNodeIntent::Database(_) => {}
-                MissionNodeIntent::Engine(_) => {}
-                MissionNodeIntent::Frontend(_) => {}
-                MissionNodeIntent::Gateway(_) => {}
-                MissionNodeIntent::Hardware(_) => {}
-            }
-        }
-        node_changes
     }
 }
 

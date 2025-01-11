@@ -8,6 +8,7 @@ mod game_state;
 mod game_user;
 
 pub use game_machine::GameMachine;
+pub use game_mission::GameMission;
 pub use game_mission_node::GameMissionNode;
 pub use game_mission_objective::GameMissionObjective;
 pub use game_process::GameProcess;
