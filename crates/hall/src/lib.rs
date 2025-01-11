@@ -1,2 +1,3 @@
-pub mod message;
-pub mod data;
+mod public;
+
+pub use public::*;

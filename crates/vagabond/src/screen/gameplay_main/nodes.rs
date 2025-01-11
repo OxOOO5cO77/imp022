@@ -1,8 +1,6 @@
 use bevy::ecs::system::IntoObserverSystem;
 use bevy::prelude::*;
 
-use hall::data::core::{MissionNodeIntent, MissionNodeKind, MissionNodeLinkDir};
-
 use crate::manager::ScreenLayout;
 use crate::screen::gameplay_main::components::MissionNodeDisplay;
 
@@ -17,6 +15,7 @@ mod gateway;
 mod hardware;
 
 pub(crate) use base_node::BaseNode;
+use hall::core::{MissionNodeIntent, MissionNodeKind, MissionNodeLinkDir};
 
 #[derive(Default)]
 pub(super) enum MissionNodeAction {

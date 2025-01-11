@@ -1,6 +1,6 @@
+use hall::core::{DelayType, MachineValueType};
+
 use crate::data::vagabond_process::VagabondProcess;
-use hall::data::core::DelayType;
-use hall::data::game::MachineValueType;
 
 #[derive(Default, Clone)]
 pub struct VagabondMachine {

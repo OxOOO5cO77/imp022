@@ -1,7 +1,7 @@
 use bevy::prelude::{Commands, Entity, Query, Res, ResMut, Sprite, Text2d, Trigger};
 
-use hall::data::core::Attributes;
-use hall::data::game::{GameMachinePlayerView, GameProcessPlayerView};
+use hall::core::Attributes;
+use hall::view::{GameMachinePlayerView, GameProcessPlayerView};
 use vagabond::data::{VagabondMachine, VagabondProcess};
 
 use crate::manager::DataManager;

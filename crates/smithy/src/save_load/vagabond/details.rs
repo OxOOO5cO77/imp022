@@ -1,8 +1,10 @@
+use std::io::Error;
+
+use hall::core::{GeneralType, SpecificType};
+use vagabond::data::VagabondDetail;
+
 use crate::data::DbDetail;
 use crate::save_load::save_data_single;
-use hall::data::core::{GeneralType, SpecificType};
-use std::io::Error;
-use vagabond::data::VagabondDetail;
 
 fn make_vagabond_detail(detail_instance: &DbDetail) -> VagabondDetail {
     VagabondDetail {

@@ -1,7 +1,10 @@
-use crate::screen::gameplay_main::nodes::{BaseNode, MissionNodeLayouts};
-use bevy::prelude::Resource;
-use hall::data::core::MissionNodeKind;
 use std::collections::HashMap;
+
+use bevy::prelude::Resource;
+
+use hall::core::MissionNodeKind;
+
+use crate::screen::gameplay_main::nodes::{BaseNode, MissionNodeLayouts};
 
 #[derive(Resource)]
 pub(crate) struct NodeLayouts {

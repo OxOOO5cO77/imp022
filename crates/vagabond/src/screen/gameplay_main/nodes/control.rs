@@ -1,8 +1,8 @@
 use bevy::log::info;
 use bevy::prelude::Commands;
 
-use hall::data::core::MissionNodeKind;
-use hall::data::game::GameMissionPlayerView;
+use hall::core::MissionNodeKind;
+use hall::view::GameMissionPlayerView;
 
 use crate::manager::ScreenLayout;
 

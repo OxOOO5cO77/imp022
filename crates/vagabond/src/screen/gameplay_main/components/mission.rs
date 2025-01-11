@@ -1,5 +1,6 @@
 use bevy::prelude::Component;
-use hall::data::core::{MissionNodeKind, MissionNodeLinkDir};
+
+use hall::core::{MissionNodeKind, MissionNodeLinkDir};
 
 #[derive(Component)]
 pub(crate) struct MissionNodeLinkButton {

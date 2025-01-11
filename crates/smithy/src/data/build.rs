@@ -1,7 +1,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
 use crate::data::shared::extract_cards;
-use hall::data::core::{Build, BuildNumberType, CardSlot, CompanyType, MarketType};
+use hall::core::{Build, BuildNumberType, CardSlot, CompanyType, MarketType};
 use serde::Deserialize;
 use sqlx::postgres::PgRow;
 use sqlx::{Pool, Postgres, Row};

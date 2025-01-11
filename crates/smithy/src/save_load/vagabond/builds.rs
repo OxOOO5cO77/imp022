@@ -1,8 +1,10 @@
+use std::io::Error;
+
+use hall::core::{CompanyType, MarketType};
+use vagabond::data::VagabondBuild;
+
 use crate::data::DbBuild;
 use crate::save_load::save_data_single;
-use hall::data::core::{CompanyType, MarketType};
-use std::io::Error;
-use vagabond::data::VagabondBuild;
 
 fn make_vagabond_build(build_instance: &DbBuild) -> VagabondBuild {
     VagabondBuild {

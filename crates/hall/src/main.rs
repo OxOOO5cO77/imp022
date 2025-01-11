@@ -2,24 +2,23 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::RwLock;
 
-use gate::message::gate_header::GateHeader;
-use hall::data::game::GameState;
-use hall::message::{GameRequestMessage, GameResponseMessage};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::error::SendError;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, instrument};
 
+use gate::message::gate_header::GateHeader;
+use hall::message::{GameRequestMessage, GameResponseMessage};
+use private::logic;
 use shared_net::{op, GameIdType, NodeType, RoutedMessage, VClientMode, VSizedBuffer};
 
-use crate::logic::handle_phase_complete;
-use crate::manager::data_manager::DataManager;
-use crate::network::broadcaster::Broadcaster;
-use crate::network::util::send_routed_message;
+use crate::private::game::GameState;
+use private::logic::handle_phase_complete;
+use private::manager::data_manager::DataManager;
+use private::network::broadcaster::Broadcaster;
+use private::network::util::send_routed_message;
 
-mod logic;
-mod manager;
-mod network;
+mod private;
 
 pub(crate) type HallContext = Rc<Hall>;
 pub(crate) type HallGames = HashMap<GameIdType, GameState>;

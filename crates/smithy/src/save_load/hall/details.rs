@@ -1,7 +1,9 @@
+use std::io::Error;
+
+use hall::hall::HallDetail;
+
 use crate::data::DbDetail;
 use crate::save_load::save_data_single;
-use hall::data::hall::HallDetail;
-use std::io::Error;
 
 fn make_hall_detail(detail_instance: &DbDetail) -> HallDetail {
     HallDetail {

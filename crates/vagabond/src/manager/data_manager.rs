@@ -2,7 +2,8 @@ use std::io::{Error, ErrorKind};
 use std::path::Path;
 
 use bevy::prelude::Resource;
-use hall::data::player::{PlayerBuild, PlayerCard, PlayerDetail, PlayerPart};
+
+use hall::player::{PlayerBuild, PlayerCard, PlayerDetail, PlayerPart};
 use vagabond::data::{VagabondBuild, VagabondCard, VagabondDetail, VagabondPart};
 
 #[derive(Resource)]

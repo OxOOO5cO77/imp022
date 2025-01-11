@@ -1,7 +1,9 @@
-use crate::data::shared::extract_cards;
-use hall::data::core::{BuildNumberType, CardSlot, Detail, GeneralType, SpecificType};
 use sqlx::postgres::PgRow;
 use sqlx::{FromRow, Pool, Postgres, Row};
+
+use hall::core::{BuildNumberType, CardSlot, Detail, GeneralType, SpecificType};
+
+use crate::data::shared::extract_cards;
 
 #[derive(FromRow)]
 pub(crate) struct DbDetail {

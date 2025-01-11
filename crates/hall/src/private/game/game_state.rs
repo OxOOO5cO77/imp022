@@ -1,0 +1,311 @@
+use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::iter::zip;
+
+use rand::{distr::Uniform, rngs::ThreadRng, Rng};
+
+use hall::core::{AttributeValueType, Attributes, ErgType, MissionNodeIntent, Phase, RemoteIdType, Stage, TickType};
+use hall::hall::{HallCard, HallMission};
+use hall::message::GameUpdateStateResponse;
+use hall::player::{PlayerCard, PlayerCommandState, PlayerStatePlayerView};
+use hall::util;
+use hall::view::GameMachinePlayerView;
+use shared_net::{op, AuthType, UserIdType};
+
+use crate::private::game::game_mission::GameMission;
+use crate::private::game::game_remote::GameRemote;
+use crate::private::game::game_user::GameUser;
+use crate::private::game::GameMachine;
+
+type UserMapType = HashMap<UserIdType, GameUser>;
+type RemoteMapType = HashMap<RemoteIdType, GameRemote>;
+
+#[derive(Default)]
+pub struct GameState {
+    pub users: UserMapType,
+    pub remotes: RemoteMapType,
+    current_tick: TickType,
+    stage: Stage,
+    pub erg_roll: [ErgType; 4],
+    pub rng: ThreadRng,
+    pub mission: GameMission,
+}
+
+#[derive(PartialEq)]
+pub enum IdType {
+    Local(UserIdType),
+    Remote(RemoteIdType),
+}
+
+impl GameState {
+    pub(crate) fn new(hall_mission: HallMission, mut rng: &mut impl Rng) -> Self {
+        let mut remotes = HashMap::new();
+
+        let mut mission = GameMission::from(hall_mission);
+
+        for node in mission.node.iter_mut() {
+            let attributes = Attributes::from_arrays([util::pick_values(&mut rng), util::pick_values(&mut rng), util::pick_values(&mut rng), util::pick_values(&mut rng)]);
+            node.remote = rng.random();
+            remotes.insert(node.remote, GameRemote::new(attributes));
+        }
+
+        Self {
+            remotes,
+            mission,
+            ..Default::default()
+        }
+    }
+
+    fn is_valid_transition(&self, game_stage: &Stage) -> bool {
+        if self.stage == *game_stage {
+            return true;
+        }
+        match game_stage {
+            Stage::Idle => false,
+            Stage::Building => self.stage == Stage::Idle,
+            Stage::Running(phase) => match phase {
+                Phase::ChooseIntent => self.stage == Stage::Idle || self.stage == Stage::Running(Phase::TurnEnd),
+                Phase::ChooseAttr => self.stage == Stage::Running(Phase::ChooseIntent),
+                Phase::CardPlay => self.stage == Stage::Running(Phase::ChooseAttr),
+                Phase::TurnEnd => self.stage == Stage::Running(Phase::CardPlay),
+            },
+            Stage::End => matches!(self.stage, Stage::Running(_)),
+        }
+    }
+
+    pub(crate) fn set_stage(&mut self, stage: Stage) {
+        if self.is_valid_transition(&stage) {
+            self.stage = stage;
+        } // else log error
+    }
+
+    pub(crate) fn set_phase(&mut self, phase: Phase) {
+        self.set_stage(Stage::Running(phase));
+        self.users.iter_mut().for_each(|(_, user)| user.state.command.should_be(phase.expected_command()));
+    }
+
+    pub(crate) fn get_user_auth(&self, user_id_type: UserIdType, user_auth: AuthType) -> Option<&GameUser> {
+        if let Some(user) = self.users.get(&user_id_type) {
+            if user.auth == user_auth {
+                return Some(user);
+            }
+        }
+        None
+    }
+    pub(crate) fn split_get_user_auth_mut(users: &mut UserMapType, user_id_type: UserIdType, user_auth: AuthType) -> Option<&mut GameUser> {
+        if let Some(user) = users.get_mut(&user_id_type) {
+            if user.auth == user_auth {
+                return Some(user);
+            }
+        }
+        None
+    }
+
+    pub(crate) fn all_users_have_players(&self) -> bool {
+        self.users.iter().all(|(_, user)| user.player.is_some())
+    }
+
+    pub(crate) fn determine_last_command(&self) -> Option<op::Command> {
+        let first_op = match self.users.iter().next().map(|(_, user)| user.state.command) {
+            None => None,
+            Some(command) => match command {
+                PlayerCommandState::Invalid => None,
+                PlayerCommandState::Expected(_) => None,
+                PlayerCommandState::Actual(actual) => Some(actual),
+            },
+        };
+        let command = first_op?;
+
+        if self.users.iter().all(|(_, user)| user.state.command.is(command)) {
+            first_op
+        } else {
+            None
+        }
+    }
+
+    pub(crate) fn user_add(&mut self, user_id_type: UserIdType, game_user: GameUser) {
+        self.users.insert(user_id_type, game_user);
+    }
+
+    // pub(crate) fn user_remove(&mut self, user_id_type: UserIdType, user_auth: AuthType) {
+    //     match self.users.entry(user_id_type) {
+    //         Entry::Occupied(user) if user.get().auth == user_auth => self.users.remove(&user_id_type),
+    //         _ => None,
+    //     };
+    // }
+
+    pub(crate) fn get_remote(&self, remote: RemoteIdType) -> Option<&GameRemote> {
+        self.remotes.get(&remote)
+    }
+
+    pub(crate) fn is_empty(&self) -> bool {
+        self.users.is_empty()
+    }
+
+    pub(crate) fn tick(&mut self) -> TickType {
+        self.current_tick += 1;
+
+        self.users.values_mut().for_each(|user| {
+            if let Some(player) = &user.player {
+                user.machine.tick(&player.attributes);
+                user.state.fill_hand();
+            }
+        });
+        self.remotes.values_mut().for_each(|remote| remote.machine.tick(&remote.attributes));
+
+        self.current_tick
+    }
+
+    pub(crate) fn roll(&mut self) {
+        let range = Uniform::new_inclusive(1, 6).unwrap();
+        for erg in self.erg_roll.iter_mut() {
+            *erg = self.rng.sample(range);
+        }
+    }
+
+    pub(crate) fn split_borrow_for_resolve(&mut self) -> (&[ErgType; 4], &mut UserMapType, &mut RemoteMapType, &GameMission) {
+        (&self.erg_roll, &mut self.users, &mut self.remotes, &self.mission)
+    }
+
+    pub(crate) fn resolve_matchups(erg_roll: &[ErgType], p1: &[AttributeValueType; 4], p2: &[AttributeValueType; 4]) -> ([ErgType; 4], [ErgType; 4]) {
+        let matchups = zip(erg_roll, zip(p1, p2)).collect::<Vec<_>>();
+
+        let mut local_alloc = [0, 0, 0, 0];
+        let mut remote_alloc = [0, 0, 0, 0];
+
+        for (idx, (erg, (protag, antag))) in matchups.iter().enumerate() {
+            match protag.cmp(antag) {
+                Ordering::Greater => local_alloc[idx] = **erg,
+                Ordering::Less => remote_alloc[idx] = **erg,
+                Ordering::Equal => {
+                    local_alloc[idx] = **erg / 2;
+                    remote_alloc[idx] = **erg / 2;
+                }
+            };
+        }
+
+        (local_alloc, remote_alloc)
+    }
+
+    pub(crate) fn resolve_cards(&mut self, cards: Vec<(IdType, HallCard, IdType)>) -> Vec<(IdType, PlayerCard, IdType)> {
+        let mut result = Vec::new();
+        for (source, card, target) in cards.into_iter() {
+            let machine = match target {
+                IdType::Local(local_id) => self.users.get_mut(&local_id).map(|u| &mut u.machine),
+                IdType::Remote(remote_id) => self.remotes.get_mut(&remote_id).map(|r| &mut r.machine),
+            };
+            if let Some(played) = machine.and_then(|m| m.enqueue(card, source == target)) {
+                result.push((source, played, target));
+            }
+        }
+        result
+    }
+
+    pub(crate) fn process_intents(&mut self) -> Vec<UserIdType> {
+        let intents = self
+            .users
+            .iter() //
+            .filter(|(_, user)| self.mission.get_node(user.mission_state.current()).map(|node| node.kind.has_intent(user.state.intent)).unwrap_or(false))
+            .map(|(id, user)| (*id, user.state.intent))
+            .collect::<Vec<_>>();
+
+        let mut node_changes = Vec::new();
+        for (id, intent) in &intents {
+            match *intent {
+                MissionNodeIntent::None => {}
+                MissionNodeIntent::Link(dir) => {
+                    if let Some(user) = self.users.get_mut(id) {
+                        let link = self.mission.get_node(user.mission_state.current()).and_then(|mission| mission.links.iter().find(|n| n.direction == dir));
+                        if let Some(link) = link {
+                            user.mission_state.set_current(link.target);
+                            node_changes.push(*id);
+                        }
+                    }
+                }
+                MissionNodeIntent::AccessPoint(_) => {}
+                MissionNodeIntent::Backend(_) => {}
+                MissionNodeIntent::Control(_) => {}
+                MissionNodeIntent::Database(_) => {}
+                MissionNodeIntent::Engine(_) => {}
+                MissionNodeIntent::Frontend(_) => {}
+                MissionNodeIntent::Gateway(_) => {}
+                MissionNodeIntent::Hardware(_) => {}
+            }
+        }
+        node_changes
+    }
+}
+
+impl GameState {
+    pub(crate) fn make_response(user: &GameUser, remote: &GameMachine, mission: &GameMission) -> GameUpdateStateResponse {
+        GameUpdateStateResponse {
+            player_state: PlayerStatePlayerView::from(&user.state),
+            local_machine: GameMachinePlayerView::from(&user.machine),
+            remote_machine: GameMachinePlayerView::from(remote),
+            mission: mission.to_player_view(&user.mission_state),
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::private::game::game_state::GameState;
+    use hall::core::ErgType;
+
+    #[test]
+    fn test_resolve_1() {
+        let erg_roll = [1, 3, 3, 6];
+
+        let p1_a = [9, 1, 9, 1];
+        let p2_a = [1, 9, 1, 9];
+
+        let result = GameState::resolve_matchups(&erg_roll, &p1_a, &p2_a);
+        assert_eq!(result.0.iter().sum::<ErgType>(), 4);
+        assert_eq!(result.1.iter().sum::<ErgType>(), 9);
+    }
+
+    #[test]
+    fn test_resolve_2() {
+        let erg_roll = [1, 3, 3, 6];
+
+        let p1_b = [5, 5, 5, 5];
+        let p2_b = [5, 5, 5, 5];
+
+        let result = GameState::resolve_matchups(&erg_roll, &p1_b, &p2_b);
+        assert_eq!(result.0.iter().sum::<ErgType>(), 5);
+        assert_eq!(result.1.iter().sum::<ErgType>(), 5);
+    }
+
+    #[test]
+    fn test_resolve_3() {
+        let erg_roll = [1, 3, 3, 6];
+
+        let p1_c = [9, 1, 5, 5];
+        let p2_c = [1, 9, 5, 5];
+        let result = GameState::resolve_matchups(&erg_roll, &p1_c, &p2_c);
+        assert_eq!(result.0.iter().sum::<ErgType>(), 5);
+        assert_eq!(result.1.iter().sum::<ErgType>(), 7);
+    }
+
+    #[test]
+    fn test_resolve_4() {
+        let erg_roll = [1, 3, 3, 6];
+
+        let p1_d = [5, 5, 9, 1];
+        let p2_d = [5, 5, 1, 9];
+        let result = GameState::resolve_matchups(&erg_roll, &p1_d, &p2_d);
+        assert_eq!(result.0.iter().sum::<ErgType>(), 4);
+        assert_eq!(result.1.iter().sum::<ErgType>(), 7);
+    }
+
+    #[test]
+    fn test_resolve_5() {
+        let erg_roll = [1, 3, 3, 6];
+
+        let p1_d = [5, 5, 9, 1];
+        let p2_c = [1, 9, 5, 5];
+        let result = GameState::resolve_matchups(&erg_roll, &p1_d, &p2_c);
+        assert_eq!(result.0.iter().sum::<ErgType>(), 4);
+        assert_eq!(result.1.iter().sum::<ErgType>(), 9);
+    }
+}

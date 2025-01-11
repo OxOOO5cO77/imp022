@@ -1,7 +1,7 @@
 use bevy::prelude::{Click, Commands, Entity, EntityCommands, Over, PickingBehavior, Pointer, Query, Res, ResMut, Text2d, Trigger, Visibility};
 
-use hall::data::core::{MissionNodeKind, MissionNodeLinkDir, MissionNodeLinkState};
-use hall::data::game::GameMissionPlayerView;
+use hall::core::{MissionNodeKind, MissionNodeLinkDir, MissionNodeLinkState};
+use hall::view::GameMissionPlayerView;
 
 use crate::manager::ScreenLayout;
 use crate::screen::gameplay_main::components::{MissionNodeContentButton, MissionNodeLinkButton};
@@ -92,7 +92,7 @@ impl BaseNode {
             let link_dir = current_node.links.iter().find(|l| l.direction == DIRS[idx]);
             let node_target = link_dir.map(|l| l.target).and_then(|target| mission.get_node(target));
             let kind = node_target.map_or(MissionNodeKind::Unknown, |n| n.kind);
-            let remote_id = node_target.map_or("".to_string(), |n| n.make_id());
+            let remote_id = node_target.map_or("???:???:????:???:???".to_string(), |n| n.make_id());
             let locked = link_dir.is_some_and(|l| l.state == MissionNodeLinkState::Closed);
             let unlocked = link_dir.is_some_and(|l| l.state == MissionNodeLinkState::Open);
             if let Ok([mut text_title, mut text_remote_id]) = text_q.get_many_mut([link.title, link.remote_id]) {

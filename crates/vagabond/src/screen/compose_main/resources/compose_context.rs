@@ -1,6 +1,6 @@
 use bevy::prelude::Resource;
 
-use hall::data::core::Attributes;
+use hall::core::Attributes;
 use vagabond::data::VagabondCard;
 
 #[derive(Default, PartialEq)]

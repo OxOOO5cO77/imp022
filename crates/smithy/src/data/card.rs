@@ -1,5 +1,5 @@
 use crate::data::shared::DbRarity;
-use hall::data::core::{AttributeKind, CardNumberType, DelayType, ErgType, PriorityType, Rarity, SetType};
+use hall::core::{AttributeKind, CardNumberType, DelayType, ErgType, PriorityType, Rarity, SetType};
 use sqlx::postgres::PgRow;
 use sqlx::{Pool, Postgres, Row};
 

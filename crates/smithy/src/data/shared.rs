@@ -1,6 +1,7 @@
-use hall::data::core::{BuildNumberType, CardSlot, Rarity, Set, SetType, Slot};
 use sqlx::postgres::PgRow;
 use sqlx::Row;
+
+use hall::core::{BuildNumberType, CardSlot, Rarity, Set, SetType, Slot};
 
 #[derive(sqlx::Type)]
 #[sqlx(type_name = "type_rarity")]

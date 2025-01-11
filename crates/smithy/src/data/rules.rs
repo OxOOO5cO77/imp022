@@ -1,6 +1,6 @@
 use std::str::Chars;
 
-use hall::data::core::{Amount, AttributeKind, AttributeValueKind, Instruction, RuntimeAmount, ValueTarget};
+use hall::core::{Amount, AttributeKind, AttributeValueKind, Instruction, RuntimeAmount, ValueTarget};
 
 pub fn process_code(instruction_str: &str) -> Option<Instruction> {
     use Instruction::*;
@@ -80,7 +80,7 @@ pub(crate) fn parse_rules(rules: &str) -> Vec<Instruction> {
 #[cfg(test)]
 mod tests {
     use crate::data::rules::process_code;
-    use hall::data::core::{Amount::*, AttributeKind::*, AttributeValueKind::*, Instruction::*, RuntimeAmount::*, ValueTarget::*};
+    use hall::core::{Amount::*, AttributeKind::*, AttributeValueKind::*, Instruction::*, RuntimeAmount::*, ValueTarget::*};
 
     #[test]
     fn test_ttl_one_digit() {

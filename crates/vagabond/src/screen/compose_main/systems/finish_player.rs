@@ -1,8 +1,10 @@
+use bevy::prelude::{Commands, Query, Res, ResMut, Trigger};
+
+use hall::core::AttributeValues;
+
 use crate::network::client_gate::GateIFace;
 use crate::screen::compose_main::resources::ComposeContext;
 use crate::screen::compose_main::{ComposeState, FinishPlayerTrigger, PartHolder, PopulatePlayerUi, Slot, StatRowKind};
-use bevy::prelude::{Commands, Query, Res, ResMut, Trigger};
-use hall::data::core::AttributeValues;
 
 fn attributes_from_holder(holder: &PartHolder) -> AttributeValues {
     AttributeValues::from_array(holder.part.as_ref().map(|o| o.values).unwrap_or_default())

@@ -1,5 +1,6 @@
 use bevy::prelude::Component;
-use hall::data::core::DelayType;
+
+use hall::core::DelayType;
 
 #[derive(Component)]
 pub(crate) struct MachineQueueItem {

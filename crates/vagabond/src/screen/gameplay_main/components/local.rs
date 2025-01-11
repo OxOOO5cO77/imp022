@@ -1,5 +1,6 @@
 use bevy::prelude::Component;
-use hall::data::core::AttributeKind;
+
+use hall::core::AttributeKind;
 
 #[derive(Component)]
 pub(crate) enum PlayerStateText {

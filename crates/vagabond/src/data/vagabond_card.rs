@@ -1,5 +1,6 @@
-use hall::data::core::{AttributeKind, CardNumberType, DelayType, ErgType, Instruction, PriorityType, Rarity, SetType};
 use serde::{Deserialize, Serialize};
+
+use hall::core::{AttributeKind, CardNumberType, DelayType, ErgType, Instruction, PriorityType, Rarity, SetType};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct VagabondCard {

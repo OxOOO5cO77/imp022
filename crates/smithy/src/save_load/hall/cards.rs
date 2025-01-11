@@ -1,8 +1,10 @@
+use std::io::Error;
+
+use hall::hall::HallCard;
+
 use crate::data::rules;
 use crate::data::DbCard;
 use crate::save_load::save_data_single;
-use hall::data::hall::HallCard;
-use std::io::Error;
 
 fn make_hall_card(card: &DbCard) -> HallCard {
     HallCard {

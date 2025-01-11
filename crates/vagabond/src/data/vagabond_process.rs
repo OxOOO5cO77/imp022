@@ -1,5 +1,6 @@
+use hall::core::PriorityType;
+
 use crate::data::VagabondCard;
-use hall::data::core::PriorityType;
 
 #[derive(Clone)]
 pub struct VagabondProcess {

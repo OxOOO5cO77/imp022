@@ -1,7 +1,9 @@
+use std::io::Error;
+
+use hall::hall::HallBuild;
+
 use crate::data::DbBuild;
 use crate::save_load::save_data_single;
-use hall::data::hall::HallBuild;
-use std::io::Error;
 
 fn make_hall_build(build_instance: &DbBuild) -> HallBuild {
     HallBuild {

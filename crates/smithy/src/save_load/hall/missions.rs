@@ -1,7 +1,9 @@
+use std::io::Error;
+
+use hall::hall::{HallMission, HallMissionNode};
+
 use crate::data::{DbMission, DbMissionNode};
 use crate::save_load::save_data_single;
-use hall::data::hall::{HallMission, HallMissionNode};
-use std::io::Error;
 
 fn make_hall_mission_node(mission_node_instance: &DbMissionNode) -> HallMissionNode {
     HallMissionNode {

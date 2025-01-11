@@ -1,7 +1,7 @@
 use bevy::prelude::{Commands, Out, Pointer, Query, Sprite, Trigger};
 
-use hall::data::core::{AttributeKind, MissionNodeKind};
-use hall::data::game::GameMissionNodePlayerView;
+use hall::core::{AttributeKind, MissionNodeKind};
+use hall::view::GameMissionNodePlayerView;
 
 use crate::manager::AtlasManager;
 use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor};

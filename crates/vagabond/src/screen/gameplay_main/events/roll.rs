@@ -1,5 +1,5 @@
 use bevy::prelude::Event;
-use hall::data::core::ErgType;
+use hall::core::ErgType;
 
 #[derive(Event)]
 pub(crate) struct RollTrigger {

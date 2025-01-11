@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
-use hall::data::core::{AttributeKind, Attributes, DelayType, MissionNodeKind};
+use hall::core::{AttributeKind, Attributes, DelayType, MissionNodeKind};
 use hall::message::*;
 
 use crate::manager::{AtlasManager, ScreenLayoutManager, ScreenLayoutManagerParams};

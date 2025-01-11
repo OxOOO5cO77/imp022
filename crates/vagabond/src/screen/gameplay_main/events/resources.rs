@@ -1,5 +1,6 @@
 use bevy::prelude::Event;
-use hall::data::core::{AttributeKind, BuildValueType, ErgType};
+
+use hall::core::{AttributeKind, BuildValueType, ErgType};
 use hall::message::GameResourcesMessage;
 
 #[derive(Event)]

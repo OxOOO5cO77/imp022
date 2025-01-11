@@ -1,4 +1,4 @@
-use hall::data::core::AttributeValueType;
+use hall::core::AttributeValueType;
 use shared_net::SeedType;
 
 use crate::data::{VagabondBuild, VagabondDetail};

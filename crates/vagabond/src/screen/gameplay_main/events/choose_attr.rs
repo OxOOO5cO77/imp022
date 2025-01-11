@@ -1,5 +1,6 @@
 use bevy::prelude::Event;
-use hall::data::core::AttributeKind;
+
+use hall::core::AttributeKind;
 
 #[derive(Event)]
 pub(crate) struct ChooseAttrTrigger {

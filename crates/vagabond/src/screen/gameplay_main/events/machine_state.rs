@@ -1,5 +1,6 @@
 use bevy::prelude::Event;
-use hall::data::game::GameMachinePlayerView;
+
+use hall::view::GameMachinePlayerView;
 
 #[derive(Event)]
 pub(crate) struct MachineStateTrigger {
