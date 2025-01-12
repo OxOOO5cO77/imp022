@@ -40,9 +40,9 @@ fn parse_attr_value(attr_char: char, remain: &mut Chars) -> RuntimeAmount {
         _ => return RuntimeAmount::None,
     };
     let value = match remain.next() {
-        Some('A') => AttributeValueKind::Accuracy,
-        Some('B') => AttributeValueKind::Boost,
-        Some('C') => AttributeValueKind::Celerity,
+        Some('A') => AttributeValueKind::Amplitude,
+        Some('B') => AttributeValueKind::Beat,
+        Some('C') => AttributeValueKind::Control,
         Some('D') => AttributeValueKind::Duration,
         _ => return RuntimeAmount::None,
     };
@@ -102,22 +102,22 @@ mod tests {
     #[test]
     fn test_dec_attr() {
         let instruction = process_code("DEC:TC:AA");
-        assert_eq!(instruction, Some(DEC(ThermalCapacity, Value(Attribute(Analyze, Accuracy)))));
+        assert_eq!(instruction, Some(DEC(ThermalCapacity, Value(Attribute(Analyze, Amplitude)))));
     }
     #[test]
     fn test_dec_attr_add_value() {
         let instruction = process_code("DEC:SH:BB+10");
-        assert_eq!(instruction, Some(DEC(SystemHealth, Add(Attribute(Breach, Boost), N(10)))));
+        assert_eq!(instruction, Some(DEC(SystemHealth, Add(Attribute(Breach, Beat), N(10)))));
     }
     #[test]
     fn test_dec_attr_mul_attr() {
         let instruction = process_code("DEC:OP:CC*DD");
-        assert_eq!(instruction, Some(DEC(OpenPorts, Mul(Attribute(Compute, Celerity), Attribute(Disrupt, Duration)))));
+        assert_eq!(instruction, Some(DEC(OpenPorts, Mul(Attribute(Compute, Control), Attribute(Disrupt, Duration)))));
     }
     #[test]
     fn test_inc_value_sub_attr() {
         let instruction = process_code("INC:FS:10-AB");
-        assert_eq!(instruction, Some(INC(FreeSpace, Sub(N(10), Attribute(Analyze, Boost)))));
+        assert_eq!(instruction, Some(INC(FreeSpace, Sub(N(10), Attribute(Analyze, Beat)))));
     }
     #[test]
     fn test_inc_value_add_value() {

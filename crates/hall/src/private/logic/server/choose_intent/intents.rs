@@ -1,6 +1,6 @@
 use hall::core::MissionNodeIntent;
 
-use crate::private::game::{GameMission, GameUser};
+use crate::private::game::{GameMission, GameUser, RemoteMapType};
 
 mod link;
 mod node_a;
@@ -12,10 +12,10 @@ mod node_f;
 mod node_g;
 mod node_h;
 
-pub(crate) fn process_intent(mission: &mut GameMission, user: &mut GameUser, intent: MissionNodeIntent) -> bool {
+pub(crate) fn process_intent(intent: MissionNodeIntent, user: &mut GameUser, mission: &mut GameMission, remotes: &mut RemoteMapType) -> bool {
     match intent {
         MissionNodeIntent::None => false,
-        MissionNodeIntent::Link(dir) => link::process_intent(mission, user, dir),
+        MissionNodeIntent::Link(dir) => link::process_intent(dir, user, mission, remotes).unwrap_or(false),
         MissionNodeIntent::AccessPoint(intent) => node_a::process_intent(mission, user, intent),
         MissionNodeIntent::Backend(intent) => node_b::process_intent(mission, user, intent),
         MissionNodeIntent::Control(intent) => node_c::process_intent(mission, user, intent),

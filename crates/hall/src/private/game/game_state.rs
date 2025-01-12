@@ -18,21 +18,21 @@ use crate::private::game::game_user::GameUser;
 use crate::private::game::GameMachine;
 
 type UserMapType = HashMap<UserIdType, GameUser>;
-type RemoteMapType = HashMap<RemoteIdType, GameRemote>;
+pub(crate) type RemoteMapType = HashMap<RemoteIdType, GameRemote>;
 
 #[derive(Default)]
-pub struct GameState {
-    pub users: UserMapType,
-    pub remotes: RemoteMapType,
+pub(crate) struct GameState {
+    pub(crate) users: UserMapType,
+    pub(crate) remotes: RemoteMapType,
     current_tick: TickType,
     stage: Stage,
-    pub erg_roll: [ErgType; 4],
-    pub rng: ThreadRng,
-    pub mission: GameMission,
+    pub(crate) erg_roll: [ErgType; 4],
+    pub(crate) rng: ThreadRng,
+    pub(crate) mission: GameMission,
 }
 
 #[derive(PartialEq)]
-pub enum IdType {
+pub(crate) enum IdType {
     Local(UserIdType),
     Remote(RemoteIdType),
 }

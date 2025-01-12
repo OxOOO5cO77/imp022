@@ -1,12 +1,23 @@
+use crate::private::game::{GameMission, GameUser, RemoteMapType};
 use hall::core::{MissionNodeLinkDir, MissionNodeLinkState};
+use hall::view::MAX_LINK_DAMAGE;
 
-use crate::private::game::{GameMission, GameUser};
-
-pub(crate) fn process_intent(mission: &mut GameMission, user: &mut GameUser, dir: MissionNodeLinkDir) -> bool {
-    mission // note: we don't care if the target node is new, just that we traversed successfully
-        .get_node(user.mission_state.current())
-        .and_then(|mission| mission.links.iter().find(|n| n.direction == dir))
-        .filter(|link| link.state == MissionNodeLinkState::Open)
-        .map(|link| user.mission_state.set_current(link.target))
-        .is_some()
+pub(crate) fn process_intent(dir: MissionNodeLinkDir, user: &mut GameUser, mission: &mut GameMission, remotes: &mut RemoteMapType) -> Option<bool> {
+    let node = mission.get_node_mut(user.mission_state.current())?;
+    let link = node.links.iter_mut().find(|n| n.direction == dir)?;
+    match link.state {
+        MissionNodeLinkState::Open => {
+            user.mission_state.set_current(link.target);
+            Some(true)
+        }
+        MissionNodeLinkState::Closed => {
+            let remote = remotes.get_mut(&node.remote)?;
+            let amount = user.player.as_ref()?.attributes.breach.amplitude.saturating_sub(remote.attributes.breach.control).max(1);
+            link.damage = link.damage.saturating_add(amount).min(MAX_LINK_DAMAGE);
+            if link.damage == MAX_LINK_DAMAGE {
+                link.state = MissionNodeLinkState::Open;
+            }
+            Some(false)
+        }
+    }
 }

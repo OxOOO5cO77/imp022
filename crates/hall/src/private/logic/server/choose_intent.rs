@@ -19,7 +19,7 @@ pub(crate) fn handle_choose_intent(game: &mut GameState, bx: &mut Broadcaster) {
     let mut node_changes = Vec::new();
     for (id, intent) in &intents {
         if let Some(user) = game.users.get_mut(id) {
-            if intents::process_intent(&mut game.mission, user, *intent) {
+            if intents::process_intent(*intent, user, &mut game.mission, &mut game.remotes) {
                 node_changes.push(*id);
             }
         }

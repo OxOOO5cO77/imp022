@@ -4,6 +4,7 @@ use shared_net::Bufferable;
 use shared_net::VSizedBuffer;
 
 pub type MissionIdType = u8;
+pub type MissionNodeLinkDamageType = u8;
 
 #[repr(u8)]
 #[derive(Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Debug, FromPrimitive, IntoPrimitive)]
@@ -51,6 +52,7 @@ pub struct MissionNodeLink {
     pub direction: MissionNodeLinkDir,
     pub target: MissionNodeIdType,
     pub state: MissionNodeLinkState,
+    pub damage: MissionNodeLinkDamageType,
 }
 
 #[derive(Bufferable, Default, Clone, PartialEq, Serialize, Deserialize, Debug)]

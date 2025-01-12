@@ -6,10 +6,10 @@ use hall::view::{GameMissionObjectivePlayerView, GameMissionPlayerView};
 use crate::private::game::{GameMissionNode, GameMissionObjective};
 
 #[derive(Default)]
-pub struct GameMission {
-    pub _id: MissionIdType,
-    pub node: Vec<GameMissionNode>,
-    pub objective: Vec<GameMissionObjective>,
+pub(crate) struct GameMission {
+    pub(crate) _id: MissionIdType,
+    pub(crate) node: Vec<GameMissionNode>,
+    pub(crate) objective: Vec<GameMissionObjective>,
 }
 
 impl From<HallMission> for GameMission {
@@ -23,13 +23,16 @@ impl From<HallMission> for GameMission {
 }
 
 impl GameMission {
-    pub fn get_node(&self, node: MissionNodeIdType) -> Option<&GameMissionNode> {
+    pub(crate) fn get_node(&self, node: MissionNodeIdType) -> Option<&GameMissionNode> {
         self.node.iter().find(|n| n.id == node)
+    }
+    pub(crate) fn get_node_mut(&mut self, node: MissionNodeIdType) -> Option<&mut GameMissionNode> {
+        self.node.iter_mut().find(|n| n.id == node)
     }
 }
 
 impl GameMission {
-    pub fn to_player_state(&self, initial_node: MissionNodeIdType) -> PlayerMissionState {
+    pub(crate) fn to_player_state(&self, initial_node: MissionNodeIdType) -> PlayerMissionState {
         let mut state = PlayerMissionState {
             current_node: initial_node,
             nodes: self.node.iter().filter(|n| n.initial_state == MissionNodeState::Known).map(|n| (n.id, MissionNodeState::Known)).collect(),
@@ -38,7 +41,7 @@ impl GameMission {
         state
     }
 
-    pub fn to_player_view(&self, mission_state: &PlayerMissionState) -> GameMissionPlayerView {
+    pub(crate) fn to_player_view(&self, mission_state: &PlayerMissionState) -> GameMissionPlayerView {
         let current_node = mission_state.current();
         let node_map = mission_state.known().iter().filter_map(|id| self.get_node(*id)).map(|node| node.to_player_view()).collect();
         let objective = self.objective.iter().map(GameMissionObjectivePlayerView::from).collect();

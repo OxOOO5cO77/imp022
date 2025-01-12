@@ -87,6 +87,7 @@ fn make_link(direction: MissionNodeLinkDir, db_link: DbMissionLink) -> MissionNo
         direction,
         target: db_link.target as MissionNodeIdType,
         state: db_link.state.into(),
+        damage: 0,
     }
 }
 

@@ -6,6 +6,6 @@ mod game_process;
 
 pub use game_machine::GameMachinePlayerView;
 pub use game_mission::GameMissionPlayerView;
-pub use game_mission_node::GameMissionNodePlayerView;
+pub use game_mission_node::{GameMissionNodePlayerView, MAX_CONTENT_COUNT, MAX_LINK_COUNT, MAX_LINK_DAMAGE};
 pub use game_mission_objective::GameMissionObjectivePlayerView;
 pub use game_process::GameProcessPlayerView;

@@ -20,17 +20,17 @@ pub enum AttributeKind {
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, Hash, PartialEq, Eq, FromPrimitive, IntoPrimitive)]
 pub enum AttributeValueKind {
     #[num_enum(default)]
-    Accuracy,
-    Boost,
-    Celerity,
+    Amplitude,
+    Beat,
+    Control,
     Duration,
 }
 
 #[derive(Default, Clone, Copy, Serialize, Deserialize)]
 pub struct AttributeValues {
-    pub accuracy: AttributeValueType,
-    pub boost: AttributeValueType,
-    pub celerity: AttributeValueType,
+    pub amplitude: AttributeValueType,
+    pub beat: AttributeValueType,
+    pub control: AttributeValueType,
     pub duration: AttributeValueType,
 }
 
@@ -44,24 +44,24 @@ pub struct Attributes {
 
 impl AttributeValues {
     pub fn to_array(&self) -> [AttributeValueType; 4] {
-        [self.accuracy, self.boost, self.celerity, self.duration]
+        [self.amplitude, self.beat, self.control, self.duration]
     }
 
     pub fn from_array(array: [AttributeValueType; 4]) -> Self {
-        let [accuracy, boost, celerity, duration] = array;
+        let [amplitude, beat, control, duration] = array;
         Self {
-            accuracy,
-            boost,
-            celerity,
+            amplitude,
+            beat,
+            control,
             duration,
         }
     }
 
     pub fn get_value(&self, value: AttributeValueKind) -> AttributeValueType {
         match value {
-            AttributeValueKind::Accuracy => self.accuracy,
-            AttributeValueKind::Boost => self.boost,
-            AttributeValueKind::Celerity => self.celerity,
+            AttributeValueKind::Amplitude => self.amplitude,
+            AttributeValueKind::Beat => self.beat,
+            AttributeValueKind::Control => self.control,
             AttributeValueKind::Duration => self.duration,
         }
     }
