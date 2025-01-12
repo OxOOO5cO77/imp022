@@ -6,6 +6,7 @@ use chrono::NaiveDate;
 use rand::prelude::{IndexedRandom, StdRng};
 use rand::{Rng, SeedableRng};
 use serde::Deserialize;
+use warehouse::data::geo_location::GeoLocation;
 use warehouse::data::player_bio::PlayerBio;
 
 #[derive(Default, Deserialize)]
@@ -81,7 +82,7 @@ impl BioManager {
         format!("{:016X}", rng.next_u64()).chars().collect::<Vec<char>>().chunks(4).map(|c| c.iter().collect::<String>()).collect::<Vec<String>>().join("-")
     }
 
-    pub fn generate_bio(&self, seed: u64) -> Option<PlayerBio> {
+    pub(crate) fn generate_player_bio(&self, seed: u64) -> Option<PlayerBio> {
         let mut rng = StdRng::seed_from_u64(seed);
 
         let country = self.country(&mut rng);
@@ -100,6 +101,19 @@ impl BioManager {
             name,
             birthplace,
             dob,
+        })
+    }
+
+    pub(crate) fn generate_geo_location(&self, seed: u64) -> Option<GeoLocation> {
+        let mut rng = StdRng::seed_from_u64(seed);
+
+        let country = self.country(&mut rng);
+        let city = self.city(&country, &mut rng);
+        let location_parts = (city.0, city.1, country.clone());
+
+        Some(GeoLocation {
+            seed,
+            location_part: location_parts,
         })
     }
 }

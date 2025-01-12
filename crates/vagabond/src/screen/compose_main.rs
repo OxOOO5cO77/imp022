@@ -427,7 +427,7 @@ fn compose_update(
     // bevy system
     mut commands: Commands,
     mut gate: ResMut<GateIFace>,
-    wm: Res<WarehouseManager>,
+    mut wm: ResMut<WarehouseManager>,
     dm: Res<DataManager>,
     mut app_state: ResMut<NextState<AppState>>,
     mut context: ResMut<ComposeContext>,
@@ -435,7 +435,7 @@ fn compose_update(
     match gate.grx.try_recv() {
         Ok(GateCommand::GameBuild(gate_response)) => match wm.fetch_player(gate_response.seed) {
             Ok(warehouse_response) => {
-                if let Some(player_bio) = warehouse_response.player_bio {
+                if let Some(player_bio) = &warehouse_response.player_bio {
                     let handoff = ComposeHandoff {
                         local_name: player_bio.name.clone(),
                         local_id: player_bio.id.clone(),
@@ -445,7 +445,7 @@ fn compose_update(
                     context.deck = dm.convert_deck(gate_response.deck);
                     context.deck.sort_by_key(|c| (std::cmp::Reverse(c.rarity), c.set, c.number));
 
-                    commands.trigger(PopulatePlayerUi::Show(player_bio));
+                    commands.trigger(PopulatePlayerUi::Show(player_bio.clone()));
                 } else {
                     commands.trigger(PopulatePlayerUi::Hide);
                 }

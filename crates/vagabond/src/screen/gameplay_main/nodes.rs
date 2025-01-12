@@ -50,14 +50,14 @@ impl MissionNodeLayouts {
         commands.entity(layout.entity(name)).insert(MissionNodeDisplay::new(kind));
         match kind {
             MissionNodeKind::Unknown => MissionNodeLayouts::Unknown,
-            MissionNodeKind::AccessPoint => MissionNodeLayouts::MissionNodeA(access_point::AccessPoint::build_layout(commands, layout, name, kind)),
-            MissionNodeKind::Backend => MissionNodeLayouts::MissionNodeB(backend::Backend::build_layout(commands, layout, name, kind)),
-            MissionNodeKind::Control => MissionNodeLayouts::MissionNodeC(control::Control::build_layout(commands, layout, name, kind)),
-            MissionNodeKind::Database => MissionNodeLayouts::MissionNodeD(database::Database::build_layout(commands, layout, name, kind)),
-            MissionNodeKind::Engine => MissionNodeLayouts::MissionNodeE(engine::Engine::build_layout(commands, layout, name, kind)),
-            MissionNodeKind::Frontend => MissionNodeLayouts::MissionNodeF(frontend::Frontend::build_layout(commands, layout, name, kind)),
-            MissionNodeKind::Gateway => MissionNodeLayouts::MissionNodeG(gateway::Gateway::build_layout(commands, layout, name, kind)),
-            MissionNodeKind::Hardware => MissionNodeLayouts::MissionNodeH(hardware::Hardware::build_layout(commands, layout, name, kind)),
+            MissionNodeKind::AccessPoint => MissionNodeLayouts::MissionNodeA(access_point::AccessPoint::build_layout(commands, layout, name)),
+            MissionNodeKind::Backend => MissionNodeLayouts::MissionNodeB(backend::Backend::build_layout(commands, layout, name)),
+            MissionNodeKind::Control => MissionNodeLayouts::MissionNodeC(control::Control::build_layout(commands, layout, name)),
+            MissionNodeKind::Database => MissionNodeLayouts::MissionNodeD(database::Database::build_layout(commands, layout, name)),
+            MissionNodeKind::Engine => MissionNodeLayouts::MissionNodeE(engine::Engine::build_layout(commands, layout, name)),
+            MissionNodeKind::Frontend => MissionNodeLayouts::MissionNodeF(frontend::Frontend::build_layout(commands, layout, name)),
+            MissionNodeKind::Gateway => MissionNodeLayouts::MissionNodeG(gateway::Gateway::build_layout(commands, layout, name)),
+            MissionNodeKind::Hardware => MissionNodeLayouts::MissionNodeH(hardware::Hardware::build_layout(commands, layout, name)),
         }
     }
 }

@@ -7,7 +7,7 @@ use crate::private::game::{GameMissionNode, GameMissionObjective};
 
 #[derive(Default)]
 pub(crate) struct GameMission {
-    pub(crate) _id: MissionIdType,
+    pub(crate) id: MissionIdType,
     pub(crate) node: Vec<GameMissionNode>,
     pub(crate) objective: Vec<GameMissionObjective>,
 }
@@ -15,7 +15,7 @@ pub(crate) struct GameMission {
 impl From<HallMission> for GameMission {
     fn from(value: HallMission) -> Self {
         Self {
-            _id: value.id,
+            id: value.id,
             node: value.node.iter().map(|node| GameMissionNode::new(node, 0)).collect(),
             objective: value.objective.iter().map(GameMissionObjective::from).collect(),
         }
@@ -42,11 +42,13 @@ impl GameMission {
     }
 
     pub(crate) fn to_player_view(&self, mission_state: &PlayerMissionState) -> GameMissionPlayerView {
+        let id = self.id;
         let current_node = mission_state.current();
         let node_map = mission_state.known().iter().filter_map(|id| self.get_node(*id)).map(|node| node.to_player_view()).collect();
         let objective = self.objective.iter().map(GameMissionObjectivePlayerView::from).collect();
 
         GameMissionPlayerView {
+            id,
             current_node,
             node_map,
             objective,

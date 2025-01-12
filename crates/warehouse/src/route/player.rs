@@ -5,24 +5,30 @@ use axum::response::IntoResponse;
 use axum::Json;
 use tracing::{info, warn};
 
-use shared_net::SeedType;
-
 use crate::AppState;
+use shared_net::SeedType;
+use warehouse::data::player_bio::PlayerBio;
 use warehouse::rest::player::PlayerBioResponse;
 
-pub(crate) async fn get(State(state): State<AppState>, Path(params): Path<HashMap<String, String>>) -> impl IntoResponse {
-    let seed_string = params.get("seed").cloned().unwrap_or_default();
-    let seed = SeedType::from_str_radix(&seed_string, 16).unwrap_or_default();
-    let player_bio = state.bio_manager.generate_bio(seed);
+fn process_player_bio(state: &AppState, params: &HashMap<String, String>) -> Option<PlayerBio> {
+    let seed_string = params.get("seed")?;
+    let seed = SeedType::from_str_radix(seed_string, 16).ok()?;
+    let player_bio = state.bio_manager.generate_player_bio(seed);
 
     match &player_bio {
         Some(p) => info!("[Warehouse] /player/{seed_string} => {} ({},{},{})", p.name, p.birthplace.0, p.birthplace.1, p.birthplace.2),
         None => warn!("[Warehouse] /player/{seed_string} => INVALID"),
     }
+    player_bio
+}
+
+pub(crate) async fn get(State(state): State<AppState>, Path(params): Path<HashMap<String, String>>) -> impl IntoResponse {
+    let player_bio = process_player_bio(&state, &params);
 
     let response = PlayerBioResponse {
         player_bio,
     };
+
     Json(response)
 }
 

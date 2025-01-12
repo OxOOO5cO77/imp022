@@ -1,3 +1,4 @@
+use crate::manager::{DataManager, WarehouseManager};
 use crate::screen::gameplay_main::components::MissionNodeDisplay;
 use crate::screen::gameplay_main::events::{GamePhaseTrigger, MissionTrigger};
 use crate::screen::gameplay_main::nodes::{BaseNode, MissionNodeAction, MissionNodeLayouts, NodeLocalObserver};
@@ -5,6 +6,7 @@ use crate::screen::gameplay_main::resources::{GameplayContext, NodeLayouts};
 use crate::screen::gameplay_main::VagabondGamePhase;
 use bevy::prelude::{Commands, Entity, Query, Res, ResMut, Text2d, Trigger, Visibility, With};
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn on_mission_ui_update(
     // bevy system
     event: Trigger<MissionTrigger>,
@@ -14,6 +16,8 @@ pub(super) fn on_mission_ui_update(
     mut text_q: Query<&mut Text2d>,
     node_layouts: Res<NodeLayouts>,
     mut context: ResMut<GameplayContext>,
+    dm: Res<DataManager>,
+    mut wm: ResMut<WarehouseManager>,
 ) {
     context.cached_mission = event.mission.clone();
 
@@ -27,7 +31,9 @@ pub(super) fn on_mission_ui_update(
             if let Some(layout) = node_layouts.layouts.get(&display.kind) {
                 match layout {
                     MissionNodeLayouts::Unknown => {}
-                    MissionNodeLayouts::MissionNodeA(access_point) => access_point.activate(&mut commands, &event.mission),
+                    MissionNodeLayouts::MissionNodeA(access_point) => {
+                        access_point.activate(&mut commands, &event.mission, &mut text_q, &dm, &mut wm);
+                    }
                     MissionNodeLayouts::MissionNodeB(backend) => backend.activate(&mut commands, &event.mission),
                     MissionNodeLayouts::MissionNodeC(control) => control.activate(&mut commands, &event.mission),
                     MissionNodeLayouts::MissionNodeD(database) => database.activate(&mut commands, &event.mission),

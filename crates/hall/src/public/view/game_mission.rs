@@ -1,4 +1,4 @@
-use crate::core::{MissionNodeIdType, MissionNodeKind};
+use crate::core::{MissionIdType, MissionNodeIdType, MissionNodeKind};
 use crate::view::{GameMissionNodePlayerView, GameMissionObjectivePlayerView};
 use shared_net::Bufferable;
 use shared_net::VSizedBuffer;
@@ -6,6 +6,7 @@ use shared_net::VSizedBuffer;
 #[derive(Bufferable, Default, Clone)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameMissionPlayerView {
+    pub id: MissionIdType,
     pub current_node: MissionNodeIdType,
     pub node_map: Vec<GameMissionNodePlayerView>,
     pub objective: Vec<GameMissionObjectivePlayerView>,
@@ -32,7 +33,8 @@ impl GameMissionPlayerView {
 impl GameMissionPlayerView {
     pub fn test_default() -> Self {
         Self {
-            current_node: 4,
+            id: 1234567890,
+            current_node: 123,
             node_map: vec![GameMissionNodePlayerView::test_default(), GameMissionNodePlayerView::test_default(), GameMissionNodePlayerView::test_default()],
             objective: vec![GameMissionObjectivePlayerView::test_default(), GameMissionObjectivePlayerView::test_default(), GameMissionObjectivePlayerView::test_default()],
         }

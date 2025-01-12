@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use shared_net::Bufferable;
 use shared_net::VSizedBuffer;
 
-pub type MissionIdType = u8;
+pub type MissionIdType = u64;
 pub type MissionNodeLinkDamageType = u8;
 
 #[repr(u8)]

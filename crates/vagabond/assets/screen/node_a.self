@@ -1,1 +1,5 @@
-#frame:frame%700,342@32,32,0!blue
+#frame:frame%700,342@0,0,0!blue
+&institution:main.24.center%668,28@16,8,1!white|?
+&access_point:main.12.right%320,20@16,38,1!white|?
+&-:main.12.center%16,20@342,38,1!white|-
+&location:main.12.left%320,20@364,38,1!white|?
