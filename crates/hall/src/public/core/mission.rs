@@ -1,10 +1,9 @@
 use num_enum::{FromPrimitive, IntoPrimitive};
 use serde::{Deserialize, Serialize};
-use shared_net::Bufferable;
-use shared_net::VSizedBuffer;
 
-pub type MissionIdType = u64;
-pub type MissionNodeLinkDamageType = u8;
+use shared_net::{Bufferable, VSizedBuffer};
+
+use crate::core::{MissionNodeIdType, MissionNodeLinkDamageType};
 
 #[repr(u8)]
 #[derive(Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Debug, FromPrimitive, IntoPrimitive)]
@@ -59,5 +58,3 @@ pub struct MissionNodeLink {
 pub struct MissionNodeContent {
     pub log: bool,
 }
-
-pub type MissionNodeIdType = u8;

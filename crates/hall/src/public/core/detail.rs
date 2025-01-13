@@ -1,14 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-pub type DetailNumberType = u8;
-pub type DetailValueType = u8;
-
-pub type GeneralType = u8;
-pub type SpecificType = u8;
+use crate::core::{GeneralType, SpecificType};
 
 #[derive(Default, Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Detail {
-    #[default] Any,
+    #[default]
+    Any,
     Institution(GeneralType, SpecificType),
     Role(GeneralType, SpecificType),
     Location(GeneralType, SpecificType),

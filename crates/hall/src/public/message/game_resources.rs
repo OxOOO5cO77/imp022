@@ -2,12 +2,12 @@ use shared_net::{op, Bufferable, VSizedBuffer};
 
 use crate::core::{AttributeKind, AttributeValueType, ErgType};
 use crate::message::CommandMessage;
-use crate::player::PlayerStatePlayerView;
+use crate::view::GameUserStatePlayerView;
 
 #[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameResourcesMessage {
-    pub player_state_view: PlayerStatePlayerView,
+    pub player_state_view: GameUserStatePlayerView,
     pub remote_attr: [AttributeValueType; 4],
     pub local_erg: [ErgType; 4],
     pub remote_erg: [ErgType; 4],
@@ -22,13 +22,13 @@ impl CommandMessage for GameResourcesMessage {
 mod test {
     use crate::core::AttributeKind;
     use crate::message::game_resources::GameResourcesMessage;
-    use crate::player::PlayerStatePlayerView;
+    use crate::view::GameUserStatePlayerView;
     use shared_net::{Bufferable, VSizedBuffer};
 
     #[test]
     fn test_response() {
         let orig = GameResourcesMessage {
-            player_state_view: PlayerStatePlayerView::default(),
+            player_state_view: GameUserStatePlayerView::default(),
             remote_attr: [4, 5, 6, 5],
             local_erg: [0, 6, 0, 2],
             remote_erg: [5, 0, 1, 0],

@@ -4,7 +4,7 @@ use crate::core::{Detail, DetailNumberType, DetailValueType, GeneralType, Specif
 use serde::{Deserialize, Serialize};
 use shared_net::{Bufferable, VSizedBuffer};
 
-pub type PackedDetailType = u64;
+type PackedDetailType = u64;
 
 #[derive(Default, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq, Debug))]

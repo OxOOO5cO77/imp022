@@ -6,11 +6,16 @@ mod game_process;
 mod game_remote;
 mod game_state;
 mod game_user;
+mod game_user_mission_state;
+mod game_user_state;
 
 pub(crate) use game_machine::GameMachine;
 pub(crate) use game_mission::GameMission;
 pub(crate) use game_mission_node::GameMissionNode;
 pub(crate) use game_mission_objective::GameMissionObjective;
 pub(crate) use game_process::GameProcess;
+pub(crate) use game_remote::GameRemote;
 pub(crate) use game_state::{GameState, IdType, RemoteMapType};
 pub(crate) use game_user::GameUser;
+pub(crate) use game_user_mission_state::GameUserMissionState;
+pub(crate) use game_user_state::{GameUserCommandState, GameUserState};

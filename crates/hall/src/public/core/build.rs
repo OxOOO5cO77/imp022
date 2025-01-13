@@ -2,11 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-pub type BuildNumberType = u8;
-pub type BuildValueType = u8;
-
-pub type CompanyType = u8;
-pub type MarketType = u8;
+use crate::core::{CompanyType, MarketType};
 
 #[derive(Default, Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub enum Build {

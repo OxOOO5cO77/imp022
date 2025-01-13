@@ -1,14 +1,14 @@
 use bevy::prelude::Event;
 
-use hall::player::PlayerStatePlayerView;
+use hall::view::GameUserStatePlayerView;
 
 #[derive(Event)]
 pub(crate) struct PlayerStateTrigger {
-    pub(crate) state: PlayerStatePlayerView,
+    pub(crate) state: GameUserStatePlayerView,
 }
 
 impl PlayerStateTrigger {
-    pub(crate) fn new(state: PlayerStatePlayerView) -> Self {
+    pub(crate) fn new(state: GameUserStatePlayerView) -> Self {
         Self {
             state,
         }

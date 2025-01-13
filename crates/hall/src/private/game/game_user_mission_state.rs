@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 
-use crate::core::{MissionNodeIdType, MissionNodeState};
+use hall::core::{MissionNodeIdType, MissionNodeState};
 
 #[derive(Default)]
-pub struct PlayerMissionState {
+pub struct GameUserMissionState {
     pub current_node: MissionNodeIdType,
     pub nodes: HashMap<MissionNodeIdType, MissionNodeState>,
 }
 
-impl PlayerMissionState {
+impl GameUserMissionState {
     pub fn current(&self) -> MissionNodeIdType {
         self.current_node
     }

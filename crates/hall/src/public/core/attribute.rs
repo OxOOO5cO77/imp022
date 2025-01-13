@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use shared_net::{Bufferable, VSizedBuffer};
 
-pub type AttributeValueType = u8;
+use crate::core::AttributeValueType;
+
 type AttributeKindType = u8;
 
 #[repr(u8)]

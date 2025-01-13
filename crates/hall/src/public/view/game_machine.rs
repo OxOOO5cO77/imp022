@@ -2,10 +2,8 @@ use shared_net::Bufferable;
 
 use shared_net::VSizedBuffer;
 
-use crate::core::DelayType;
+use crate::core::{DelayType, MachineValueType};
 use crate::view::GameProcessPlayerView;
-
-pub type MachineValueType = u16;
 
 #[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]

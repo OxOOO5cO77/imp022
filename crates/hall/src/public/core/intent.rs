@@ -9,6 +9,7 @@ use shared_net::{Bufferable, VSizedBuffer};
 pub enum AccessPointIntent {
     #[num_enum(default)]
     None,
+    Authenticate,
 }
 
 #[repr(u8)]

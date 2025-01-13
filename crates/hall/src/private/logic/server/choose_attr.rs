@@ -1,6 +1,6 @@
 use hall::core::Phase;
 use hall::message::GameResourcesMessage;
-use hall::player::PlayerStatePlayerView;
+use hall::view::GameUserStatePlayerView;
 
 use crate::private::game::GameState;
 use crate::private::network::broadcaster::Broadcaster;
@@ -17,7 +17,7 @@ pub(crate) fn handle_choose_attr(game: &mut GameState, bx: &mut Broadcaster) {
                         let (local_erg, remote_erg) = GameState::resolve_matchups(erg_roll, &player.attributes.get_values(kind), &remote_attr);
                         user.state.add_erg(kind, local_erg);
 
-                        let player_state_view = PlayerStatePlayerView::from(&user.state);
+                        let player_state_view = GameUserStatePlayerView::from(&user.state);
                         let message = GameResourcesMessage {
                             player_state_view,
                             remote_attr,

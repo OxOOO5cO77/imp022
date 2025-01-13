@@ -1,8 +1,7 @@
 use shared_net::{op, Bufferable, GameIdType, VSizedBuffer};
 
 use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
-use crate::player::PlayerStatePlayerView;
-use crate::view::{GameMachinePlayerView, GameMissionPlayerView};
+use crate::view::{GameMachinePlayerView, GameMissionPlayerView, GameUserStatePlayerView};
 
 #[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
@@ -23,7 +22,7 @@ impl GameRequestMessage for GameUpdateStateRequest {
 #[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameUpdateStateResponse {
-    pub player_state: PlayerStatePlayerView,
+    pub player_state: GameUserStatePlayerView,
     pub local_machine: GameMachinePlayerView,
     pub remote_machine: GameMachinePlayerView,
     pub mission: GameMissionPlayerView,
@@ -38,14 +37,13 @@ impl GameResponseMessage for GameUpdateStateResponse {}
 #[cfg(test)]
 mod test {
     use crate::message::game_update_state::GameUpdateStateResponse;
-    use crate::player::PlayerStatePlayerView;
-    use crate::view::{GameMachinePlayerView, GameMissionPlayerView};
+    use crate::view::{GameMachinePlayerView, GameMissionPlayerView, GameUserStatePlayerView};
     use shared_net::{Bufferable, VSizedBuffer};
 
     #[test]
     fn test_response() {
         let orig = GameUpdateStateResponse {
-            player_state: PlayerStatePlayerView {
+            player_state: GameUserStatePlayerView {
                 attr: [[1, 2, 3, 4], [5, 6, 7, 8], [9, 1, 2, 3], [4, 5, 6, 7]],
                 deck: 23,
                 heap: vec![],

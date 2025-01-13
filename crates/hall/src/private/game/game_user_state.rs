@@ -1,34 +1,35 @@
-use crate::core::{AttributeKind, AttributeValueType, Attributes, ErgType, MissionNodeIntent};
-use crate::hall::HallCard;
-use crate::message::{CardTarget, PicksType};
-use crate::player::PlayerCard;
-use rand::{seq::SliceRandom, Rng};
-use shared_net::Bufferable;
-use shared_net::{op, VSizedBuffer};
 use std::collections::{HashMap, VecDeque};
+
+use rand::{seq::SliceRandom, Rng};
+
+use hall::core::{AttributeKind, Attributes, DeckCountType, ErgArray, ErgType, MissionNodeIntent};
+use hall::hall::HallCard;
+use hall::message::{CardTarget, PicksType};
+use hall::view::GameUserStatePlayerView;
+use shared_net::op;
 
 const HAND_SIZE: usize = 5;
 
 #[derive(Default, PartialEq, Copy, Clone, Debug)]
-pub enum PlayerCommandState {
+pub enum GameUserCommandState {
     #[default]
     Invalid,
     Expected(op::Command),
     Actual(op::Command),
 }
 
-impl PlayerCommandState {
+impl GameUserCommandState {
     pub fn is(&self, command: op::Command) -> bool {
-        matches!(self, PlayerCommandState::Actual(c) if *c == command)
+        matches!(self, GameUserCommandState::Actual(c) if *c == command)
     }
     pub fn should_be(&mut self, command: op::Command) {
-        *self = PlayerCommandState::Expected(command);
+        *self = GameUserCommandState::Expected(command);
     }
     pub fn try_set(&mut self, command: op::Command) -> Result<(), Self> {
         match self {
-            PlayerCommandState::Invalid => *self = PlayerCommandState::Actual(command),
-            PlayerCommandState::Expected(expected) if command == *expected => *self = PlayerCommandState::Actual(command),
-            PlayerCommandState::Actual(actual) if command == *actual => *self = PlayerCommandState::Actual(command),
+            GameUserCommandState::Invalid => *self = GameUserCommandState::Actual(command),
+            GameUserCommandState::Expected(expected) if command == *expected => *self = GameUserCommandState::Actual(command),
+            GameUserCommandState::Actual(actual) if command == *actual => *self = GameUserCommandState::Actual(command),
             _ => return Err(*self),
         }
         Ok(())
@@ -36,19 +37,19 @@ impl PlayerCommandState {
 }
 
 #[derive(Default)]
-pub struct PlayerState {
+pub struct GameUserState {
     attr: Attributes,
     deck: VecDeque<HallCard>,
     heap: Vec<HallCard>,
     hand: [Option<HallCard>; HAND_SIZE],
     erg: HashMap<AttributeKind, ErgType>,
-    pub play: Vec<(HallCard, CardTarget)>,
-    pub command: PlayerCommandState,
+    play: Vec<(HallCard, CardTarget)>,
+    pub command: GameUserCommandState,
     pub resolve_kind: Option<AttributeKind>,
     pub intent: MissionNodeIntent,
 }
 
-impl PlayerState {
+impl GameUserState {
     pub fn set_attr(&mut self, attr: Attributes) {
         self.attr = attr;
     }
@@ -94,6 +95,10 @@ impl PlayerState {
         result
     }
 
+    pub fn played_cards(&mut self) -> Vec<(HallCard, CardTarget)> {
+        self.play.drain(..).collect::<Vec<_>>()
+    }
+
     pub fn add_erg(&mut self, kind: AttributeKind, erg_array: ErgArray) {
         const KIND_MAP: [AttributeKind; 4] = [AttributeKind::Analyze, AttributeKind::Breach, AttributeKind::Compute, AttributeKind::Disrupt];
         for (idx, erg) in erg_array.iter().enumerate() {
@@ -114,22 +119,8 @@ impl PlayerState {
     }
 }
 
-type DeckCountType = u8;
-type AttributeArrays = [[AttributeValueType; 4]; 4];
-type ErgArray = [ErgType; 4];
-
-#[derive(Default, Clone, Bufferable)]
-#[cfg_attr(test, derive(Debug, PartialEq))]
-pub struct PlayerStatePlayerView {
-    pub attr: AttributeArrays,
-    pub deck: DeckCountType,
-    pub heap: Vec<PlayerCard>,
-    pub hand: Vec<PlayerCard>,
-    pub erg: ErgArray,
-}
-
-impl From<&PlayerState> for PlayerStatePlayerView {
-    fn from(player_state: &PlayerState) -> Self {
+impl From<&GameUserState> for GameUserStatePlayerView {
+    fn from(player_state: &GameUserState) -> Self {
         Self {
             attr: player_state.attr.to_arrays(),
             deck: player_state.deck.len() as DeckCountType,
@@ -143,42 +134,5 @@ impl From<&PlayerState> for PlayerStatePlayerView {
                 *player_state.erg.get(&AttributeKind::Disrupt).unwrap_or(&0),
             ],
         }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use crate::core::Rarity;
-    use crate::player::{PlayerCard, PlayerStatePlayerView};
-    use shared_net::{Bufferable, VSizedBuffer};
-
-    #[test]
-    fn test_player_state_player_view() {
-        let dummy_card = PlayerCard {
-            rarity: Rarity::Legendary,
-            number: 123,
-            set: 1,
-        };
-
-        let orig_view = PlayerStatePlayerView {
-            attr: [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]],
-            deck: 32,
-            heap: vec![dummy_card; 12],
-            hand: vec![dummy_card; 5],
-            erg: [5, 6, 7, 8],
-        };
-
-        let mut buf = VSizedBuffer::new(orig_view.size_in_buffer());
-        buf.push(&orig_view);
-        let new_view = buf.pull::<PlayerStatePlayerView>();
-
-        assert_eq!(orig_view.deck, new_view.deck);
-        assert_eq!(orig_view.heap.len(), new_view.heap.len());
-        assert_eq!(orig_view.heap[0], new_view.heap[0]);
-        assert_eq!(orig_view.heap[1], new_view.heap[1]);
-        assert_eq!(orig_view.hand.len(), new_view.hand.len());
-        assert_eq!(orig_view.hand[0], new_view.hand[0]);
-        assert_eq!(orig_view.hand[1], new_view.hand[1]);
-        assert_eq!(orig_view.erg, new_view.erg);
     }
 }

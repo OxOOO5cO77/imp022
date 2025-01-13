@@ -1,17 +1,17 @@
 use rand::Rng;
 
-use hall::player::{Player, PlayerMissionState, PlayerState};
+use hall::player::Player;
 use shared_net::{AuthType, PartType};
 
-use crate::private::game::GameMachine;
+use crate::private::game::{GameMachine, GameUserMissionState, GameUserState};
 
 pub struct GameUser {
     pub(crate) auth: AuthType,
     pub parts: Vec<PartType>,
     pub player: Option<Player>,
     pub machine: GameMachine,
-    pub state: PlayerState,
-    pub mission_state: PlayerMissionState,
+    pub state: GameUserState,
+    pub mission_state: GameUserMissionState,
 }
 
 impl GameUser {
@@ -21,8 +21,8 @@ impl GameUser {
             parts: rand::rng().random_iter().take(8).collect(),
             player: None,
             machine: GameMachine::default(),
-            state: PlayerState::default(),
-            mission_state: PlayerMissionState::default(),
+            state: GameUserState::default(),
+            mission_state: GameUserMissionState::default(),
         }
     }
 }

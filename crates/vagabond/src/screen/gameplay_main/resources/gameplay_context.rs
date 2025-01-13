@@ -3,8 +3,7 @@ use std::collections::{HashMap, VecDeque};
 use bevy::prelude::Resource;
 use hall::core::{AttributeKind, TickType};
 use hall::message::{CardIdxType, CardTarget};
-use hall::player::PlayerStatePlayerView;
-use hall::view::GameMissionPlayerView;
+use hall::view::{GameMissionPlayerView, GameUserStatePlayerView};
 use vagabond::data::{VagabondCard, VagabondMachine};
 
 use crate::screen::gameplay_main::nodes::MissionNodeAction;
@@ -20,7 +19,7 @@ pub(crate) struct GameplayContext {
     pub(crate) node_action: MissionNodeAction,
     pub(crate) hand: Vec<VagabondCard>,
     pub(crate) tty: HashMap<MachineKind, VecDeque<String>>,
-    pub(crate) cached_state: PlayerStatePlayerView,
+    pub(crate) cached_state: GameUserStatePlayerView,
     pub(crate) cached_local: VagabondMachine,
     pub(crate) cached_remote: VagabondMachine,
     pub(crate) cached_mission: GameMissionPlayerView,

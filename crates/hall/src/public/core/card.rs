@@ -1,11 +1,7 @@
 use num_enum::{FromPrimitive, IntoPrimitive};
 use serde::{Deserialize, Serialize};
 
-pub type SetType = u8;
-pub type CardNumberType = u8;
-pub type ErgType = u8;
-pub type PriorityType = u8;
-pub type DelayType = u8;
+use crate::core::types::{CardNumberType, SetType};
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct Set(pub SetType);

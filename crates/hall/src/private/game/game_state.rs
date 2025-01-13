@@ -7,15 +7,12 @@ use rand::{distr::Uniform, rngs::ThreadRng, Rng};
 use hall::core::{AttributeValueType, Attributes, ErgType, Phase, RemoteIdType, Stage, TickType};
 use hall::hall::{HallCard, HallMission};
 use hall::message::GameUpdateStateResponse;
-use hall::player::{PlayerCard, PlayerCommandState, PlayerStatePlayerView};
+use hall::player::PlayerCard;
 use hall::util;
-use hall::view::GameMachinePlayerView;
+use hall::view::{GameMachinePlayerView, GameUserStatePlayerView};
 use shared_net::{op, AuthType, UserIdType};
 
-use crate::private::game::game_mission::GameMission;
-use crate::private::game::game_remote::GameRemote;
-use crate::private::game::game_user::GameUser;
-use crate::private::game::GameMachine;
+use crate::private::game::{GameMachine, GameMission, GameRemote, GameUser, GameUserCommandState};
 
 type UserMapType = HashMap<UserIdType, GameUser>;
 pub(crate) type RemoteMapType = HashMap<RemoteIdType, GameRemote>;
@@ -109,9 +106,9 @@ impl GameState {
         let first_op = match self.users.iter().next().map(|(_, user)| user.state.command) {
             None => None,
             Some(command) => match command {
-                PlayerCommandState::Invalid => None,
-                PlayerCommandState::Expected(_) => None,
-                PlayerCommandState::Actual(actual) => Some(actual),
+                GameUserCommandState::Invalid => None,
+                GameUserCommandState::Expected(_) => None,
+                GameUserCommandState::Actual(actual) => Some(actual),
             },
         };
         let command = first_op?;
@@ -205,7 +202,7 @@ impl GameState {
 impl GameState {
     pub(crate) fn make_response(user: &GameUser, remote: &GameMachine, mission: &GameMission) -> GameUpdateStateResponse {
         GameUpdateStateResponse {
-            player_state: PlayerStatePlayerView::from(&user.state),
+            player_state: GameUserStatePlayerView::from(&user.state),
             local_machine: GameMachinePlayerView::from(&user.machine),
             remote_machine: GameMachinePlayerView::from(remote),
             mission: mission.to_player_view(&user.mission_state),
