@@ -34,16 +34,16 @@ impl GameMission {
     pub(crate) fn to_player_state(&self, initial_node: MissionNodeIdType) -> GameUserMissionState {
         let mut state = GameUserMissionState {
             current_node: initial_node,
-            nodes: self.node.iter().filter(|n| n.initial_state == MissionNodeState::Known).map(|n| (n.id, MissionNodeState::Known)).collect(),
+            known_nodes: self.node.iter().filter(|n| n.initial_state == MissionNodeState::Known).map(|n| n.id).collect(),
         };
-        state.nodes.insert(initial_node, MissionNodeState::Known);
+        state.known_nodes.insert(initial_node);
         state
     }
 
     pub(crate) fn to_player_view(&self, mission_state: &GameUserMissionState) -> GameMissionPlayerView {
         let id = self.id;
         let current_node = mission_state.current();
-        let node_map = mission_state.known().iter().filter_map(|id| self.get_node(*id)).map(|node| node.to_player_view()).collect();
+        let node_map = mission_state.known_nodes.iter().filter_map(|id| self.get_node(*id)).map(|node| node.to_player_view()).collect();
         let objective = self.objective.iter().map(GameMissionObjectivePlayerView::from).collect();
 
         GameMissionPlayerView {

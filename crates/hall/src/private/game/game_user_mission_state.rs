@@ -1,11 +1,11 @@
-use std::collections::HashMap;
+use std::collections::HashSet;
 
-use hall::core::{MissionNodeIdType, MissionNodeState};
+use hall::core::MissionNodeIdType;
 
 #[derive(Default)]
 pub struct GameUserMissionState {
     pub current_node: MissionNodeIdType,
-    pub nodes: HashMap<MissionNodeIdType, MissionNodeState>,
+    pub known_nodes: HashSet<MissionNodeIdType>,
 }
 
 impl GameUserMissionState {
@@ -13,12 +13,8 @@ impl GameUserMissionState {
         self.current_node
     }
 
-    pub fn known(&self) -> Vec<MissionNodeIdType> {
-        self.nodes.iter().filter(|(_, state)| **state == MissionNodeState::Known).map(|(id, _)| *id).collect()
-    }
-
     pub fn set_current(&mut self, node: MissionNodeIdType) -> bool {
         self.current_node = node;
-        self.nodes.insert(node, MissionNodeState::Known).is_none_or(|prev| prev == MissionNodeState::Unknown)
+        self.known_nodes.insert(node)
     }
 }
