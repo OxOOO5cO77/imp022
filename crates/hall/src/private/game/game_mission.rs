@@ -35,6 +35,7 @@ impl GameMission {
         let mut state = GameUserMissionState {
             current_node: initial_node,
             known_nodes: self.node.iter().filter(|n| n.initial_state == MissionNodeState::Known).map(|n| n.id).collect(),
+            tokens: Vec::new(),
         };
         state.known_nodes.insert(initial_node);
         state
@@ -44,12 +45,14 @@ impl GameMission {
         let id = self.id;
         let current_node = mission_state.current();
         let node_map = mission_state.known_nodes.iter().filter_map(|id| self.get_node(*id)).map(|node| node.to_player_view()).collect();
+        let tokens = mission_state.tokens.clone();
         let objective = self.objective.iter().map(GameMissionObjectivePlayerView::from).collect();
 
         GameMissionPlayerView {
             id,
             current_node,
             node_map,
+            tokens,
             objective,
         }
     }

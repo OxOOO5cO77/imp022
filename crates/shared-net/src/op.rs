@@ -146,6 +146,7 @@ pub enum Command {
     GameEndTurn,
     GameTick,
     GameUpdateMission,
+    GameUpdateTokens,
     GameUpdateState,
     GameEndGame,
 }

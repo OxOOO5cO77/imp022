@@ -26,6 +26,7 @@ pub(crate) enum GateCommand {
     GameTick(Box<GameTickMessage>),
     GameEndGame(Box<GameEndGameResponse>),
     GameUpdateMission(Box<GameUpdateMissionMessage>),
+    GameUpdateTokens(Box<GameUpdateTokensMessage>),
     GameUpdateState(Box<GameUpdateStateResponse>),
 }
 
@@ -77,8 +78,9 @@ fn process_gate(context: GateClient, _tx: UnboundedSender<RoutedMessage>, mut bu
         op::Command::GameTick => recv_response(context, &mut buf, GateCommand::GameTick),
         op::Command::GameEndGame => recv_response(context, &mut buf, GateCommand::GameEndGame),
         op::Command::GameUpdateMission => recv_response(context, &mut buf, GateCommand::GameUpdateMission),
+        op::Command::GameUpdateTokens => recv_response(context, &mut buf, GateCommand::GameUpdateTokens),
         op::Command::GameUpdateState => recv_response(context, &mut buf, GateCommand::GameUpdateState),
-        _ => VClientMode::Continue,
+        op::Command::NoOp | op::Command::Register | op::Command::Authorize | op::Command::UserAttr | op::Command::InvGen => VClientMode::Continue,
     }
 }
 
@@ -154,10 +156,10 @@ impl GateIFace {
         self.send_request(request)
     }
 
-    pub fn send_game_choose_intent(&self, intent: MissionNodeIntent) -> bool {
+    pub fn send_game_choose_intent(&self, intent: Option<MissionNodeIntent>) -> bool {
         let request = GameChooseIntentRequest {
             game_id: self.game_id,
-            intent,
+            intent: intent.unwrap_or_default(),
         };
 
         self.send_request(request)

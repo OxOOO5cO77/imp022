@@ -1,4 +1,4 @@
-use hall::core::MissionNodeIntent;
+use hall::core::{MissionNodeIntent, TickType, Token};
 
 use crate::private::game::{GameMission, GameUser, RemoteMapType};
 
@@ -12,17 +12,22 @@ mod node_f;
 mod node_g;
 mod node_h;
 
-pub(crate) fn process_intent(intent: MissionNodeIntent, user: &mut GameUser, mission: &mut GameMission, remotes: &mut RemoteMapType) -> bool {
+pub(crate) enum IntentResult {
+    NodeChange,
+    TokenChange(Token),
+}
+
+pub(crate) fn process_intent(intent: MissionNodeIntent, mission: &mut GameMission, user: &mut GameUser, remotes: &mut RemoteMapType, tick: TickType) -> Option<IntentResult> {
     match intent {
-        MissionNodeIntent::None => false,
-        MissionNodeIntent::Link(dir) => link::process_intent(dir, user, mission, remotes).unwrap_or(false),
-        MissionNodeIntent::AccessPoint(intent) => node_a::process_intent(mission, user, intent),
-        MissionNodeIntent::Backend(intent) => node_b::process_intent(mission, user, intent),
-        MissionNodeIntent::Control(intent) => node_c::process_intent(mission, user, intent),
-        MissionNodeIntent::Database(intent) => node_d::process_intent(mission, user, intent),
-        MissionNodeIntent::Engine(intent) => node_e::process_intent(mission, user, intent),
-        MissionNodeIntent::Frontend(intent) => node_f::process_intent(mission, user, intent),
-        MissionNodeIntent::Gateway(intent) => node_g::process_intent(mission, user, intent),
-        MissionNodeIntent::Hardware(intent) => node_h::process_intent(mission, user, intent),
+        MissionNodeIntent::None => None,
+        MissionNodeIntent::Link(dir) => link::process_intent(dir, user, mission, remotes),
+        MissionNodeIntent::AccessPoint(intent) => node_a::process_intent(intent, mission, user, tick),
+        MissionNodeIntent::Backend(intent) => node_b::process_intent(intent, mission, user),
+        MissionNodeIntent::Control(intent) => node_c::process_intent(intent, mission, user),
+        MissionNodeIntent::Database(intent) => node_d::process_intent(intent, mission, user),
+        MissionNodeIntent::Engine(intent) => node_e::process_intent(intent, mission, user),
+        MissionNodeIntent::Frontend(intent) => node_f::process_intent(intent, mission, user),
+        MissionNodeIntent::Gateway(intent) => node_g::process_intent(intent, mission, user),
+        MissionNodeIntent::Hardware(intent) => node_h::process_intent(intent, mission, user),
     }
 }

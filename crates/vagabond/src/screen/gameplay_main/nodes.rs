@@ -1,4 +1,3 @@
-use bevy::ecs::system::IntoObserverSystem;
 use bevy::prelude::*;
 
 use crate::manager::ScreenLayout;
@@ -13,22 +12,26 @@ mod engine;
 mod frontend;
 mod gateway;
 mod hardware;
+mod shared;
 
 pub(crate) use base_node::BaseNode;
-use hall::core::{MissionNodeIntent, MissionNodeKind, MissionNodeLinkDir};
+pub(crate) use shared::deselect_node_action;
+
+use hall::core::*;
 
 #[derive(Default)]
-pub(super) enum MissionNodeAction {
-    #[default]
-    None,
-    Link(Entity, MissionNodeLinkDir, Srgba),
+pub(super) struct MissionNodeAction {
+    pub(super) intent: Option<MissionNodeIntent>,
+    pub(super) entity: Option<Entity>,
+    pub(super) color: Srgba,
 }
 
-impl From<&MissionNodeAction> for MissionNodeIntent {
-    fn from(value: &MissionNodeAction) -> Self {
-        match value {
-            MissionNodeAction::None => MissionNodeIntent::None,
-            MissionNodeAction::Link(_, dir, _) => MissionNodeIntent::Link(*dir),
+impl MissionNodeAction {
+    pub(super) fn new(intent: Option<MissionNodeIntent>, entity: Option<Entity>, color: Srgba) -> Self {
+        Self {
+            intent,
+            entity,
+            color,
         }
     }
 }
@@ -58,20 +61,6 @@ impl MissionNodeLayouts {
             MissionNodeKind::Frontend => MissionNodeLayouts::MissionNodeF(frontend::Frontend::build_layout(commands, layout, name)),
             MissionNodeKind::Gateway => MissionNodeLayouts::MissionNodeG(gateway::Gateway::build_layout(commands, layout, name)),
             MissionNodeKind::Hardware => MissionNodeLayouts::MissionNodeH(hardware::Hardware::build_layout(commands, layout, name)),
-        }
-    }
-}
-
-#[derive(Component)]
-pub(crate) struct NodeLocalObserver;
-
-// local copy of observe to decorate observers with NodeLocalObserver to easily dispose before reactivation
-fn local_observe<E: Event, B: Bundle, M>(observer: impl IntoObserverSystem<E, B, M>) -> impl EntityCommand {
-    move |entity: Entity, world: &mut World| {
-        if let Ok(mut world_entity) = world.get_entity_mut(entity) {
-            world_entity.world_scope(|w| {
-                w.spawn(Observer::new(observer).with_entity(entity)).insert(NodeLocalObserver);
-            });
         }
     }
 }

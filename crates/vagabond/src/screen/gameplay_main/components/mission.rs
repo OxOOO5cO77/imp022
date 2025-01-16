@@ -1,16 +1,19 @@
 use bevy::prelude::Component;
 
-use hall::core::{MissionNodeKind, MissionNodeLinkDir};
+use hall::core::MissionNodeKind;
 
 #[derive(Component)]
-pub(crate) struct MissionNodeLinkButton {
-    pub(crate) dir: MissionNodeLinkDir,
+pub(crate) struct MissionNodeLocalObserver;
+
+#[derive(Component)]
+pub(crate) struct MissionNodeButton<T> {
+    pub(crate) data: T,
 }
 
-impl MissionNodeLinkButton {
-    pub(crate) fn new(dir: MissionNodeLinkDir) -> Self {
+impl<T> MissionNodeButton<T> {
+    pub(crate) fn new(data: T) -> Self {
         Self {
-            dir,
+            data,
         }
     }
 }

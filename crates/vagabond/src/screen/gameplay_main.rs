@@ -2,8 +2,7 @@ use std::cmp::PartialEq;
 use std::collections::HashMap;
 
 use bevy::prelude::*;
-
-use hall::core::{AttributeKind, Attributes, DelayType, MissionNodeKind};
+use hall::core::{AttributeKind, Attributes, DelayType, MissionNodeKind, TokenKind};
 use hall::message::*;
 
 use crate::manager::{AtlasManager, ScreenLayoutManager, ScreenLayoutManagerParams};
@@ -177,32 +176,32 @@ fn gameplay_enter(
     for (machine_name, machine_kind) in MACHINES {
         commands.entity(layout.entity(machine_name)).insert((*machine_kind, PickingBehavior::default())).observe(on_card_drop);
 
-        commands.entity(layout.entity(&format!("{}/title", machine_name))).insert((*machine_kind, MachineText::new(MachineTextKind::Title)));
-        commands.entity(layout.entity(&format!("{}/id", machine_name))).insert((*machine_kind, MachineText::new(MachineTextKind::Id)));
+        commands.entity(layout.entity(&format!("{machine_name}/title"))).insert((*machine_kind, MachineText::new(MachineTextKind::Title)));
+        commands.entity(layout.entity(&format!("{machine_name}/id"))).insert((*machine_kind, MachineText::new(MachineTextKind::Id)));
 
-        commands.entity(layout.entity(&format!("{}/free_space", machine_name))).insert((*machine_kind, MachineText::new(MachineTextKind::Vitals(0))));
-        commands.entity(layout.entity(&format!("{}/thermal_capacity", machine_name))).insert((*machine_kind, MachineText::new(MachineTextKind::Vitals(1))));
-        commands.entity(layout.entity(&format!("{}/system_health", machine_name))).insert((*machine_kind, MachineText::new(MachineTextKind::Vitals(2))));
-        commands.entity(layout.entity(&format!("{}/open_ports", machine_name))).insert((*machine_kind, MachineText::new(MachineTextKind::Vitals(3))));
+        commands.entity(layout.entity(&format!("{machine_name}/free_space"))).insert((*machine_kind, MachineText::new(MachineTextKind::Vitals(0))));
+        commands.entity(layout.entity(&format!("{machine_name}/thermal_capacity"))).insert((*machine_kind, MachineText::new(MachineTextKind::Vitals(1))));
+        commands.entity(layout.entity(&format!("{machine_name}/system_health"))).insert((*machine_kind, MachineText::new(MachineTextKind::Vitals(2))));
+        commands.entity(layout.entity(&format!("{machine_name}/open_ports"))).insert((*machine_kind, MachineText::new(MachineTextKind::Vitals(3))));
 
         for queue_index in 0..PROCESS_QUEUE_SIZE {
-            commands.entity(layout.entity(&format!("{}/queue{}", machine_name, queue_index))).observe_process(*machine_kind, queue_index);
+            commands.entity(layout.entity(&format!("{machine_name}/queue{queue_index}"))).observe_process(*machine_kind, queue_index);
         }
 
         for running_index in 0..RUNNING_PROGRAM_COUNT {
-            let running = CardLayout::build(&mut commands, layout, &format!("{}/running{}", machine_name, running_index));
+            let running = CardLayout::build(&mut commands, layout, &format!("{machine_name}/running{running_index}"));
             commands.entity(running).observe_running(*machine_kind, running_index);
         }
     }
 
     for card_index in 0..HAND_SIZE {
-        let built = CardLayout::build(&mut commands, layout, &format!("card{}", card_index));
+        let built = CardLayout::build(&mut commands, layout, &format!("card{card_index}"));
         commands.entity(built).observe_hand_card(card_index);
     }
 
     for msg_index in 0..TTY_MESSAGE_COUNT {
-        commands.entity(layout.entity(&format!("l_tty{}", msg_index))).insert(TTYMessageText::new(MachineKind::Local, msg_index));
-        commands.entity(layout.entity(&format!("r_tty{}", msg_index))).insert(TTYMessageText::new(MachineKind::Remote, msg_index));
+        commands.entity(layout.entity(&format!("l_tty{msg_index}"))).insert(TTYMessageText::new(MachineKind::Local, msg_index));
+        commands.entity(layout.entity(&format!("r_tty{msg_index}"))).insert(TTYMessageText::new(MachineKind::Remote, msg_index));
     }
 
     const NODES: &[(&str, MissionNodeKind)] = &[
@@ -255,7 +254,7 @@ fn gameplay_enter(
 
 fn on_click_next(_event: Trigger<Pointer<Click>>, mut context: ResMut<GameplayContext>, gate: Res<GateIFace>) {
     let wait = match context.phase {
-        VagabondGamePhase::Start => gate.send_game_choose_intent((&context.node_action).into()),
+        VagabondGamePhase::Start => gate.send_game_choose_intent(context.node_action.intent),
         VagabondGamePhase::Pick => gate.send_game_choose_attr(context.attr_pick),
         VagabondGamePhase::Play => gate.send_game_play_cards(&context.card_picks),
         VagabondGamePhase::Draw => gate.send_game_end_turn(),
@@ -512,9 +511,13 @@ fn gameplay_update(
         Ok(GateCommand::GameTick(gate_response)) => recv_tick(&mut commands, *gate_response, &mut context),
         Ok(GateCommand::GameEndGame(gate_response)) => recv_end_game(&mut commands, *gate_response),
         Ok(GateCommand::GameUpdateMission(gate_response)) => recv_update_mission(&mut commands, *gate_response, &context),
+        Ok(GateCommand::GameUpdateTokens(gate_response)) => recv_update_tokens(&mut commands, *gate_response),
         Ok(GateCommand::GameUpdateState(gate_response)) => recv_update_state(&mut commands, *gate_response),
-        Ok(_) => None,
         Err(_) => None,
+        Ok(GateCommand::Hello) => None,
+        Ok(GateCommand::GameActivate(_)) => None,
+        Ok(GateCommand::GameBuild(_)) => None,
+        Ok(GateCommand::GameStartGame(_)) => None,
     };
     if let Some(phase) = new_phase {
         context.phase = phase;
@@ -579,8 +582,8 @@ fn recv_end_game(commands: &mut Commands, _response: GameEndGameResponse) -> Opt
 }
 
 fn update_mission_info(commands: &mut Commands, remote_name: &str, remote_id: &str, player_id: &str) {
-    commands.trigger(TTYMessageTrigger::new(MachineKind::Local, &format!("Connected to {}", remote_id)));
-    commands.trigger(TTYMessageTrigger::new(MachineKind::Remote, &format!("Connection from {}", player_id)));
+    commands.trigger(TTYMessageTrigger::new(MachineKind::Local, &format!("Connected to {remote_id}")));
+    commands.trigger(TTYMessageTrigger::new(MachineKind::Remote, &format!("Connection from {player_id}")));
 
     commands.trigger(MachineInfoTrigger::new(MachineKind::Remote, remote_name.to_string(), remote_id.to_string()));
 }
@@ -593,6 +596,21 @@ fn recv_update_mission(commands: &mut Commands, response: GameUpdateMissionMessa
 
         update_mission_info(commands, remote_name, &remote_id, &context.player_id);
     }
+    None
+}
+
+fn recv_update_tokens(commands: &mut Commands, response: GameUpdateTokensMessage) -> Option<VagabondGamePhase> {
+    match response.token.kind {
+        TokenKind::Invalid => {}
+        TokenKind::Authorization(level) => {
+            commands.trigger(TTYMessageTrigger::new(MachineKind::Local, &format!("{level} Authorization")));
+            commands.trigger(TTYMessageTrigger::new(MachineKind::Remote, &format!("Authorized {level}")));
+        }
+        TokenKind::Credentials(level) => {
+            commands.trigger(TTYMessageTrigger::new(MachineKind::Local, &format!("{level} Credentials")));
+        }
+    }
+
     None
 }
 

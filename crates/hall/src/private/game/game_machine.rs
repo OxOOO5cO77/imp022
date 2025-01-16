@@ -1,5 +1,4 @@
 use std::collections::VecDeque;
-use std::fmt;
 
 use hall::core::{Attributes, DelayType, Instruction, MachineValueType, ValueTarget};
 use hall::hall::HallCard;
@@ -48,19 +47,6 @@ enum GameMachineTerminationReason {
     ThermalCapacity,
     SystemHealth,
     OpenPorts,
-}
-
-impl fmt::Display for GameMachineTerminationReason {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use GameMachineTerminationReason::*;
-        let display = match self {
-            FreeSpace => "FreeSpace",
-            ThermalCapacity => "ThermalCapacity",
-            SystemHealth => "SystemHealth",
-            OpenPorts => "OpenPorts",
-        };
-        write!(f, "{}", display)
-    }
 }
 
 impl GameMachine {

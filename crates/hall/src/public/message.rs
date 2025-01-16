@@ -12,6 +12,7 @@ mod game_start_game;
 mod game_tick;
 mod game_update_mission;
 mod game_update_state;
+mod game_update_tokens;
 
 pub use game_activate::{GameActivateRequest, GameActivateResponse};
 pub use game_build::{GameBuildRequest, GameBuildResponse};
@@ -28,6 +29,7 @@ pub use game_roll::GameRollMessage;
 pub use game_start_game::GameStartGameMessage;
 pub use game_tick::GameTickMessage;
 pub use game_update_mission::GameUpdateMissionMessage;
+pub use game_update_tokens::GameUpdateTokensMessage;
 
 use shared_net::{op, Bufferable, GameIdType};
 

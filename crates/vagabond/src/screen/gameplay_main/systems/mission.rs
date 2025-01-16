@@ -1,10 +1,11 @@
+use bevy::prelude::{Commands, Entity, Query, Res, ResMut, Text2d, Trigger, Visibility, With};
+
 use crate::manager::{DataManager, WarehouseManager};
-use crate::screen::gameplay_main::components::MissionNodeDisplay;
+use crate::screen::gameplay_main::components::{MissionNodeDisplay, MissionNodeLocalObserver};
 use crate::screen::gameplay_main::events::{GamePhaseTrigger, MissionTrigger};
-use crate::screen::gameplay_main::nodes::{BaseNode, MissionNodeAction, MissionNodeLayouts, NodeLocalObserver};
+use crate::screen::gameplay_main::nodes::{deselect_node_action, MissionNodeAction, MissionNodeLayouts};
 use crate::screen::gameplay_main::resources::{GameplayContext, NodeLayouts};
 use crate::screen::gameplay_main::VagabondGamePhase;
-use bevy::prelude::{Commands, Entity, Query, Res, ResMut, Text2d, Trigger, Visibility, With};
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn on_mission_ui_update(
@@ -12,7 +13,7 @@ pub(super) fn on_mission_ui_update(
     event: Trigger<MissionTrigger>,
     mut commands: Commands,
     display_q: Query<(Entity, &MissionNodeDisplay)>,
-    observer_q: Query<Entity, With<NodeLocalObserver>>,
+    observer_q: Query<Entity, With<MissionNodeLocalObserver>>,
     mut text_q: Query<&mut Text2d>,
     node_layouts: Res<NodeLayouts>,
     mut context: ResMut<GameplayContext>,
@@ -60,8 +61,8 @@ pub(super) fn on_mission_phase_update(
     match event.phase {
         VagabondGamePhase::Start => {}
         VagabondGamePhase::Pick => {
-            BaseNode::deselect(&mut commands, &context);
-            context.node_action = MissionNodeAction::None;
+            deselect_node_action(&mut commands, &context);
+            context.node_action = MissionNodeAction::default();
         }
         VagabondGamePhase::Play => {}
         VagabondGamePhase::Draw => {}

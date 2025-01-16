@@ -14,6 +14,7 @@ mod game_build;
 mod play_card;
 mod update_mission;
 mod update_state;
+mod update_tokens;
 
 pub(crate) fn handle_phase_complete(context: HallContext, game_id: GameIdType) {
     let mut bx = context.bx.write().unwrap();

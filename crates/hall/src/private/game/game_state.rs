@@ -139,6 +139,10 @@ impl GameState {
         self.users.is_empty()
     }
 
+    pub(crate) fn now(&self) -> TickType {
+        self.current_tick
+    }
+
     pub(crate) fn tick(&mut self) -> TickType {
         self.current_tick += 1;
 

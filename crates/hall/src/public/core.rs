@@ -6,6 +6,7 @@ mod instruction;
 mod intent;
 mod mission;
 mod stage;
+mod token;
 mod types;
 
 pub use attribute::*;
@@ -16,4 +17,5 @@ pub use instruction::*;
 pub use intent::*;
 pub use mission::*;
 pub use stage::*;
+pub use token::*;
 pub use types::*;

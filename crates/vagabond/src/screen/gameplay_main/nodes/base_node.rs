@@ -1,15 +1,14 @@
-use bevy::prelude::{Click, Commands, Entity, EntityCommands, Over, PickingBehavior, Pointer, Query, Res, ResMut, Text2d, Trigger, Visibility};
+use bevy::prelude::{Click, Commands, Entity, EntityCommands, PickingBehavior, Pointer, Query, ResMut, Text2d, Trigger, Visibility};
 
-use hall::core::{MissionNodeKind, MissionNodeLinkDir, MissionNodeLinkState};
+use hall::core::{MissionNodeIntent, MissionNodeKind, MissionNodeLinkDir, MissionNodeLinkState};
 use hall::view::{GameMissionPlayerView, MAX_CONTENT_COUNT, MAX_LINK_COUNT, MAX_LINK_DAMAGE};
 
 use crate::manager::ScreenLayout;
-use crate::screen::gameplay_main::components::{MissionNodeContentButton, MissionNodeLinkButton};
-use crate::screen::gameplay_main::nodes::{local_observe, MissionNodeAction};
+use crate::screen::gameplay_main::components::{MissionNodeButton, MissionNodeContentButton};
+use crate::screen::gameplay_main::nodes::shared;
 use crate::screen::gameplay_main::resources::GameplayContext;
-use crate::screen::gameplay_main::VagabondGamePhase;
 use crate::screen::shared::{on_out_reset_color, GameMissionNodePlayerViewExt, MissionNodeKindExt};
-use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor};
+use crate::system::ui_effects::UiFxTrackedColor;
 
 struct BaseNodeLink {
     container: Entity,
@@ -52,9 +51,9 @@ trait NodeLinkEntityCommandsExt {
 impl NodeLinkEntityCommandsExt for &mut EntityCommands<'_> {
     fn observe_link_button(self) -> Self {
         self //
-            .queue(local_observe(BaseNode::on_click_link))
-            .queue(local_observe(BaseNode::on_over_link))
-            .queue(local_observe(on_out_reset_color))
+            .queue(shared::local_observe(BaseNode::on_click_link))
+            .queue(shared::local_observe(shared::on_over_node_action))
+            .queue(shared::local_observe(on_out_reset_color))
     }
 }
 
@@ -68,7 +67,7 @@ impl BaseNode {
             ("link_s", MissionNodeLinkDir::South),
         ];
         for (link, dir) in LINKS {
-            commands.entity(layout.entity(&format!("{name}/{link}/frame"))).insert((MissionNodeLinkButton::new(*dir), PickingBehavior::default()));
+            commands.entity(layout.entity(&format!("{name}/{link}/frame"))).insert((MissionNodeButton::new(*dir), PickingBehavior::default()));
         }
 
         let links = LINKS.map(|(link, _)| BaseNodeLink::new(layout, name, link));
@@ -123,59 +122,16 @@ impl BaseNode {
         }
     }
 
-    pub(crate) fn deselect(
-        //
-        commands: &mut Commands,
-        context: &GameplayContext,
-    ) {
-        match &context.node_action {
-            MissionNodeAction::Link(entity, _, color) => {
-                commands.entity(*entity).trigger(SetColorEvent::new(*entity, *color)).insert(UiFxTrackedColor::from(*color));
-            }
-            MissionNodeAction::None => {}
-        }
-    }
-
+    //noinspection DuplicatedCode
     fn on_click_link(
         //
         event: Trigger<Pointer<Click>>,
         mut commands: Commands,
-        button_q: Query<(&MissionNodeLinkButton, &UiFxTrackedColor)>,
+        button_q: Query<(&MissionNodeButton<MissionNodeLinkDir>, &UiFxTrackedColor)>,
         mut context: ResMut<GameplayContext>,
     ) {
-        if context.phase != VagabondGamePhase::Start {
-            return;
-        }
-
         if let Ok((button, new_color)) = button_q.get(event.target) {
-            let (new_action, old_color) = match context.node_action {
-                MissionNodeAction::Link(_, current_dir, old_color) if current_dir == button.dir => (MissionNodeAction::None, Some(old_color)),
-                _ => {
-                    Self::deselect(&mut commands, &context);
-                    (MissionNodeAction::Link(event.target, button.dir, new_color.color), None)
-                }
-            };
-
-            context.node_action = new_action;
-
-            let color = match context.node_action {
-                MissionNodeAction::None => old_color.unwrap_or(bevy::color::palettes::basic::BLUE),
-                _ => bevy::color::palettes::basic::GREEN,
-            };
-
-            commands.entity(event.target).trigger(SetColorEvent::new(event.target, color)).insert(UiFxTrackedColor::from(color));
+            shared::click_common(&mut commands, &mut context, event.target, new_color.color, button.data, MissionNodeIntent::Link);
         }
-    }
-
-    fn on_over_link(
-        //
-        event: Trigger<Pointer<Over>>,
-        mut commands: Commands,
-        context: Res<GameplayContext>,
-    ) {
-        if context.phase != VagabondGamePhase::Start {
-            return;
-        }
-        commands.entity(event.target).trigger(SetColorEvent::new(event.target, bevy::color::palettes::basic::WHITE));
     }
 }

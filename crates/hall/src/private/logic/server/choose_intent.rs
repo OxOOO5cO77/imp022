@@ -1,9 +1,13 @@
+use std::collections::{HashMap, HashSet};
+
 use hall::core::Phase;
 use hall::message::GameRollMessage;
 
 use crate::private::game::GameState;
+use crate::private::logic::server::choose_intent::intents::IntentResult;
 use crate::private::logic::server::update_mission::some_users_update_mission;
 use crate::private::logic::server::update_state::all_users_update_state;
+use crate::private::logic::server::update_tokens::some_users_update_tokens;
 use crate::private::network::broadcaster::Broadcaster;
 
 mod intents;
@@ -16,17 +20,28 @@ pub(crate) fn handle_choose_intent(game: &mut GameState, bx: &mut Broadcaster) {
         .map(|(id, user)| (*id, user.state.intent))
         .collect::<Vec<_>>();
 
-    let mut node_changes = Vec::new();
+    let tick = game.now();
+
+    let mut node_changes = HashSet::new();
+    let mut token_changes = HashMap::new();
     for (id, intent) in &intents {
         if let Some(user) = game.users.get_mut(id) {
-            if intents::process_intent(*intent, user, &mut game.mission, &mut game.remotes) {
-                node_changes.push(*id);
+            if let Some(result) = intents::process_intent(*intent, &mut game.mission, user, &mut game.remotes, tick) {
+                match result {
+                    IntentResult::NodeChange => {
+                        node_changes.insert(id);
+                    }
+                    IntentResult::TokenChange(token) => {
+                        token_changes.insert(id, token);
+                    }
+                };
             }
         }
     }
 
     all_users_update_state(game, bx);
     some_users_update_mission(game, bx, node_changes);
+    some_users_update_tokens(game, bx, token_changes);
 
     game.roll();
 

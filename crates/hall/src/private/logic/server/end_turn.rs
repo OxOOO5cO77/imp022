@@ -7,6 +7,10 @@ use hall::message::GameTickMessage;
 pub(crate) fn handle_end_turn(game: &mut GameState, bx: &mut Broadcaster) {
     let tick = game.tick();
 
+    for user in game.users.values_mut() {
+        user.mission_state.expire_tokens(tick);
+    }
+
     all_users_update_state(game, bx);
 
     let message = GameTickMessage {

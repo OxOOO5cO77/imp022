@@ -158,7 +158,7 @@ fn compose_enter(
     commands.entity(layout.entity("bio/age")).insert(InfoKind::Age);
 
     for (index, part) in parts.iter().enumerate() {
-        let name = format!("part{}", index);
+        let name = format!("part{index}");
         let part_layout = PartLayout::populate_full(&mut commands, layout, &name);
 
         let part_entity = commands //
@@ -168,7 +168,7 @@ fn compose_enter(
             .observe_part_drop()
             .id();
 
-        let slot_name = format!("part{}_slot", index);
+        let slot_name = format!("part{index}_slot");
         commands //
             .entity(layout.entity(&slot_name))
             .insert_empty_slot(Slot::Empty(part_entity), PartLayout::new())
@@ -181,7 +181,7 @@ fn compose_enter(
 
     commands.entity(layout.entity("gutter")).insert((DeckGutterGroup, Visibility::Hidden));
     for index in 0..40 {
-        let base_name = format!("gutter/card{:02}", index);
+        let base_name = format!("gutter/card{index:02}");
         let header = CardLayout::build(&mut commands, layout, &base_name);
         commands.entity(header).observe_card_header(index);
     }

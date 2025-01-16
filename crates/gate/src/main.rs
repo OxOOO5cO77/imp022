@@ -102,6 +102,7 @@ fn process_vagabond(context: Arc<Mutex<Gate>>, tx: UnboundedSender<RoutedMessage
         | op::Command::GameEndGame
         | op::Command::GameTick
         | op::Command::GameUpdateMission
+        | op::Command::GameUpdateTokens
         | op::Command::UserAttr
         => false,
     }
@@ -176,6 +177,7 @@ fn process_courtyard(context: Arc<Mutex<Gate>>, tx: UnboundedSender<RoutedMessag
         | op::Command::GameTick
         | op::Command::GameUpdateMission
         | op::Command::GameUpdateState
+        | op::Command::GameUpdateTokens
         | op::Command::GameEndGame
         => c_marshal_one(command, &tx, &mut buf),
         op::Command::NoOp
