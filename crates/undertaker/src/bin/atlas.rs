@@ -20,7 +20,7 @@ fn main() -> Result<(), std::io::Error> {
 }
 
 fn filter_extension(path: PathBuf, extension: &str) -> Option<PathBuf> {
-    path.extension().map_or(false, |ext| ext == extension).then_some(path)
+    path.extension().is_some_and(|ext| ext == extension).then_some(path)
 }
 
 fn atlas_to_map(atlas: &str) -> Option<Vec<String>> {
@@ -28,18 +28,17 @@ fn atlas_to_map(atlas: &str) -> Option<Vec<String>> {
 
     let mut lines = atlas.lines();
 
-    let (name,_) = lines.next()?.split_once('.')?;
-    let (_,size) = lines.next()?.split_once(':')?;
-    map.push(format!("{}:{}", name, size));
+    let (name, _) = lines.next()?.split_once('.')?;
+    let (_, size) = lines.next()?.split_once(':')?;
+    map.push(format!("{name}:{size}"));
 
     lines.next()?; // repeat:none
 
     while let Some(line) = lines.next() {
         let image = line;
-        let (_,bounds) = lines.next()?.split_once(':')?;
-        map.push(format!("{}:{}", image, bounds));
+        let (_, bounds) = lines.next()?.split_once(':')?;
+        map.push(format!("{image}:{bounds}"));
     }
 
     Some(map)
 }
-
