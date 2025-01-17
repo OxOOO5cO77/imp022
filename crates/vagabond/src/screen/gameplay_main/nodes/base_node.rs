@@ -1,10 +1,10 @@
 use bevy::prelude::{Click, Commands, Entity, EntityCommands, PickingBehavior, Pointer, Query, ResMut, Text2d, Trigger, Visibility};
 
 use hall::core::{MissionNodeIntent, MissionNodeKind, MissionNodeLinkDir, MissionNodeLinkState};
-use hall::view::{GameMissionPlayerView, MAX_CONTENT_COUNT, MAX_LINK_COUNT, MAX_LINK_DAMAGE};
+use hall::view::{GameMissionPlayerView, MAX_CONTENT_COUNT, MAX_LINK_COUNT, MAX_LINK_DAMAGE, MAX_USER_COUNT};
 
 use crate::manager::ScreenLayout;
-use crate::screen::gameplay_main::components::{MissionNodeButton, MissionNodeContentButton};
+use crate::screen::gameplay_main::components::{MissionNodeButton, MissionNodeContentButton, MissionNodeUserButton};
 use crate::screen::gameplay_main::nodes::shared;
 use crate::screen::gameplay_main::resources::GameplayContext;
 use crate::screen::shared::{on_out_reset_color, GameMissionNodePlayerViewExt, MissionNodeKindExt};
@@ -42,6 +42,7 @@ impl BaseNodeLink {
 pub(crate) struct BaseNode {
     links: [BaseNodeLink; MAX_LINK_COUNT],
     content: [Entity; MAX_CONTENT_COUNT],
+    users: [Entity; MAX_USER_COUNT],
 }
 
 trait NodeLinkEntityCommandsExt {
@@ -72,12 +73,16 @@ impl BaseNode {
 
         let links = LINKS.map(|(link, _)| BaseNodeLink::new(layout, name, link));
 
+        const USERS: &[&str; MAX_USER_COUNT] = &["user0", "user1", "user2", "user3", "user4", "user5", "user6", "user7"];
+        let users = USERS.map(|user| commands.entity(layout.entity(&format!("{name}/{user}"))).insert((MissionNodeUserButton, PickingBehavior::default())).id());
+
         const CONTENT: &[&str; MAX_CONTENT_COUNT] = &["content1", "content2", "content3", "content4"];
         let content = CONTENT.map(|content| commands.entity(layout.entity(&format!("{name}/{content}"))).insert((MissionNodeContentButton, PickingBehavior::default())).id());
 
         Self {
             links,
             content,
+            users,
         }
     }
 
@@ -110,6 +115,11 @@ impl BaseNode {
 
         for (idx, e) in self.content.iter().enumerate() {
             let visible = idx < current_node.content.len();
+            commands.entity(*e).insert(Self::is_visible(visible));
+        }
+
+        for (idx, e) in self.users.iter().enumerate() {
+            let visible = idx < current_node.users.len();
             commands.entity(*e).insert(Self::is_visible(visible));
         }
     }

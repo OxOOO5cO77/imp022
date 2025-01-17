@@ -1,4 +1,4 @@
-use hall::core::{MissionNodeContent, MissionNodeIdType, MissionNodeKind, MissionNodeLink, MissionNodeState, RemoteIdType};
+use hall::core::{ActorIdType, MissionNodeContent, MissionNodeIdType, MissionNodeKind, MissionNodeLink, MissionNodeState, RemoteIdType};
 use hall::hall::HallMissionNode;
 use hall::view::GameMissionNodePlayerView;
 
@@ -9,6 +9,7 @@ pub struct GameMissionNode {
     pub links: Vec<MissionNodeLink>,
     pub content: Vec<MissionNodeContent>,
     pub remote: RemoteIdType,
+    pub users: Vec<ActorIdType>,
 }
 
 impl GameMissionNode {
@@ -20,6 +21,7 @@ impl GameMissionNode {
             links: node.links.clone(),
             content: node.content.clone(),
             remote,
+            users: Vec::new(),
         }
     }
 }
@@ -32,6 +34,7 @@ impl GameMissionNode {
             links: self.links.clone(),
             content: self.content.clone(),
             remote: self.remote,
+            users: self.users.clone(),
         }
     }
 }

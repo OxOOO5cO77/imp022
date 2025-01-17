@@ -16,9 +16,10 @@ pub struct GameMissionPlayerView {
 static UNKNOWN_NODE: GameMissionNodePlayerView = GameMissionNodePlayerView {
     id: 0,
     kind: MissionNodeKind::Unknown,
-    links: vec![],
-    content: vec![],
+    links: Vec::new(),
+    content: Vec::new(),
     remote: 0,
+    users: Vec::new(),
 };
 
 impl GameMissionPlayerView {

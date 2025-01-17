@@ -31,3 +31,5 @@ pub type MachineValueType = u16;
 pub type MissionIdType = u64;
 pub type MissionNodeLinkDamageType = u8;
 pub type MissionNodeIdType = u8;
+
+pub type ActorIdType = u64;
