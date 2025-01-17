@@ -66,7 +66,6 @@ impl AccessPoint {
         Some(())
     }
 
-    //noinspection DuplicatedCode
     fn on_click_auth(
         //
         event: Trigger<Pointer<Click>>,
@@ -74,8 +73,6 @@ impl AccessPoint {
         button_q: Query<(&MissionNodeButton<AccessPointIntent>, &UiFxTrackedColor)>,
         mut context: ResMut<GameplayContext>,
     ) {
-        if let Ok((button, new_color)) = button_q.get(event.target) {
-            shared::click_common(&mut commands, &mut context, event.target, new_color.color, button.data, MissionNodeIntent::AccessPoint);
-        }
+        shared::click_common(&mut commands, &mut context, event.target, button_q.get(event.target), MissionNodeIntent::AccessPoint);
     }
 }

@@ -1,7 +1,8 @@
+use bevy::ecs::query::QueryEntityError;
 use bevy::ecs::system::IntoObserverSystem;
-use bevy::prelude::{Bundle, Commands, Entity, EntityCommand, Event, Observer, Over, Pointer, Res, Srgba, Trigger, World};
+use bevy::prelude::{Bundle, Commands, Entity, EntityCommand, Event, Observer, Over, Pointer, Res, Trigger, World};
 
-use crate::screen::gameplay_main::components::MissionNodeLocalObserver;
+use crate::screen::gameplay_main::components::{MissionNodeButton, MissionNodeLocalObserver};
 use crate::screen::gameplay_main::nodes::MissionNodeAction;
 use crate::screen::gameplay_main::resources::GameplayContext;
 use crate::screen::gameplay_main::VagabondGamePhase;
@@ -26,13 +27,12 @@ pub(crate) fn deselect_node_action(commands: &mut Commands, context: &GameplayCo
     }
 }
 
-pub(crate) fn click_common<T>(
+pub(crate) fn click_common<T: Clone>(
     //
     commands: &mut Commands,
     context: &mut GameplayContext,
     target: Entity,
-    color: Srgba,
-    data: T,
+    query_result: Result<(&MissionNodeButton<T>, &UiFxTrackedColor), QueryEntityError>,
     callback: fn(data: T) -> MissionNodeIntent,
 ) {
     if context.phase != VagabondGamePhase::Start {
@@ -41,15 +41,17 @@ pub(crate) fn click_common<T>(
 
     deselect_node_action(commands, context);
 
-    let (intent, entity) = if context.node_action.entity.is_some_and(|e| e == target) {
-        (None, None)
-    } else {
-        let color = bevy::color::palettes::basic::GREEN;
-        commands.entity(target).trigger(SetColorEvent::new(target, color)).insert(UiFxTrackedColor::from(color));
-        (Some(callback(data)), Some(target))
-    };
+    if let Ok((button, new_color)) = query_result {
+        let (intent, entity) = if context.node_action.entity.is_some_and(|e| e == target) {
+            (None, None)
+        } else {
+            let color = bevy::color::palettes::basic::GREEN;
+            commands.entity(target).trigger(SetColorEvent::new(target, color)).insert(UiFxTrackedColor::from(color));
+            (Some(callback(button.data.clone())), Some(target))
+        };
 
-    context.node_action = MissionNodeAction::new(intent, entity, color);
+        context.node_action = MissionNodeAction::new(intent, entity, new_color.color);
+    }
 }
 
 // local copy of observe to decorate observers with NodeLocalObserver to easily dispose before reactivation
