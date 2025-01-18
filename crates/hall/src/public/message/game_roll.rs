@@ -1,14 +1,12 @@
 use shared_net::{op, Bufferable, SizedBuffer, SizedBufferError};
 
-use crate::core::ErgType;
+use crate::core::ErgArray;
 use crate::message::CommandMessage;
-
-type RollArray = [ErgType; 4];
 
 #[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameRollMessage {
-    pub roll: RollArray,
+    pub roll: ErgArray,
 }
 
 impl CommandMessage for GameRollMessage {

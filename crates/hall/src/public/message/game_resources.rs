@@ -1,6 +1,6 @@
 use shared_net::{op, Bufferable, SizedBuffer, SizedBufferError};
 
-use crate::core::{AttributeKind, AttributeValueType, ErgType};
+use crate::core::{AttributeArray, AttributeKind, ErgArray};
 use crate::message::CommandMessage;
 use crate::view::GameUserStatePlayerView;
 
@@ -8,9 +8,9 @@ use crate::view::GameUserStatePlayerView;
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GameResourcesMessage {
     pub player_state_view: GameUserStatePlayerView,
-    pub remote_attr: [AttributeValueType; 4],
-    pub local_erg: [ErgType; 4],
-    pub remote_erg: [ErgType; 4],
+    pub remote_attr: AttributeArray,
+    pub local_erg: ErgArray,
+    pub remote_erg: ErgArray,
     pub remote_kind: AttributeKind,
 }
 

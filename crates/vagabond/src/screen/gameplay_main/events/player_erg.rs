@@ -1,14 +1,14 @@
 use bevy::prelude::Event;
 
-use hall::core::ErgType;
+use hall::core::ErgArray;
 
 #[derive(Event)]
 pub(crate) struct PlayerErgTrigger {
-    pub(crate) erg: [ErgType; 4],
+    pub(crate) erg: ErgArray,
 }
 
 impl PlayerErgTrigger {
-    pub(crate) fn new(erg: [ErgType; 4]) -> Self {
+    pub(crate) fn new(erg: ErgArray) -> Self {
         Self {
             erg,
         }

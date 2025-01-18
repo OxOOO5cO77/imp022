@@ -7,7 +7,7 @@ use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 use crate::core::{CardNumberType, Rarity, SetType};
 use crate::hall::HallCard;
 
-pub type PackedCardType = u16;
+type PackedCardType = u16;
 
 #[derive(Default, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(test, derive(Debug, PartialEq))]

@@ -1,7 +1,7 @@
-use crate::core::AttributeValueType;
+use crate::core::AttributeArray;
 use rand::Rng;
 
-pub fn pick_values(rng: &mut impl Rng) -> [AttributeValueType; 4] {
+pub fn pick_values(rng: &mut impl Rng) -> AttributeArray {
     let v1 = rng.random_range(1..=9);
     let v2 = rng.random_range(1..=9);
     let remain = 20 - v1 - v2;

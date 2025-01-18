@@ -1,13 +1,13 @@
 use bevy::prelude::Event;
-use hall::core::ErgType;
+use hall::core::ErgArray;
 
 #[derive(Event)]
 pub(crate) struct RollTrigger {
-    pub(crate) roll: [ErgType; 4],
+    pub(crate) roll: ErgArray,
 }
 
 impl RollTrigger {
-    pub(crate) fn new(roll: [ErgType; 4]) -> Self {
+    pub(crate) fn new(roll: ErgArray) -> Self {
         Self {
             roll,
         }

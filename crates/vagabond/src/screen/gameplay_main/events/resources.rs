@@ -1,13 +1,13 @@
 use bevy::prelude::Event;
 
-use hall::core::{AttributeKind, BuildValueType, ErgType};
+use hall::core::{AttributeArray, AttributeKind, ErgArray};
 use hall::message::GameResourcesMessage;
 
 #[derive(Event)]
 pub(crate) struct ResourcesTrigger {
-    pub(crate) local_erg: [ErgType; 4],
-    pub(crate) remote_erg: [ErgType; 4],
-    pub(crate) remote_attr: [BuildValueType; 4],
+    pub(crate) local_erg: ErgArray,
+    pub(crate) remote_erg: ErgArray,
+    pub(crate) remote_attr: AttributeArray,
     pub(crate) remote_kind: AttributeKind,
 }
 

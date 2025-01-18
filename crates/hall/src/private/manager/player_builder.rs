@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::iter::zip;
 
-use hall::core::{AttributeValueType, Attributes};
+use hall::core::{AttributeArray, Attributes};
 use hall::hall::{HallBuild, HallDetail};
 use hall::player::{Player, PlayerBuild, PlayerCard, PlayerDetail, PlayerPart};
 use hall::util;
@@ -13,7 +13,7 @@ use crate::private::manager::data_manager::DataManager;
 #[derive(Clone)]
 pub(crate) struct PlayerPartBuilder {
     seed: u64,
-    pub(crate) values: [AttributeValueType; 4],
+    pub(crate) values: AttributeArray,
     pub(crate) build: [HallBuild; 4],
     pub(crate) detail: [HallDetail; 4],
 }

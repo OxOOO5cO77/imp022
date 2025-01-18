@@ -10,7 +10,8 @@ pub type DelayType = u8;
 pub type DeckCountType = u8;
 
 pub type AttributeValueType = u8;
-pub type AttributeArrays = [[AttributeValueType; 4]; 4];
+pub type AttributeArray = [AttributeValueType; 4];
+pub type AttributeArrays = [AttributeArray; 4];
 
 pub type BuildNumberType = u8;
 pub type BuildValueType = u8;

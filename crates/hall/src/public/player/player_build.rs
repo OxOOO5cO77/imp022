@@ -6,7 +6,7 @@ use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
 use crate::core::{Build, BuildNumberType, BuildValueType, CompanyType, MarketType};
 
-pub type PackedBuildType = u32;
+type PackedBuildType = u32;
 
 #[derive(Default, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq, Debug))]

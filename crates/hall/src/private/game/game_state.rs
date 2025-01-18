@@ -4,7 +4,7 @@ use std::iter::zip;
 
 use rand::{distr::Uniform, rngs::ThreadRng, Rng};
 
-use hall::core::{ActorIdType, AttributeValueType, Attributes, ErgType, Phase, RemoteIdType, Stage, TickType};
+use hall::core::{ActorIdType, AttributeArray, Attributes, ErgArray, ErgType, Phase, RemoteIdType, Stage, TickType};
 use hall::hall::{HallCard, HallMission};
 use hall::message::GameUpdateStateResponse;
 use hall::player::PlayerCard;
@@ -25,7 +25,7 @@ pub(crate) struct GameState {
     pub(crate) _actors: ActorMapType,
     current_tick: TickType,
     stage: Stage,
-    pub(crate) erg_roll: [ErgType; 4],
+    pub(crate) erg_roll: ErgArray,
     pub(crate) rng: ThreadRng,
     pub(crate) mission: GameMission,
 }
@@ -171,13 +171,19 @@ impl GameState {
     pub(crate) fn tick(&mut self) -> TickType {
         self.current_tick += 1;
 
-        self.users.values_mut().for_each(|user| {
+        for user in self.users.values_mut() {
             if let Some(player) = &user.player {
                 user.machine.tick(&player.attributes);
                 user.state.fill_hand();
             }
-        });
-        self.remotes.values_mut().for_each(|remote| remote.machine.tick(&remote.attributes));
+
+            user.mission_state.expire_tokens(self.current_tick);
+        }
+
+        for remote in self.remotes.values_mut() {
+            remote.machine.tick(&remote.attributes);
+            remote.end_turn();
+        }
 
         self.current_tick
     }
@@ -189,15 +195,15 @@ impl GameState {
         }
     }
 
-    pub(crate) fn split_borrow_for_resolve(&mut self) -> (&[ErgType; 4], &mut UserMapType, &mut RemoteMapType, &GameMission) {
+    pub(crate) fn split_borrow_for_resolve(&mut self) -> (&ErgArray, &mut UserMapType, &mut RemoteMapType, &GameMission) {
         (&self.erg_roll, &mut self.users, &mut self.remotes, &self.mission)
     }
 
-    pub(crate) fn resolve_matchups(erg_roll: &[ErgType], p1: &[AttributeValueType; 4], p2: &[AttributeValueType; 4]) -> ([ErgType; 4], [ErgType; 4]) {
+    pub(crate) fn resolve_matchups(erg_roll: &[ErgType], p1: &AttributeArray, p2: &AttributeArray) -> (ErgArray, ErgArray) {
         let matchups = zip(erg_roll, zip(p1, p2)).collect::<Vec<_>>();
 
-        let mut local_alloc = [0, 0, 0, 0];
-        let mut remote_alloc = [0, 0, 0, 0];
+        let mut local_alloc: ErgArray = [0, 0, 0, 0];
+        let mut remote_alloc: ErgArray = [0, 0, 0, 0];
 
         for (idx, (erg, (protag, antag))) in matchups.iter().enumerate() {
             match protag.cmp(antag) {

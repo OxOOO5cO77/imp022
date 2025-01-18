@@ -2,7 +2,7 @@ use rand::prelude::IndexedRandom;
 use rand::Rng;
 
 use crate::private::game::GameMachine;
-use hall::core::{AttributeKind, AttributeValueType, Attributes};
+use hall::core::{AttributeArray, AttributeKind, Attributes};
 
 pub struct GameRemote {
     pub attributes: Attributes,
@@ -19,11 +19,11 @@ impl GameRemote {
         }
     }
 
-    pub fn reset(&mut self) {
+    pub fn end_turn(&mut self) {
         self.chosen_attr = None;
     }
 
-    pub fn choose_attr(&self, mut rng: &mut impl Rng) -> ([AttributeValueType; 4], AttributeKind) {
+    pub fn choose_attr(&self, mut rng: &mut impl Rng) -> (AttributeArray, AttributeKind) {
         const ATTR: [AttributeKind; 4] = [AttributeKind::Analyze, AttributeKind::Breach, AttributeKind::Compute, AttributeKind::Disrupt];
         let kind = self.chosen_attr.unwrap_or_else(|| *ATTR.choose(&mut rng).unwrap());
         (self.attributes.get_values(kind), kind)

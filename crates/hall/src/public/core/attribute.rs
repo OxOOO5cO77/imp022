@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
-use crate::core::AttributeValueType;
+use crate::core::{AttributeArray, AttributeArrays, AttributeValueType};
 
 type AttributeKindType = u8;
 
@@ -44,11 +44,11 @@ pub struct Attributes {
 }
 
 impl AttributeValues {
-    pub fn to_array(&self) -> [AttributeValueType; 4] {
+    pub fn to_array(&self) -> AttributeArray {
         [self.amplitude, self.beat, self.control, self.duration]
     }
 
-    pub fn from_array(array: [AttributeValueType; 4]) -> Self {
+    pub fn from_array(array: AttributeArray) -> Self {
         let [amplitude, beat, control, duration] = array;
         Self {
             amplitude,
@@ -69,11 +69,11 @@ impl AttributeValues {
 }
 
 impl Attributes {
-    pub fn to_arrays(&self) -> [[AttributeValueType; 4]; 4] {
+    pub fn to_arrays(&self) -> AttributeArrays {
         [self.analyze.to_array(), self.breach.to_array(), self.compute.to_array(), self.disrupt.to_array()]
     }
 
-    pub fn from_arrays(array: [[AttributeValueType; 4]; 4]) -> Self {
+    pub fn from_arrays(array: AttributeArrays) -> Self {
         let [analyze, breach, compute, disrupt] = array.map(AttributeValues::from_array);
         Self {
             analyze,
@@ -92,7 +92,7 @@ impl Attributes {
         }
         .get_value(value)
     }
-    pub fn get_values(&self, kind: AttributeKind) -> [AttributeValueType; 4] {
+    pub fn get_values(&self, kind: AttributeKind) -> AttributeArray {
         match kind {
             AttributeKind::Analyze => self.analyze,
             AttributeKind::Breach => self.breach,

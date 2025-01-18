@@ -2,20 +2,19 @@ use serde::{Deserialize, Serialize};
 
 use shared_net::{Bufferable, SeedType, SizedBuffer, SizedBufferError};
 
-use crate::core::AttributeValueType;
+use crate::core::AttributeArray;
 use crate::player::{PlayerBuild, PlayerDetail};
 
-type AttributeArray = [AttributeValueType; 4];
-type BuildArray = [PlayerBuild; 4];
-type DetailArray = [PlayerDetail; 4];
+type PlayerBuildArray = [PlayerBuild; 4];
+type PlayerDetailArray = [PlayerDetail; 4];
 
 #[derive(Default, Clone, Copy, Bufferable, Serialize, Deserialize)]
 #[cfg_attr(test, derive(PartialEq, Debug))]
 pub struct PlayerPart {
     pub seed: SeedType,
     pub values: AttributeArray,
-    pub build: BuildArray,
-    pub detail: DetailArray,
+    pub build: PlayerBuildArray,
+    pub detail: PlayerDetailArray,
 }
 
 #[cfg(test)]
