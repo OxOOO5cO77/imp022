@@ -1,14 +1,14 @@
-use bevy::prelude::{Click, Commands, Entity, EntityCommands, PickingBehavior, Pointer, Query, ResMut, Text2d, Trigger, Visibility};
+use bevy::prelude::{Click, Commands, Entity, EntityCommands, Hwba, PickingBehavior, Pointer, Query, ResMut, Text2d, Trigger, Visibility};
 
-use hall::core::{MissionNodeIntent, MissionNodeKind, MissionNodeLinkDir, MissionNodeLinkState};
+use hall::core::{ActorIdType, MissionNodeIntent, MissionNodeKind, MissionNodeLinkDir, MissionNodeLinkState};
 use hall::view::{GameMissionPlayerView, MAX_CONTENT_COUNT, MAX_LINK_COUNT, MAX_LINK_DAMAGE, MAX_USER_COUNT};
 
-use crate::manager::ScreenLayout;
-use crate::screen::gameplay_main::components::{MissionNodeButton, MissionNodeContentButton, MissionNodeUserButton};
+use crate::manager::{ScreenLayout, WarehouseManager};
+use crate::screen::gameplay_main::components::{MissionNodeButton, MissionNodeContentButton};
 use crate::screen::gameplay_main::nodes::shared;
 use crate::screen::gameplay_main::resources::GameplayContext;
 use crate::screen::shared::{on_out_reset_color, GameMissionNodePlayerViewExt, MissionNodeKindExt};
-use crate::system::ui_effects::UiFxTrackedColor;
+use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor};
 
 struct BaseNodeLink {
     container: Entity,
@@ -39,10 +39,29 @@ impl BaseNodeLink {
     }
 }
 
+struct BaseNodeUser {
+    container: Entity,
+    bg: Entity,
+    text: Entity,
+}
+
+impl BaseNodeUser {
+    fn new(layout: &ScreenLayout, name: &str, user_name: &str) -> Self {
+        let container = layout.entity(&format!("{name}/{user_name}"));
+        let bg = layout.entity(&format!("{name}/{user_name}/bg"));
+        let text = layout.entity(&format!("{name}/{user_name}/text"));
+        Self {
+            container,
+            bg,
+            text,
+        }
+    }
+}
+
 pub(crate) struct BaseNode {
     links: [BaseNodeLink; MAX_LINK_COUNT],
     content: [Entity; MAX_CONTENT_COUNT],
-    users: [Entity; MAX_USER_COUNT],
+    users: [BaseNodeUser; MAX_USER_COUNT],
 }
 
 trait NodeLinkEntityCommandsExt {
@@ -70,11 +89,10 @@ impl BaseNode {
         for (link, dir) in LINKS {
             commands.entity(layout.entity(&format!("{name}/{link}/frame"))).insert((MissionNodeButton::new(*dir), PickingBehavior::default()));
         }
-
         let links = LINKS.map(|(link, _)| BaseNodeLink::new(layout, name, link));
 
         const USERS: &[&str; MAX_USER_COUNT] = &["user0", "user1", "user2", "user3", "user4", "user5", "user6", "user7"];
-        let users = USERS.map(|user| commands.entity(layout.entity(&format!("{name}/{user}"))).insert((MissionNodeUserButton, PickingBehavior::default())).id());
+        let users = USERS.map(|user| BaseNodeUser::new(layout, name, user));
 
         const CONTENT: &[&str; MAX_CONTENT_COUNT] = &["content1", "content2", "content3", "content4"];
         let content = CONTENT.map(|content| commands.entity(layout.entity(&format!("{name}/{content}"))).insert((MissionNodeContentButton, PickingBehavior::default())).id());
@@ -86,7 +104,7 @@ impl BaseNode {
         }
     }
 
-    pub(crate) fn activate(&self, commands: &mut Commands, mission: &GameMissionPlayerView, text_q: &mut Query<&mut Text2d>) {
+    pub(crate) fn activate(&self, commands: &mut Commands, mission: &GameMissionPlayerView, text_q: &mut Query<&mut Text2d>, wm: &mut WarehouseManager) {
         let current_node = mission.current();
 
         const DIRS: &[MissionNodeLinkDir; MAX_LINK_COUNT] = &[MissionNodeLinkDir::North, MissionNodeLinkDir::East, MissionNodeLinkDir::West, MissionNodeLinkDir::South];
@@ -118,9 +136,21 @@ impl BaseNode {
             commands.entity(*e).insert(Self::is_visible(visible));
         }
 
-        for (idx, e) in self.users.iter().enumerate() {
+        for (idx, user) in self.users.iter().enumerate() {
             let visible = idx < current_node.users.len();
-            commands.entity(*e).insert(Self::is_visible(visible));
+            if visible {
+                let hue = pick_hue(current_node.users[idx]);
+                let color = Hwba::hwb(hue, 0.25, 0.25);
+                commands.entity(user.bg).trigger(SetColorEvent::new(user.bg, color.into()));
+                if let Ok(mut text_letter) = text_q.get_mut(user.text) {
+                    if let Ok(response) = wm.fetch_player(current_node.users[idx]) {
+                        if let Some(bio) = response.player_bio.as_ref() {
+                            *text_letter = bio.name.chars().next().unwrap_or('?').to_string().into();
+                        }
+                    }
+                }
+            }
+            commands.entity(user.container).insert(Self::is_visible(visible));
         }
     }
 
@@ -141,4 +171,13 @@ impl BaseNode {
     ) {
         shared::click_common(&mut commands, &mut context, event.target, button_q.get(event.target), MissionNodeIntent::Link);
     }
+}
+
+fn pick_hue(id: ActorIdType) -> f32 {
+    let mut hue = 0;
+    hue += id & 0xFFFF;
+    hue += (id >> 16) & 0xFFFF;
+    hue += (id >> 32) & 0xFFFF;
+    hue += (id >> 48) & 0xFFFF;
+    (hue as f32 / 0xFFFF as f32) * 360.0
 }

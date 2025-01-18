@@ -46,6 +46,7 @@ enum ShapeKind {
     CapsuleX,
     Frame,
     DashFrame,
+    Circle,
 }
 
 struct ShapeElement {
@@ -119,6 +120,7 @@ impl ScreenLayout {
             "capsule_x" => Ok(ShapeKind::CapsuleX),
             "frame" => Ok(ShapeKind::Frame),
             "dash_frame" => Ok(ShapeKind::DashFrame),
+            "circle" => Ok(ShapeKind::Circle),
             _ => Err(format!("shape_kind: {shape_kind}")),
         }
     }
@@ -415,6 +417,14 @@ impl ScreenLayoutManager {
         parent.spawn((mesh, material, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::IGNORE)).id()
     }
 
+    fn spawn_shape_bundle_circle(parent: &mut ChildBuilder, element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> Entity {
+        let mesh = Mesh2d(meshes.add(Circle::new(element.size.x / 2.0)));
+        let material = MeshMaterial2d(materials.add(Color::Srgba(element.color)));
+        let transform = Transform::from_translation(element.position);
+
+        parent.spawn((mesh, material, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::IGNORE)).id()
+    }
+
     fn spawn_sprite_bundle(parent: &mut ChildBuilder, element: &SpriteElement, am: &AtlasManager) -> Option<Entity> {
         let (atlas, image) = am.get_atlas_texture(&element.atlas, &element.item)?;
 
@@ -509,6 +519,7 @@ impl ScreenLayoutManager {
                     ShapeKind::CapsuleX => Self::spawn_shape_bundle_capsule_x(parent, e, &mut slm_params.meshes, &mut slm_params.materials_color),
                     ShapeKind::Frame => Self::spawn_shape_bundle_frame(parent, e, 0.0, &mut slm_params.meshes, &mut slm_params.materials_frame),
                     ShapeKind::DashFrame => Self::spawn_shape_bundle_frame(parent, e, 8.0, &mut slm_params.meshes, &mut slm_params.materials_frame),
+                    ShapeKind::Circle => Self::spawn_shape_bundle_circle(parent, e, &mut slm_params.meshes, &mut slm_params.materials_color),
                 },
                 Element::Sprite(e) => {
                     if let Some(sprite) = Self::spawn_sprite_bundle(parent, e, am) {

@@ -22,9 +22,6 @@ impl<T> MissionNodeButton<T> {
 pub(crate) struct MissionNodeContentButton;
 
 #[derive(Component)]
-pub(crate) struct MissionNodeUserButton;
-
-#[derive(Component)]
 pub(crate) struct MissionNodeDisplay {
     pub(crate) kind: MissionNodeKind,
 }

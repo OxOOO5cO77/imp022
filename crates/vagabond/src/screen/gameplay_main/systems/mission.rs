@@ -28,7 +28,7 @@ pub(super) fn on_mission_ui_update(
 
     for (entity, display) in &display_q {
         let visibility = if event.mission.current().kind == display.kind {
-            node_layouts.base_node.activate(&mut commands, &event.mission, &mut text_q);
+            node_layouts.base_node.activate(&mut commands, &event.mission, &mut text_q, &mut wm);
             if let Some(layout) = node_layouts.layouts.get(&display.kind) {
                 match layout {
                     MissionNodeLayouts::Unknown => {}
