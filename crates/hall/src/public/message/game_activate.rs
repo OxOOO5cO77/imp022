@@ -1,4 +1,4 @@
-use shared_net::{op, Bufferable, GameIdType, VSizedBuffer};
+use shared_net::{op, Bufferable, GameIdType, SizedBuffer, SizedBufferError};
 
 use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
 use crate::player::PlayerPart;
@@ -39,24 +39,24 @@ mod test {
     use crate::core::{Build, Detail};
     use crate::message::game_activate::{GameActivateRequest, GameActivateResponse};
     use crate::player::{PlayerBuild, PlayerDetail, PlayerPart};
-    use shared_net::{Bufferable, VSizedBuffer};
+    use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]
-    fn test_request() {
+    fn test_request() -> Result<(), SizedBufferError> {
         let orig = GameActivateRequest {
             game_id: 1234567890,
         };
 
-        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
-        buf.push(&orig);
-        let result = buf.pull::<GameActivateRequest>();
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<GameActivateRequest>()?;
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig, result);
+        Ok(())
     }
 
     #[test]
-    fn test_response() {
+    fn test_response() -> Result<(), SizedBufferError> {
         let part = PlayerPart {
             seed: 1234567890,
             values: [4, 6, 9, 1],
@@ -111,11 +111,11 @@ mod test {
             parts: [part; 8],
         };
 
-        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
-        buf.push(&orig);
-        let result = buf.pull::<GameActivateResponse>();
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<GameActivateResponse>()?;
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig, result);
+        Ok(())
     }
 }

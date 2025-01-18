@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 use num_enum::{FromPrimitive, IntoPrimitive};
 use serde::{Deserialize, Serialize};
 
-use shared_net::{Bufferable, VSizedBuffer};
+use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
 use crate::core::TickType;
 
@@ -136,14 +136,14 @@ impl Token {
 }
 
 impl Bufferable for Token {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
+    fn push_into(&self, buf: &mut SizedBuffer) -> Result<usize, SizedBufferError> {
         let packed = self.pack();
-        packed.push_into(buf);
+        packed.push_into(buf)
     }
 
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let packed = PackedTokenType::pull_from(buf);
-        Self::unpack(packed)
+    fn pull_from(buf: &mut SizedBuffer) -> Result<Self, SizedBufferError> {
+        let packed = PackedTokenType::pull_from(buf)?;
+        Ok(Self::unpack(packed))
     }
 
     fn size_in_buffer(&self) -> usize {
@@ -165,16 +165,16 @@ impl Token {
 #[cfg(test)]
 mod test {
     use crate::core::Token;
-    use shared_net::{Bufferable, VSizedBuffer};
+    use shared_net::{SizedBuffer, SizedBufferError};
 
     #[test]
-    fn test_token() {
+    fn test_token() -> Result<(), SizedBufferError> {
         let orig = vec![Token::test_default(1), Token::test_default(2)];
 
-        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
-        buf.push(&orig);
-        let new = buf.pull::<Vec<Token>>();
+        let mut buf = SizedBuffer::from(&orig)?;
+        let new = buf.pull::<Vec<Token>>()?;
 
         assert_eq!(orig, new);
+        Ok(())
     }
 }

@@ -7,7 +7,7 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
-use shared_net::{op, AuthType, RoutedMessage, VClientMode, VSizedBuffer};
+use shared_net::{op, AuthType, RoutedMessage, SizedBuffer, SizedBufferError, VClientMode};
 
 pub(crate) struct AuthInfo {
     pub(crate) ip: IpAddr,
@@ -44,21 +44,20 @@ impl DrawbridgeClient {
     }
 }
 
-fn process_drawbridge(context: DrawbridgeClient, _tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
+fn process_drawbridge(context: DrawbridgeClient, _tx: UnboundedSender<RoutedMessage>, mut buf: SizedBuffer) -> VClientMode {
     match buf.pull::<op::Command>() {
-        //op::Command::Hello => {},
-        op::Command::Authorize => recv_authorize(context, buf),
+        Ok(op::Command::Authorize) => recv_authorize(context, buf).unwrap_or(VClientMode::Shutdown),
         _ => VClientMode::Continue,
     }
 }
 
-fn recv_authorize(context: DrawbridgeClient, mut buf: VSizedBuffer) -> VClientMode {
+fn recv_authorize(context: DrawbridgeClient, mut buf: SizedBuffer) -> Result<VClientMode, SizedBufferError> {
     let mut ip_buf = [0; 16];
-    ip_buf.copy_from_slice(&buf.pull_bytes_n(16));
+    ip_buf.copy_from_slice(&buf.pull_bytes_n(16)?);
 
     let ip = IpAddr::from(ip_buf);
-    let port = buf.pull::<u16>();
-    let auth = buf.pull::<AuthType>();
+    let port = buf.pull::<u16>()?;
+    let auth = buf.pull::<AuthType>()?;
 
     let auth_info = AuthInfo {
         ip,
@@ -67,14 +66,14 @@ fn recv_authorize(context: DrawbridgeClient, mut buf: VSizedBuffer) -> VClientMo
     };
     let _ = context.auth_tx.send(auth_info);
 
-    VClientMode::Shutdown
+    Ok(VClientMode::Shutdown)
 }
 
 pub(crate) fn send_authorize(tx: &UnboundedSender<RoutedMessage>, user: String, pass: String) {
-    let mut out = VSizedBuffer::new(64);
-    out.push(&op::Command::Authorize);
-    out.push(&fingerprint128(user.as_bytes()));
-    out.push(&fingerprint128(pass.as_bytes()));
+    let mut out = SizedBuffer::new(64);
+    let _ = out.push(&op::Command::Authorize);
+    let _ = out.push(&fingerprint128(user.as_bytes()));
+    let _ = out.push(&fingerprint128(pass.as_bytes()));
 
     let msg = RoutedMessage {
         route: op::Route::Local,

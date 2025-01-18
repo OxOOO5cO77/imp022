@@ -2,7 +2,7 @@ use std::mem::size_of;
 
 use serde::{Deserialize, Serialize};
 
-use shared_net::{Bufferable, VSizedBuffer};
+use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
 use crate::core::{Build, BuildNumberType, BuildValueType, CompanyType, MarketType};
 
@@ -81,12 +81,12 @@ impl PlayerBuild {
 }
 
 impl Bufferable for PlayerBuild {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.pack().push_into(buf);
+    fn push_into(&self, buf: &mut SizedBuffer) -> Result<usize, SizedBufferError> {
+        self.pack().push_into(buf)
     }
 
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        Self::unpack(PackedBuildType::pull_from(buf))
+    fn pull_from(buf: &mut SizedBuffer) -> Result<Self, SizedBufferError> {
+        Ok(Self::unpack(PackedBuildType::pull_from(buf)?))
     }
 
     fn size_in_buffer(&self) -> usize {
@@ -98,21 +98,21 @@ impl Bufferable for PlayerBuild {
 mod test {
     use crate::core::Build;
     use crate::player::PlayerBuild;
-    use shared_net::{Bufferable, VSizedBuffer};
+    use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]
-    fn test_player_build() {
+    fn test_player_build() -> Result<(), SizedBufferError> {
         let orig = PlayerBuild {
             number: 123,
             build: Build::CPU(3, 12),
             value: 9,
         };
 
-        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
-        buf.push(&orig);
-        let result = buf.pull::<PlayerBuild>();
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<PlayerBuild>()?;
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig, result);
+        Ok(())
     }
 }

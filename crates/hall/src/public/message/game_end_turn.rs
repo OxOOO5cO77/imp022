@@ -1,4 +1,4 @@
-use shared_net::{op, Bufferable, GameIdType, VSizedBuffer};
+use shared_net::{op, Bufferable, GameIdType, SizedBuffer, SizedBufferError};
 
 use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
 
@@ -33,33 +33,35 @@ impl GameResponseMessage for GameEndTurnResponse {}
 #[cfg(test)]
 mod test {
     use crate::message::game_end_turn::{GameEndTurnRequest, GameEndTurnResponse};
-    use shared_net::{Bufferable, VSizedBuffer};
+    use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]
-    fn test_request() {
+    fn test_request() -> Result<(), SizedBufferError> {
         let orig = GameEndTurnRequest {
             game_id: 1234567890,
         };
 
-        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
-        buf.push(&orig);
-        let result = buf.pull::<GameEndTurnRequest>();
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<GameEndTurnRequest>()?;
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig, result);
+
+        Ok(())
     }
 
     #[test]
-    fn test_response() {
+    fn test_response() -> Result<(), SizedBufferError> {
         let orig = GameEndTurnResponse {
             success: true,
         };
 
-        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
-        buf.push(&orig);
-        let result = buf.pull::<GameEndTurnResponse>();
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<GameEndTurnResponse>()?;
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig, result);
+
+        Ok(())
     }
 }

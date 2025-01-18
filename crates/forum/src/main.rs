@@ -2,7 +2,7 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, instrument};
 
-use shared_net::{op, NodeType, RoutedMessage, VClientMode, VSizedBuffer};
+use shared_net::{op, NodeType, RoutedMessage, SizedBuffer, SizedBufferError, VClientMode};
 
 #[derive(Clone)]
 struct NoContext;
@@ -38,44 +38,44 @@ async fn forum_main(courtyard: String) -> Result<(), ForumError> {
     Ok(())
 }
 
-fn process_courtyard(_context: NoContext, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
+fn process_courtyard(_context: NoContext, tx: UnboundedSender<RoutedMessage>, mut buf: SizedBuffer) -> VClientMode {
     match buf.pull::<op::Command>() {
-        op::Command::Chat => c_chat(tx, buf),
-        op::Command::DM => c_dm(tx, buf),
+        Ok(op::Command::Chat) => c_chat(tx, buf),
+        Ok(op::Command::DM) => c_dm(tx, buf),
         _ => {}
     }
     VClientMode::Continue
 }
 
-fn c_chat(tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
-    let _gate = buf.pull::<NodeType>(); // discard gate id
+fn c_chat(tx: UnboundedSender<RoutedMessage>, mut buf: SizedBuffer) {
+    if let Ok(out) = move || -> Result<SizedBuffer, SizedBufferError> {
+        let _gate = buf.pull::<NodeType>()?; // discard gate id
 
-    let mut out = VSizedBuffer::new(256);
-    out.push(&op::Route::All(op::Flavor::Gate));
-    out.push(&op::Command::Chat);
-    out.xfer_bytes(&mut buf);
-
-    let _ = tx.send(RoutedMessage {
-        route: op::Route::None,
-        buf: out,
-    });
+        let mut out = SizedBuffer::new(256);
+        out.push(&op::Route::All(op::Flavor::Gate))?;
+        out.push(&op::Command::Chat)?;
+        out.xfer_bytes(&mut buf)?;
+        Ok(out)
+    }() {
+        let _ = tx.send(out.into());
+    }
 }
 
-fn c_dm(tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
-    let _gate = buf.pull::<NodeType>();
+fn c_dm(tx: UnboundedSender<RoutedMessage>, mut buf: SizedBuffer) {
+    if let Ok(out) = move || -> Result<SizedBuffer, SizedBufferError> {
+        let _gate = buf.pull::<NodeType>()?;
 
-    let sender = buf.pull::<String>();
-    let sendee = buf.pull::<String>();
+        let sender = buf.pull::<String>()?;
+        let sendee = buf.pull::<String>()?;
 
-    let mut out = VSizedBuffer::new(256);
-    out.push(&op::Route::All(op::Flavor::Gate));
-    out.push(&op::Command::DM);
-    out.push(&sendee);
-    out.push(&sender);
-    out.xfer_bytes(&mut buf);
-
-    let _ = tx.send(RoutedMessage {
-        route: op::Route::None,
-        buf: out,
-    });
+        let mut out = SizedBuffer::new(256);
+        out.push(&op::Route::All(op::Flavor::Gate))?;
+        out.push(&op::Command::DM)?;
+        out.push(&sendee)?;
+        out.push(&sender)?;
+        out.xfer_bytes(&mut buf)?;
+        Ok(out)
+    }() {
+        let _ = tx.send(out.into());
+    }
 }

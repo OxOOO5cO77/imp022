@@ -1,5 +1,5 @@
 use num_enum::{FromPrimitive, IntoPrimitive};
-use shared_net::{op, Bufferable, VSizedBuffer};
+use shared_net::{op, Bufferable, SizedBuffer, SizedBufferError};
 
 #[cfg(test)]
 use strum_macros::EnumIter;
@@ -48,29 +48,30 @@ impl Stage {
 }
 
 impl Bufferable for Stage {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
+    fn push_into(&self, buf: &mut SizedBuffer) -> Result<usize, SizedBufferError> {
         match self {
             Stage::Idle => Self::REPR_IDLE.push_into(buf),
             Stage::Building => Self::REPR_BUILDING.push_into(buf),
             Stage::Running(phase) => {
-                Self::REPR_RUNNING.push_into(buf);
-                phase.push_into(buf);
+                Self::REPR_RUNNING.push_into(buf)?;
+                phase.push_into(buf)
             }
             Stage::End => Self::REPR_END.push_into(buf),
         }
     }
 
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        match u8::pull_from(buf) {
+    fn pull_from(buf: &mut SizedBuffer) -> Result<Self, SizedBufferError> {
+        let result = match u8::pull_from(buf)? {
             Self::REPR_IDLE => Stage::Idle,
             Self::REPR_BUILDING => Stage::Building,
             Self::REPR_RUNNING => {
-                let phase = Phase::pull_from(buf);
+                let phase = Phase::pull_from(buf)?;
                 Stage::Running(phase)
             }
             Self::REPR_END => Stage::End,
             _ => Stage::Idle,
-        }
+        };
+        Ok(result)
     }
 
     fn size_in_buffer(&self) -> usize {
@@ -83,14 +84,14 @@ impl Bufferable for Stage {
 }
 
 impl Bufferable for Phase {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
+    fn push_into(&self, buf: &mut SizedBuffer) -> Result<usize, SizedBufferError> {
         let game_phase: GamePhaseType = (*self).into();
-        game_phase.push_into(buf);
+        game_phase.push_into(buf)
     }
 
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let game_phase = GamePhaseType::pull_from(buf);
-        game_phase.into()
+    fn pull_from(buf: &mut SizedBuffer) -> Result<Self, SizedBufferError> {
+        let game_phase = GamePhaseType::pull_from(buf)?;
+        Ok(game_phase.into())
     }
 
     fn size_in_buffer(&self) -> usize {
@@ -102,39 +103,41 @@ impl Bufferable for Phase {
 mod test {
     mod test_vsizedbuffer {
         use crate::public::core::stage::{Phase, Stage};
-        use shared_net::VSizedBuffer;
+        use shared_net::{SizedBuffer, SizedBufferError};
         use strum::IntoEnumIterator;
 
         #[test]
-        fn test_game_stage() {
+        fn test_game_stage() -> Result<(), SizedBufferError> {
             for game_stage in Stage::iter() {
-                let mut buf1 = VSizedBuffer::new(32);
-                buf1.push(&game_stage);
-                buf1.push(&game_stage);
+                let mut buf1 = SizedBuffer::new(32);
+                buf1.push(&game_stage)?;
+                buf1.push(&game_stage)?;
 
-                assert_eq!(game_stage, buf1.pull::<Stage>());
+                assert_eq!(game_stage, buf1.pull::<Stage>()?);
 
-                let mut buf2 = VSizedBuffer::new(32);
-                buf2.xfer::<Stage>(&mut buf1);
+                let mut buf2 = SizedBuffer::new(32);
+                buf2.xfer::<Stage>(&mut buf1)?;
 
-                assert_eq!(game_stage, buf2.pull::<Stage>());
+                assert_eq!(game_stage, buf2.pull::<Stage>()?);
             }
+            Ok(())
         }
 
         #[test]
-        fn test_game_phase() {
+        fn test_game_phase() -> Result<(), SizedBufferError> {
             for game_phase in Phase::iter() {
-                let mut buf1 = VSizedBuffer::new(32);
-                buf1.push(&game_phase);
-                buf1.push(&game_phase);
+                let mut buf1 = SizedBuffer::new(32);
+                buf1.push(&game_phase)?;
+                buf1.push(&game_phase)?;
 
-                assert_eq!(game_phase, buf1.pull::<Phase>());
+                assert_eq!(game_phase, buf1.pull::<Phase>()?);
 
-                let mut buf2 = VSizedBuffer::new(32);
-                buf2.xfer::<Phase>(&mut buf1);
+                let mut buf2 = SizedBuffer::new(32);
+                buf2.xfer::<Phase>(&mut buf1)?;
 
-                assert_eq!(game_phase, buf2.pull::<Phase>());
+                assert_eq!(game_phase, buf2.pull::<Phase>()?);
             }
+            Ok(())
         }
     }
 }

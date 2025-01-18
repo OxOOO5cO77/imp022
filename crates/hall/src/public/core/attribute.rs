@@ -1,7 +1,7 @@
 use num_enum::{FromPrimitive, IntoPrimitive};
 use serde::{Deserialize, Serialize};
 
-use shared_net::{Bufferable, VSizedBuffer};
+use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
 use crate::core::AttributeValueType;
 
@@ -104,14 +104,14 @@ impl Attributes {
 }
 
 impl Bufferable for AttributeKind {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
+    fn push_into(&self, buf: &mut SizedBuffer) -> Result<usize, SizedBufferError> {
         let attribute_kind: AttributeKindType = (*self).into();
-        attribute_kind.push_into(buf);
+        attribute_kind.push_into(buf)
     }
 
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let attribute_kind = AttributeKindType::pull_from(buf);
-        attribute_kind.into()
+    fn pull_from(buf: &mut SizedBuffer) -> Result<Self, SizedBufferError> {
+        let attribute_kind = AttributeKindType::pull_from(buf)?;
+        Ok(attribute_kind.into())
     }
 
     fn size_in_buffer(&self) -> usize {
@@ -122,22 +122,23 @@ impl Bufferable for AttributeKind {
 #[cfg(test)]
 mod test {
     use crate::core::AttributeKind;
-    use shared_net::VSizedBuffer;
+    use shared_net::{SizedBuffer, SizedBufferError};
 
     #[test]
-    fn attr_kind() {
+    fn attr_kind() -> Result<(), SizedBufferError> {
         let orig1 = AttributeKind::Analyze;
         let orig2 = AttributeKind::Disrupt;
 
-        let mut buf1 = VSizedBuffer::new(32);
-        buf1.push(&orig1);
-        buf1.push(&orig2);
+        let mut buf1 = SizedBuffer::new(32);
+        buf1.push(&orig1)?;
+        buf1.push(&orig2)?;
 
-        assert_eq!(orig1, buf1.pull::<AttributeKind>());
+        assert_eq!(orig1, buf1.pull::<AttributeKind>()?);
 
-        let mut buf2 = VSizedBuffer::new(32);
-        buf2.xfer::<AttributeKind>(&mut buf1);
+        let mut buf2 = SizedBuffer::new(32);
+        buf2.xfer::<AttributeKind>(&mut buf1)?;
 
-        assert_eq!(orig2, buf2.pull::<AttributeKind>());
+        assert_eq!(orig2, buf2.pull::<AttributeKind>()?);
+        Ok(())
     }
 }

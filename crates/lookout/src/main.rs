@@ -6,7 +6,7 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, instrument};
 
-use shared_net::{op, NodeType, PasswordType, RoutedMessage, UserIdType, VClientMode, VSizedBuffer};
+use shared_net::{op, NodeType, PasswordType, RoutedMessage, SizedBuffer, SizedBufferError, UserIdType, VClientMode};
 
 struct Lookout {
     pool: PgPool,
@@ -52,10 +52,11 @@ async fn lookout_main(courtyard: String, database: &str) -> Result<(), LookoutEr
     Ok(())
 }
 
-fn process_courtyard(context: Arc<Mutex<Lookout>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
-    if buf.pull::<op::Command>() == op::Command::Authorize {
-        c_authorize(context, tx, &mut buf)
-    }
+fn process_courtyard(context: Arc<Mutex<Lookout>>, tx: UnboundedSender<RoutedMessage>, mut buf: SizedBuffer) -> VClientMode {
+    let _result = match buf.pull::<op::Command>() {
+        Ok(op::Command::Authorize) => c_authorize(context, tx, &mut buf),
+        _ => Ok(()),
+    };
     VClientMode::Continue
 }
 
@@ -65,11 +66,11 @@ struct User {
     pass_uuid: Uuid,
 }
 
-fn c_authorize(context: Arc<Mutex<Lookout>>, tx: UnboundedSender<RoutedMessage>, buf: &mut VSizedBuffer) {
-    let drawbridge = buf.pull::<NodeType>();
-    let vagabond = buf.pull::<NodeType>();
-    let user_hash = buf.pull::<UserIdType>();
-    let pass_hash = buf.pull::<PasswordType>();
+fn c_authorize(context: Arc<Mutex<Lookout>>, tx: UnboundedSender<RoutedMessage>, buf: &mut SizedBuffer) -> Result<(), SizedBufferError> {
+    let drawbridge = buf.pull::<NodeType>()?;
+    let vagabond = buf.pull::<NodeType>()?;
+    let user_hash = buf.pull::<UserIdType>()?;
+    let pass_hash = buf.pull::<PasswordType>()?;
 
     let pool = context.lock().unwrap().pool.clone();
 
@@ -84,20 +85,21 @@ fn c_authorize(context: Arc<Mutex<Lookout>>, tx: UnboundedSender<RoutedMessage>,
                     info!(user_hash, "ALLOW: {}", user.name);
                     let auth = Uuid::new_v4().as_u128();
 
-                    let mut out = VSizedBuffer::new(256);
-                    out.push(&op::Route::Any(op::Flavor::Gate));
-                    out.push(&op::Command::Authorize);
-                    out.push(&drawbridge);
-                    out.push(&vagabond);
+                    if let Ok(out) = move || -> Result<SizedBuffer, SizedBufferError> {
+                        let mut out = SizedBuffer::new(256);
+                        out.push(&op::Route::Any(op::Flavor::Gate))?;
+                        out.push(&op::Command::Authorize)?;
+                        out.push(&drawbridge)?;
+                        out.push(&vagabond)?;
 
-                    out.push(&user_hash);
-                    out.push(&auth);
-                    out.push(&user.name);
+                        out.push(&user_hash)?;
+                        out.push(&auth)?;
+                        out.push(&user.name)?;
 
-                    let _ = tx.send(RoutedMessage {
-                        route: op::Route::None,
-                        buf: out,
-                    });
+                        Ok(out)
+                    }() {
+                        let _ = tx.send(out.into());
+                    }
                 } else {
                     info!(user_hash, "DENY: {}", user.name);
                 }
@@ -111,6 +113,7 @@ fn c_authorize(context: Arc<Mutex<Lookout>>, tx: UnboundedSender<RoutedMessage>,
         }
     };
     tokio::spawn(future);
+    Ok(())
 }
 
 #[cfg(test)]

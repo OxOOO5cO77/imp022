@@ -1,5 +1,6 @@
-use crate::screen::gameplay_main::MachineKind;
 use bevy::prelude::Event;
+
+use crate::screen::gameplay_main::components::MachineKind;
 
 #[derive(Event)]
 pub(crate) struct TTYMessageTrigger {

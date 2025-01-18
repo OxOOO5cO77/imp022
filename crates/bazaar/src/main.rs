@@ -6,7 +6,7 @@ use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, instrument};
 
 use shared_net::op;
-use shared_net::{RoutedMessage, VClientMode, VSizedBuffer};
+use shared_net::{RoutedMessage, SizedBuffer, VClientMode};
 
 struct Bazaar {
     _pool: PgPool,
@@ -51,6 +51,6 @@ async fn bazaar_main(courtyard: String, database: &str) -> Result<(), BazaarErro
     Ok(())
 }
 
-fn process_courtyard(_context: Arc<Mutex<Bazaar>>, _tx: UnboundedSender<RoutedMessage>, _buf: VSizedBuffer) -> VClientMode {
+fn process_courtyard(_context: Arc<Mutex<Bazaar>>, _tx: UnboundedSender<RoutedMessage>, _buf: SizedBuffer) -> VClientMode {
     VClientMode::Continue
 }

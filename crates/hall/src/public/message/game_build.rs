@@ -1,4 +1,4 @@
-use shared_net::{op, Bufferable, GameIdType, PartType, SeedType, VSizedBuffer};
+use shared_net::{op, Bufferable, GameIdType, PartType, SeedType, SizedBuffer, SizedBufferError};
 
 use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
 use crate::player::PlayerCard;
@@ -41,28 +41,29 @@ mod test {
     use crate::core::Rarity::Legendary;
     use crate::message::game_build::{GameBuildRequest, GameBuildResponse};
     use crate::player::PlayerCard;
-    use shared_net::{Bufferable, VSizedBuffer};
+    use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     pub const CARD_COUNT: usize = 40;
 
     #[test]
-    fn test_request() {
+    fn test_request() -> Result<(), SizedBufferError> {
         let orig = GameBuildRequest {
             game_id: 1234567890,
             parts: [1234567890, 1234567891, 1234567892, 1234567893, 1234567894, 1234567895, 1234567896, 1234567897],
             commit: true,
         };
 
-        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
-        buf.push(&orig);
-        let result = buf.pull::<GameBuildRequest>();
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<GameBuildRequest>()?;
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig, result);
+
+        Ok(())
     }
 
     #[test]
-    fn test_response() {
+    fn test_response() -> Result<(), SizedBufferError> {
         let mut orig = GameBuildResponse {
             seed: 1234567890,
             deck: Vec::default(),
@@ -75,13 +76,14 @@ mod test {
             });
         }
 
-        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
-        buf.push(&orig);
-        let result = buf.pull::<GameBuildResponse>();
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<GameBuildResponse>()?;
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig.seed, result.seed);
         assert_eq!(orig.deck.len(), result.deck.len());
-        assert_eq!(orig.deck.iter().last().unwrap().number, result.deck.iter().last().unwrap().number)
+        assert_eq!(orig.deck.iter().last().unwrap().number, result.deck.iter().last().unwrap().number);
+
+        Ok(())
     }
 }

@@ -1,8 +1,8 @@
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
-use tracing::{info, instrument};
+use tracing::{error, info, instrument};
 
-use shared_net::{op, Bufferable, IdMessage, RoutedMessage, VSizedBuffer};
+use shared_net::{op, Bufferable, IdMessage, RoutedMessage, SizedBuffer};
 
 #[derive(Clone)]
 struct NoContext;
@@ -38,19 +38,23 @@ async fn courtyard_main(interface: String) -> Result<(), CourtyardError> {
 
 fn process(_context: NoContext, tx: UnboundedSender<RoutedMessage>, msg: IdMessage) -> bool {
     let mut in_buf = msg.buf;
-    let route = in_buf.pull::<op::Route>();
-    let command = in_buf.pull::<op::Command>();
+    if let Ok(route) = in_buf.pull::<op::Route>() {
+        if let Ok(command) = in_buf.pull::<op::Command>() {
+            let mut out_buf = SizedBuffer::new(command.size_in_buffer() + msg.id.size_in_buffer() + in_buf.read_remain());
+            let success = out_buf.push(&command).and_then(|_| out_buf.push(&msg.id)).and_then(|_| out_buf.xfer_bytes(&mut in_buf)).is_ok();
 
-    let mut out_buf = VSizedBuffer::new(command.size_in_buffer() + msg.id.size_in_buffer() + in_buf.remaining());
-    out_buf.push(&command);
-    out_buf.push(&msg.id);
-    out_buf.xfer_bytes(&mut in_buf);
+            if success {
+                info!(msg.id, ?command, ?route, bytes = out_buf.size());
+            } else {
+                error!(msg.id, ?command, ?route, bytes = out_buf.size());
+            }
 
-    info!(msg.id, ?command, ?route, bytes = out_buf.size());
-
-    tx.send(RoutedMessage {
-        route,
-        buf: out_buf,
-    })
-    .is_ok()
+            let message = RoutedMessage {
+                route,
+                buf: out_buf,
+            };
+            return tx.send(message).is_ok();
+        }
+    }
+    false
 }

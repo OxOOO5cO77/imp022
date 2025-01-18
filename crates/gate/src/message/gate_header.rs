@@ -1,4 +1,4 @@
-use shared_net::{AuthType, Bufferable, NodeType, UserIdType, VSizedBuffer};
+use shared_net::{AuthType, Bufferable, NodeType, SizedBuffer, SizedBufferError, UserIdType};
 
 #[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
@@ -21,21 +21,21 @@ impl GateHeader {
 #[cfg(test)]
 mod test {
     use crate::message::gate_header::GateHeader;
-    use shared_net::{Bufferable, VSizedBuffer};
+    use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]
-    fn test_gate_header() {
+    fn test_gate_header() -> Result<(), SizedBufferError> {
         let orig = GateHeader {
             vagabond: 3,
             user: 1234567890,
             auth: 9876543210,
         };
 
-        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
-        buf.push(&orig);
-        let result = buf.pull::<GateHeader>();
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<GateHeader>()?;
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig, result);
+        Ok(())
     }
 }

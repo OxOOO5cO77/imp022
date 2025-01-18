@@ -10,7 +10,7 @@ use tokio::sync::{mpsc, Mutex};
 use tracing::{error, info};
 
 use crate::util::write_buf;
-use crate::{op, IdMessage, RoutedMessage, VSizedBuffer};
+use crate::{op, IdMessage, RoutedMessage, SizedBuffer};
 
 struct VConnection<T> {
     write: WriteHalf<T>,
@@ -65,15 +65,15 @@ where
 
                 tokio::spawn( async move {
                     loop {
-                        let mut size_buf = [0_u8; VSizedBuffer::sizesize()];
+                        let mut size_buf = [0_u8; SizedBuffer::sizesize()];
                         let error = match read.read(&mut size_buf[..]).await {
                             Ok(bytes) => {
                                 let mut error = false;
-                                if bytes == VSizedBuffer::sizesize() {
-                                    let expected_bytes = VSizedBuffer::extract_size(&size_buf);
-                                    let mut buf = VSizedBuffer::new(expected_bytes);
+                                if bytes == SizedBuffer::sizesize() {
+                                    let expected_bytes = SizedBuffer::extract_size(&size_buf);
+                                    let mut buf = SizedBuffer::new(expected_bytes);
 
-                                    error = match read.read(&mut buf.raw[VSizedBuffer::sizesize()..]).await {
+                                    error = match read.read(&mut buf.raw[SizedBuffer::sizesize()..]).await {
                                         Ok(bytes) => {
 
                                             if bytes != expected_bytes {
@@ -106,22 +106,25 @@ where
                 let id = msg.id;
                 let builtin = msg.buf.pull::<op::Command>();
                 let is_ok = match builtin {
-                    op::Command::NoOp => false,
-                    op::Command::Register => {
-                        let flavor = msg.buf.pull::<op::Flavor>();
-                        let mut connections = connections.lock().await;
-                        if let Some(cx) = connections.get_mut(&id) {
-                            cx.flavor = Some(flavor);
+                    Ok(op::Command::NoOp) => false,
+                    Ok(op::Command::Register) => {
+                        if let Ok(flavor) = msg.buf.pull::<op::Flavor>() {
+                            let mut connections = connections.lock().await;
+                            if let Some(cx) = connections.get_mut(&id) {
+                                cx.flavor = Some(flavor);
+                            }
+                            info!("Registered {} as {:?}", id, flavor);
+                            let mut out = SizedBuffer::new(32);
+                            out.push(&op::Command::Hello).ok().and_then(|_| outgoing_tx.send(RoutedMessage { route: op::Route::One(id), buf: out }).ok()).is_some()
+                        } else {
+                            false
                         }
-                        info!("Registered {} as {:?}", id, flavor);
-                        let mut out = VSizedBuffer::new(32);
-                        out.push(&op::Command::Hello);
-                        outgoing_tx.send(RoutedMessage { route: op::Route::One(id), buf: out }).is_ok()
                     }
-                    _ => {
+                    Ok(_) => {
                         msg.buf.rewind();
                         process( context.clone(), outgoing_tx.clone(), msg )
                     }
+                    Err(_) => false,
                 };
                 if !is_ok {
                     cleanup_needed.push(id);

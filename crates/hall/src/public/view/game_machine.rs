@@ -1,6 +1,4 @@
-use shared_net::Bufferable;
-
-use shared_net::VSizedBuffer;
+use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
 use crate::core::{DelayType, MachineValueType};
 use crate::view::GameProcessPlayerView;
@@ -27,18 +25,19 @@ impl GameMachinePlayerView {
 #[cfg(test)]
 mod test {
     use crate::view::GameMachinePlayerView;
-    use shared_net::{Bufferable, VSizedBuffer};
+    use shared_net::{SizedBuffer, SizedBufferError};
 
     #[test]
-    fn test_machine_player_view() {
+    fn test_machine_player_view() -> Result<(), SizedBufferError> {
         let orig = GameMachinePlayerView::test_default();
 
-        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
-        buf.push(&orig);
-        let result = buf.pull::<GameMachinePlayerView>();
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<GameMachinePlayerView>()?;
 
         assert_eq!(orig.vitals, result.vitals);
         assert_eq!(orig.queue, result.queue);
         assert_eq!(orig.running, result.running);
+
+        Ok(())
     }
 }

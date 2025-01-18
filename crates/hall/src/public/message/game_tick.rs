@@ -1,6 +1,6 @@
 use crate::core::TickType;
 use crate::message::CommandMessage;
-use shared_net::{op, Bufferable, VSizedBuffer};
+use shared_net::{op, Bufferable, SizedBuffer, SizedBufferError};
 
 #[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
@@ -15,19 +15,20 @@ impl CommandMessage for GameTickMessage {
 #[cfg(test)]
 mod test {
     use crate::message::game_tick::GameTickMessage;
-    use shared_net::{Bufferable, VSizedBuffer};
+    use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]
-    fn test_response() {
+    fn test_response() -> Result<(), SizedBufferError> {
         let orig = GameTickMessage {
             tick: 123,
         };
 
-        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
-        buf.push(&orig);
-        let result = buf.pull::<GameTickMessage>();
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<GameTickMessage>()?;
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig, result);
+
+        Ok(())
     }
 }

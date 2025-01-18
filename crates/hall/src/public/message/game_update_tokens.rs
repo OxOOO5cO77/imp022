@@ -1,4 +1,4 @@
-use shared_net::{op, Bufferable, VSizedBuffer};
+use shared_net::{op, Bufferable, SizedBuffer, SizedBufferError};
 
 use crate::core::Token;
 use crate::message::CommandMessage;
@@ -25,17 +25,17 @@ impl GameUpdateTokensMessage {
 mod test {
     use crate::core::Token;
     use crate::message::game_update_tokens::GameUpdateTokensMessage;
-    use shared_net::{Bufferable, VSizedBuffer};
+    use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]
-    fn test_response() {
+    fn test_response() -> Result<(), SizedBufferError> {
         let orig = GameUpdateTokensMessage::new(Token::test_default(0));
 
-        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
-        buf.push(&orig);
-        let result = buf.pull::<GameUpdateTokensMessage>();
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<GameUpdateTokensMessage>()?;
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig, result);
+        Ok(())
     }
 }

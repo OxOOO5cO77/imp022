@@ -1,4 +1,4 @@
-use shared_net::{Bufferable, VSizedBuffer};
+use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
 use crate::core::{AttributeArrays, DeckCountType, ErgArray};
 use crate::player::PlayerCard;
@@ -18,10 +18,10 @@ mod test {
     use crate::core::Rarity;
     use crate::player::PlayerCard;
     use crate::view::game_user_state::GameUserStatePlayerView;
-    use shared_net::{Bufferable, VSizedBuffer};
+    use shared_net::{SizedBuffer, SizedBufferError};
 
     #[test]
-    fn test_player_state_player_view() {
+    fn test_player_state_player_view() -> Result<(), SizedBufferError> {
         let dummy_card = PlayerCard {
             rarity: Rarity::Legendary,
             number: 123,
@@ -36,9 +36,8 @@ mod test {
             erg: [5, 6, 7, 8],
         };
 
-        let mut buf = VSizedBuffer::new(orig_view.size_in_buffer());
-        buf.push(&orig_view);
-        let new_view = buf.pull::<GameUserStatePlayerView>();
+        let mut buf = SizedBuffer::from(&orig_view)?;
+        let new_view = buf.pull::<GameUserStatePlayerView>()?;
 
         assert_eq!(orig_view.deck, new_view.deck);
         assert_eq!(orig_view.heap.len(), new_view.heap.len());
@@ -48,5 +47,7 @@ mod test {
         assert_eq!(orig_view.hand[0], new_view.hand[0]);
         assert_eq!(orig_view.hand[1], new_view.hand[1]);
         assert_eq!(orig_view.erg, new_view.erg);
+
+        Ok(())
     }
 }

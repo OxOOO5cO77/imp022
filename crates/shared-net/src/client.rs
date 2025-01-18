@@ -3,7 +3,7 @@ use std::net::{SocketAddr, ToSocketAddrs};
 
 use crate::op;
 use crate::util::write_buf;
-use crate::{RoutedMessage, VSizedBuffer};
+use crate::{RoutedMessage, SizedBuffer};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::signal;
@@ -18,7 +18,7 @@ pub enum VClientMode {
     Shutdown,
 }
 
-type FnProcess<T> = fn(context: T, UnboundedSender<RoutedMessage>, msg: VSizedBuffer) -> VClientMode;
+type FnProcess<T> = fn(context: T, UnboundedSender<RoutedMessage>, msg: SizedBuffer) -> VClientMode;
 
 pub async fn async_client<T>(context: T, flavor: op::Flavor, external_tx: UnboundedSender<RoutedMessage>, mut external_rx: UnboundedReceiver<RoutedMessage>, interface: String, process: FnProcess<T>) -> Result<(), ()>
 where
@@ -28,16 +28,16 @@ where
     let addr = addr.next().unwrap();
 
     while let Some(mut active_connection) = handle_client_connection(&addr, flavor).await {
-        let mut buf = [0_u8; VSizedBuffer::sizesize()];
+        let mut buf = [0_u8; SizedBuffer::sizesize()];
         let mode = loop {
             tokio::select! {
                 read_result = active_connection.read_exact(&mut buf[..]) => {
                     match read_result {
                         Ok(bytes) => {
-                            if bytes == VSizedBuffer::sizesize() {
-                                let expected_bytes = VSizedBuffer::extract_size(&buf);
-                                let mut sized_buf = VSizedBuffer::new(expected_bytes);
-                                match active_connection.read_exact(&mut sized_buf.raw[VSizedBuffer::sizesize()..]).await {
+                            if bytes == SizedBuffer::sizesize() {
+                                let expected_bytes = SizedBuffer::extract_size(&buf);
+                                let mut sized_buf = SizedBuffer::new(expected_bytes);
+                                match active_connection.read_exact(&mut sized_buf.raw[SizedBuffer::sizesize()..]).await {
                                     Ok(bytes) => {
                                         if bytes != expected_bytes {
                                             error!("Bytes:{} Expected:{}", bytes, expected_bytes);
@@ -86,9 +86,9 @@ where
 async fn handle_client_connection(addr: &SocketAddr, flavor: op::Flavor) -> Option<TcpStream> {
     loop {
         if let Ok(mut stream) = TcpStream::connect(addr).await {
-            let mut buf = VSizedBuffer::new(32);
-            buf.push(&op::Command::Register);
-            buf.push(&flavor);
+            let mut buf = SizedBuffer::new(32);
+            buf.push(&op::Command::Register).ok()?;
+            buf.push(&flavor).ok()?;
 
             if write_buf(&mut stream, &buf).await.is_err() {
                 let _ = stream.shutdown().await;

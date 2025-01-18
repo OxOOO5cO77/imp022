@@ -5,12 +5,12 @@ use std::sync::RwLock;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::error::SendError;
 use tokio::sync::mpsc::UnboundedSender;
-use tracing::{info, instrument};
+use tracing::{error, info, instrument};
 
 use gate::message::gate_header::GateHeader;
 use hall::message::{GameRequestMessage, GameResponseMessage};
 use private::logic;
-use shared_net::{op, GameIdType, NodeType, RoutedMessage, VClientMode, VSizedBuffer};
+use shared_net::{op, GameIdType, NodeType, RoutedMessage, SizedBuffer, SizedBufferError, VClientMode};
 
 use crate::private::game::GameState;
 use private::logic::handle_phase_complete;
@@ -33,6 +33,8 @@ struct Hall {
 #[derive(Debug)]
 enum HallError {
     Io(std::io::Error),
+    SizedBuffer(&'static str, SizedBufferError),
+    Send(SendError<RoutedMessage>),
     Client(()),
 }
 
@@ -67,36 +69,39 @@ async fn hall_main(courtyard: String) -> Result<(), HallError> {
     Ok(())
 }
 
-fn process_courtyard(context: HallContext, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
+fn process_courtyard(context: HallContext, tx: UnboundedSender<RoutedMessage>, mut buf: SizedBuffer) -> VClientMode {
     let command = buf.pull::<op::Command>();
 
-    let result = match command {
-        op::Command::GameBuild => handle_recv(&context, tx, buf, logic::recv_game_build),
-        op::Command::GameActivate => handle_recv(&context, tx, buf, logic::recv_game_activate),
-        op::Command::GameChooseIntent => handle_recv(&context, tx, buf, logic::recv_game_choose_intent),
-        op::Command::GameChooseAttr => handle_recv(&context, tx, buf, logic::recv_game_choose_attr),
-        op::Command::GamePlayCard => handle_recv(&context, tx, buf, logic::recv_game_play_card),
-        op::Command::GameEndTurn => handle_recv(&context, tx, buf, logic::recv_game_end_turn),
-        op::Command::GameEndGame => handle_recv(&context, tx, buf, logic::recv_game_end_game),
-        op::Command::GameUpdateState => handle_recv(&context, tx, buf, logic::recv_game_update_state),
-        _ => return VClientMode::Continue,
-    };
+    if let Ok(command) = command {
+        let result = match command {
+            op::Command::GameBuild => handle_recv(&context, tx, buf, logic::recv_game_build),
+            op::Command::GameActivate => handle_recv(&context, tx, buf, logic::recv_game_activate),
+            op::Command::GameChooseIntent => handle_recv(&context, tx, buf, logic::recv_game_choose_intent),
+            op::Command::GameChooseAttr => handle_recv(&context, tx, buf, logic::recv_game_choose_attr),
+            op::Command::GamePlayCard => handle_recv(&context, tx, buf, logic::recv_game_play_card),
+            op::Command::GameEndTurn => handle_recv(&context, tx, buf, logic::recv_game_end_turn),
+            op::Command::GameEndGame => handle_recv(&context, tx, buf, logic::recv_game_end_game),
+            op::Command::GameUpdateState => handle_recv(&context, tx, buf, logic::recv_game_update_state),
+            _ => return VClientMode::Continue,
+        };
 
-    if let Ok(game_id) = result {
-        handle_phase_complete(context, game_id);
+        match result {
+            Ok(game_id) => handle_phase_complete(context, game_id),
+            Err(e) => error!(?command, ?e),
+        }
     }
 
     VClientMode::Continue
 }
 
-fn handle_recv<Request, Response>(context: &HallContext, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer, handle_request: impl Fn(&HallContext, Request, NodeType, GateHeader) -> Option<Response>) -> Result<GameIdType, SendError<RoutedMessage>>
+fn handle_recv<Request, Response>(context: &HallContext, tx: UnboundedSender<RoutedMessage>, mut buf: SizedBuffer, handle_request: impl Fn(&HallContext, Request, NodeType, GateHeader) -> Option<Response>) -> Result<GameIdType, HallError>
 where
     Request: GameRequestMessage,
     Response: GameResponseMessage,
 {
-    let gate = buf.pull::<NodeType>();
-    let header = buf.pull::<GateHeader>();
-    let request = buf.pull::<Request>();
+    let gate = buf.pull::<NodeType>().map_err(|e| HallError::SizedBuffer("gate", e))?;
+    let header = buf.pull::<GateHeader>().map_err(|e| HallError::SizedBuffer("header", e))?;
+    let request = buf.pull::<Request>().map_err(|e| HallError::SizedBuffer("request", e))?;
 
     let game_id = request.game_id();
     let vagabond = header.vagabond;

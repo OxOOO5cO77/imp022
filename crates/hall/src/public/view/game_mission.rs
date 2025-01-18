@@ -1,7 +1,6 @@
 use crate::core::{MissionIdType, MissionNodeIdType, MissionNodeKind, Token};
 use crate::view::{GameMissionNodePlayerView, GameMissionObjectivePlayerView};
-use shared_net::Bufferable;
-use shared_net::VSizedBuffer;
+use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
 #[derive(Bufferable, Default, Clone)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
@@ -47,16 +46,17 @@ impl GameMissionPlayerView {
 #[cfg(test)]
 mod test {
     use crate::view::GameMissionPlayerView;
-    use shared_net::{Bufferable, VSizedBuffer};
+    use shared_net::{SizedBuffer, SizedBufferError};
 
     #[test]
-    fn test_game_mission_player_view() {
+    fn test_game_mission_player_view() -> Result<(), SizedBufferError> {
         let orig_view = GameMissionPlayerView::test_default();
 
-        let mut buf = VSizedBuffer::new(orig_view.size_in_buffer());
-        buf.push(&orig_view);
-        let new_view = buf.pull::<GameMissionPlayerView>();
+        let mut buf = SizedBuffer::from(&orig_view)?;
+        let new_view = buf.pull::<GameMissionPlayerView>()?;
 
         assert_eq!(orig_view, new_view);
+
+        Ok(())
     }
 }

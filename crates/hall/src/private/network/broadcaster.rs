@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use tokio::sync::mpsc::UnboundedSender;
-
 use hall::message::CommandMessage;
 use shared_net::{NodeType, RoutedMessage, UserIdType};
+use tokio::sync::mpsc::UnboundedSender;
+use tracing::error;
 
 use crate::private::network::util::send_routed_message;
 
@@ -25,6 +25,7 @@ impl Broadcaster {
         for (id, (gate, vagabond)) in &self.gate_map {
             let result = send_routed_message(&message, *gate, *vagabond, &self.local_tx);
             if result.is_err() {
+                error!(?result, id, gate, vagabond);
                 errors.push(*id);
             }
         }
@@ -38,6 +39,7 @@ impl Broadcaster {
         if let Some((gate, vagabond)) = self.gate_map.get(id) {
             let result = send_routed_message(message, *gate, *vagabond, &self.local_tx);
             if result.is_err() {
+                error!(?result, id, gate, vagabond);
                 self.gate_map.remove(id);
             }
         }

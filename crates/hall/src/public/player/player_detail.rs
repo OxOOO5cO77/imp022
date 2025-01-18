@@ -1,8 +1,10 @@
 use std::mem::size_of;
 
-use crate::core::{Detail, DetailNumberType, DetailValueType, GeneralType, SpecificType};
 use serde::{Deserialize, Serialize};
-use shared_net::{Bufferable, VSizedBuffer};
+
+use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
+
+use crate::core::{Detail, DetailNumberType, DetailValueType, GeneralType, SpecificType};
 
 type PackedDetailType = u64;
 
@@ -79,12 +81,12 @@ impl PlayerDetail {
 }
 
 impl Bufferable for PlayerDetail {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.pack().push_into(buf);
+    fn push_into(&self, buf: &mut SizedBuffer) -> Result<usize, SizedBufferError> {
+        self.pack().push_into(buf)
     }
 
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        Self::unpack(PackedDetailType::pull_from(buf))
+    fn pull_from(buf: &mut SizedBuffer) -> Result<Self, SizedBufferError> {
+        Ok(Self::unpack(PackedDetailType::pull_from(buf)?))
     }
 
     fn size_in_buffer(&self) -> usize {
@@ -96,21 +98,21 @@ impl Bufferable for PlayerDetail {
 mod test {
     use crate::core::Detail;
     use crate::player::PlayerDetail;
-    use shared_net::{Bufferable, VSizedBuffer};
+    use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]
-    fn test_player_detail() {
+    fn test_player_detail() -> Result<(), SizedBufferError> {
         let orig = PlayerDetail {
             number: 123,
             detail: Detail::Role(4, 16),
             value: 9,
         };
 
-        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
-        buf.push(&orig);
-        let result = buf.pull::<PlayerDetail>();
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<PlayerDetail>()?;
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(result, orig);
+        Ok(())
     }
 }

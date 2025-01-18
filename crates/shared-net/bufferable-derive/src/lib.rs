@@ -11,12 +11,12 @@ pub fn bufferable_derive(input: TokenStream) -> TokenStream {
         if let Fields::Named(ref fields) = data.fields {
             let push_into = fields.named.iter().map(|field| {
                 let name = &field.ident;
-                quote!(self.#name.push_into(buf);)
+                quote!(pushed += self.#name.push_into(buf)?;)
             });
             let pull_from_vars = fields.named.iter().map(|field| {
                 let name = &field.ident;
                 let ty = &field.ty;
-                quote!(let #name = <#ty>::pull_from(buf);)
+                quote!(let #name = <#ty>::pull_from(buf)?;)
             });
             let pull_from_self = fields.named.iter().map(|field| {
                 let name = &field.ident;
@@ -29,15 +29,18 @@ pub fn bufferable_derive(input: TokenStream) -> TokenStream {
 
             let output = quote!(
                 impl Bufferable for #name {
-                    fn push_into(&self, buf: &mut VSizedBuffer) {
+                    fn push_into(&self, buf: &mut SizedBuffer) -> Result<usize, SizedBufferError>{
+                        let mut pushed = 0;
                         #(#push_into)*
+                        Ok(pushed)
                     }
 
-                    fn pull_from(buf: &mut VSizedBuffer) -> Self {
+                    fn pull_from(buf: &mut SizedBuffer) -> Result<Self, SizedBufferError> {
                         #(#pull_from_vars)*
-                        Self {
+                        let result = Self {
                             #(#pull_from_self),*
-                        }
+                        };
+                        Ok(result)
                     }
 
                     fn size_in_buffer(&self) -> usize {

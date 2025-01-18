@@ -1,4 +1,4 @@
-use shared_net::{op, Bufferable, VSizedBuffer};
+use shared_net::{op, Bufferable, SizedBuffer, SizedBufferError};
 
 use crate::message::CommandMessage;
 
@@ -15,19 +15,20 @@ impl CommandMessage for GameResolveCardsMessage {
 #[cfg(test)]
 mod test {
     use crate::message::game_resolve_cards::GameResolveCardsMessage;
-    use shared_net::{Bufferable, VSizedBuffer};
+    use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]
-    fn test_response() {
+    fn test_response() -> Result<(), SizedBufferError> {
         let orig = GameResolveCardsMessage {
             success: true,
         };
 
-        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
-        buf.push(&orig);
-        let result = buf.pull::<GameResolveCardsMessage>();
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<GameResolveCardsMessage>()?;
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig, result);
+
+        Ok(())
     }
 }

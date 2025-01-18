@@ -7,7 +7,7 @@ use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, instrument};
 
 use gate::message::gate_header::GateHeader;
-use shared_net::{op, NodeType, RoutedMessage, VClientMode, VSizedBuffer};
+use shared_net::{op, Bufferable, NodeType, RoutedMessage, SizedBuffer, SizedBufferError, VClientMode};
 
 struct Archive {
     pool: PgPool,
@@ -52,19 +52,19 @@ async fn archive_main(courtyard: String, database: &str) -> Result<(), ArchiveEr
     Ok(())
 }
 
-fn process_courtyard(context: Arc<Mutex<Archive>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
-    match buf.pull::<op::Command>() {
-        op::Command::InvGen => c_invgen(context, tx, buf),
-        op::Command::InvList => c_invlist(context, tx, buf),
-        _ => {}
-    }
+fn process_courtyard(context: Arc<Mutex<Archive>>, tx: UnboundedSender<RoutedMessage>, mut buf: SizedBuffer) -> VClientMode {
+    let _result = match buf.pull::<op::Command>() {
+        Ok(op::Command::InvGen) => c_invgen(context, tx, buf),
+        Ok(op::Command::InvList) => c_invlist(context, tx, buf),
+        _ => Ok(()),
+    };
     VClientMode::Continue
 }
 
-fn c_invgen(context: Arc<Mutex<Archive>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
-    let gate = buf.pull::<NodeType>();
-    let header = buf.pull::<GateHeader>();
-    let _ob_type = buf.pull::<u8>();
+fn c_invgen(context: Arc<Mutex<Archive>>, tx: UnboundedSender<RoutedMessage>, mut buf: SizedBuffer) -> Result<(), SizedBufferError> {
+    let gate = buf.pull::<NodeType>()?;
+    let header = buf.pull::<GateHeader>()?;
+    let _ob_type = buf.pull::<u8>()?;
 
     let pool = context.lock().unwrap().pool.clone();
 
@@ -73,21 +73,24 @@ fn c_invgen(context: Arc<Mutex<Archive>>, tx: UnboundedSender<RoutedMessage>, mu
         let object_uuid = Uuid::new_v4();
         let result = sqlx::query("INSERT INTO objects(user_uuid,ob_uuid) VALUES ( $1, $2 )").bind(user_uuid).bind(object_uuid).execute(&pool).await.is_ok();
         if result {
-            let mut out = VSizedBuffer::new(6 + 200 * 16);
-            out.push(&op::Route::One(gate));
-            out.push(&op::Command::InvList);
-            out.push(&header.vagabond);
+            if let Ok(out) = move || -> Result<SizedBuffer, SizedBufferError> {
+                let route = op::Route::One(gate);
+                let command = op::Command::InvList;
+                let results = vec![object_uuid.as_u128()];
 
-            out.push(&1_u16);
-            out.push(&object_uuid.as_u128());
-
-            let _ = tx.send(RoutedMessage {
-                route: op::Route::None,
-                buf: out,
-            });
+                let mut out = SizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + header.vagabond.size_in_buffer() + results.size_in_buffer());
+                out.push(&route)?;
+                out.push(&command)?;
+                out.push(&header.vagabond)?;
+                out.push(&results)?;
+                Ok(out)
+            }() {
+                let _ = tx.send(out.into());
+            }
         }
     };
     tokio::spawn(future);
+    Ok(())
 }
 
 #[derive(sqlx::FromRow)]
@@ -95,10 +98,10 @@ struct Object {
     ob_uuid: Uuid,
 }
 
-fn c_invlist(context: Arc<Mutex<Archive>>, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) {
-    let gate = buf.pull::<NodeType>();
-    let header = buf.pull::<GateHeader>();
-    let _ob_type = buf.pull::<u8>();
+fn c_invlist(context: Arc<Mutex<Archive>>, tx: UnboundedSender<RoutedMessage>, mut buf: SizedBuffer) -> Result<(), SizedBufferError> {
+    let gate = buf.pull::<NodeType>()?;
+    let header = buf.pull::<GateHeader>()?;
+    let _ob_type = buf.pull::<u8>()?;
 
     let pool = context.lock().unwrap().pool.clone();
 
@@ -107,20 +110,22 @@ fn c_invlist(context: Arc<Mutex<Archive>>, tx: UnboundedSender<RoutedMessage>, m
 
         let query_result = sqlx::query_as::<_, Object>("SELECT (ob_uuid) FROM objects WHERE user_uuid = $1").bind(user_uuid).fetch_all(&pool).await;
         if let Ok(results) = query_result {
-            let mut out = VSizedBuffer::new(6 + results.len() * 16);
-            out.push(&op::Route::One(gate));
-            out.push(&op::Command::InvList);
-            out.push(&header.vagabond);
-            out.push(&(results.len() as u16));
-            for ob in results {
-                out.push(&ob.ob_uuid.as_u128());
-            }
+            if let Ok(out) = move || -> Result<SizedBuffer, SizedBufferError> {
+                let route = op::Route::One(gate);
+                let command = op::Command::InvList;
+                let mapped_results = results.iter().map(|r| r.ob_uuid.as_u128()).collect::<Vec<_>>();
 
-            let _ = tx.send(RoutedMessage {
-                route: op::Route::None,
-                buf: out,
-            });
+                let mut out = SizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + header.vagabond.size_in_buffer() + mapped_results.size_in_buffer());
+                out.push(&op::Route::One(gate))?;
+                out.push(&op::Command::InvList)?;
+                out.push(&header.vagabond)?;
+                out.push(&mapped_results)?;
+                Ok(out)
+            }() {
+                let _ = tx.send(out.into());
+            }
         }
     };
     tokio::spawn(future);
+    Ok(())
 }

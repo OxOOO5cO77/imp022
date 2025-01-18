@@ -1,4 +1,4 @@
-use shared_net::{op, Bufferable, GameIdType, VSizedBuffer};
+use shared_net::{op, Bufferable, GameIdType, SizedBuffer, SizedBufferError};
 
 use crate::core::MissionNodeIntent;
 use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
@@ -36,34 +36,34 @@ impl GameResponseMessage for GameChooseIntentResponse {}
 mod test {
     use crate::core::{MissionNodeIntent, MissionNodeLinkDir};
     use crate::message::game_choose_intent::{GameChooseIntentRequest, GameChooseIntentResponse};
-    use shared_net::{Bufferable, VSizedBuffer};
+    use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]
-    fn test_request() {
+    fn test_request() -> Result<(), SizedBufferError> {
         let orig = GameChooseIntentRequest {
             game_id: 1234567890,
             intent: MissionNodeIntent::Link(MissionNodeLinkDir::North),
         };
 
-        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
-        buf.push(&orig);
-        let result = buf.pull::<GameChooseIntentRequest>();
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<GameChooseIntentRequest>()?;
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig, result);
+        Ok(())
     }
 
     #[test]
-    fn test_response() {
+    fn test_response() -> Result<(), SizedBufferError> {
         let orig = GameChooseIntentResponse {
             success: true,
         };
 
-        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
-        buf.push(&orig);
-        let result = buf.pull::<GameChooseIntentResponse>();
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<GameChooseIntentResponse>()?;
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig, result);
+        Ok(())
     }
 }

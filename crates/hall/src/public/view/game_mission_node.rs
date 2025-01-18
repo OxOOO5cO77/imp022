@@ -1,5 +1,5 @@
 use crate::core::{ActorIdType, MissionNodeContent, MissionNodeIdType, MissionNodeKind, MissionNodeLink, MissionNodeLinkDamageType, MissionNodeLinkDir, MissionNodeLinkState, RemoteIdType};
-use shared_net::{Bufferable, VSizedBuffer};
+use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
 #[derive(Default, Clone)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
@@ -121,32 +121,33 @@ impl GameMissionNodePlayerView {
 }
 
 impl Bufferable for GameMissionNodePlayerView {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        let packed_mission = self.pack_mission();
-        packed_mission.push_into(buf);
-        let packed_links = self.pack_links();
-        packed_links.push_into(buf);
-        self.content.push_into(buf);
-        self.remote.push_into(buf);
-        self.users.push_into(buf);
+    fn push_into(&self, buf: &mut SizedBuffer) -> Result<usize, SizedBufferError> {
+        let mut pushed = 0;
+        pushed += self.pack_mission().push_into(buf)?;
+        pushed += self.pack_links().push_into(buf)?;
+        pushed += self.content.push_into(buf)?;
+        pushed += self.remote.push_into(buf)?;
+        pushed += self.users.push_into(buf)?;
+        Ok(pushed)
     }
 
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let packed_mission = PackedMissionNodeType::pull_from(buf);
+    fn pull_from(buf: &mut SizedBuffer) -> Result<Self, SizedBufferError> {
+        let packed_mission = PackedMissionNodeType::pull_from(buf)?;
         let (id, kind) = Self::unpack_mission(packed_mission);
-        let packed_links = PackedMissionNodeLinkType::pull_from(buf);
+        let packed_links = PackedMissionNodeLinkType::pull_from(buf)?;
         let links = Self::unpack_links(packed_links);
-        let content = <Vec<MissionNodeContent>>::pull_from(buf);
-        let remote = RemoteIdType::pull_from(buf);
-        let users = <Vec<ActorIdType>>::pull_from(buf);
-        Self {
+        let content = <Vec<MissionNodeContent>>::pull_from(buf)?;
+        let remote = RemoteIdType::pull_from(buf)?;
+        let users = <Vec<ActorIdType>>::pull_from(buf)?;
+        let result = Self {
             id,
             kind,
             links,
             content,
             remote,
             users,
-        }
+        };
+        Ok(result)
     }
 
     fn size_in_buffer(&self) -> usize {
@@ -188,7 +189,7 @@ impl GameMissionNodePlayerView {
             ],
             content: Vec::new(),
             remote: 12345678901234567890,
-            users: Vec::new(),
+            users: vec![123123123, 12312312351, 1231616123123, 1231391238],
         }
     }
 }
@@ -196,16 +197,16 @@ impl GameMissionNodePlayerView {
 #[cfg(test)]
 mod test {
     use crate::view::GameMissionNodePlayerView;
-    use shared_net::{Bufferable, VSizedBuffer};
+    use shared_net::{SizedBuffer, SizedBufferError};
 
     #[test]
-    fn test_game_mission_node_player_view() {
+    fn test_game_mission_node_player_view() -> Result<(), SizedBufferError> {
         let orig_view = GameMissionNodePlayerView::test_default();
 
-        let mut buf = VSizedBuffer::new(orig_view.size_in_buffer());
-        buf.push(&orig_view);
-        let new_view = buf.pull::<GameMissionNodePlayerView>();
+        let mut buf = SizedBuffer::from(&orig_view)?;
+        let new_view = buf.pull::<GameMissionNodePlayerView>()?;
 
         assert_eq!(orig_view, new_view);
+        Ok(())
     }
 }

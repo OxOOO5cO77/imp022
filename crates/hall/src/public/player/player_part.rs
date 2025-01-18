@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use shared_net::{Bufferable, SeedType, VSizedBuffer};
+use shared_net::{Bufferable, SeedType, SizedBuffer, SizedBufferError};
 
 use crate::core::AttributeValueType;
 use crate::player::{PlayerBuild, PlayerDetail};
@@ -22,10 +22,10 @@ pub struct PlayerPart {
 mod test {
     use crate::core::{Build, Detail};
     use crate::player::{PlayerBuild, PlayerDetail, PlayerPart};
-    use shared_net::{Bufferable, VSizedBuffer};
+    use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]
-    fn test_player_part() {
+    fn test_player_part() -> Result<(), SizedBufferError> {
         let orig = PlayerPart {
             seed: 1234567890,
             values: [9, 1, 9, 1],
@@ -74,11 +74,12 @@ mod test {
                 },
             ],
         };
-        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
-        buf.push(&orig);
-        let result = buf.pull::<PlayerPart>();
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<PlayerPart>()?;
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig, result);
+
+        Ok(())
     }
 }

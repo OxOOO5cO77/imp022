@@ -1,6 +1,6 @@
 use crate::core::MissionNodeIdType;
 use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
-use shared_net::{op, Bufferable, GameIdType, VSizedBuffer};
+use shared_net::{op, Bufferable, GameIdType, SizedBuffer, SizedBufferError};
 
 pub type CardIdxType = u8;
 
@@ -33,19 +33,20 @@ impl GameRequestMessage for GamePlayCardRequest {
 }
 
 impl Bufferable for CardTarget {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
+    fn push_into(&self, buf: &mut SizedBuffer) -> Result<usize, SizedBufferError> {
         match self {
             CardTarget::Local => 0u8,
             CardTarget::Remote(node) => *node,
         }
-        .push_into(buf);
+        .push_into(buf)
     }
 
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        match u8::pull_from(buf) {
+    fn pull_from(buf: &mut SizedBuffer) -> Result<Self, SizedBufferError> {
+        let result = match u8::pull_from(buf)? {
             0 => CardTarget::Local,
             node => CardTarget::Remote(node),
-        }
+        };
+        Ok(result)
     }
 
     fn size_in_buffer(&self) -> usize {
@@ -68,34 +69,34 @@ impl GameResponseMessage for GamePlayCardResponse {}
 #[cfg(test)]
 mod test {
     use crate::message::game_play_card::{CardTarget, GamePlayCardRequest, GamePlayCardResponse};
-    use shared_net::{Bufferable, VSizedBuffer};
+    use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]
-    fn test_request() {
+    fn test_request() -> Result<(), SizedBufferError> {
         let orig = GamePlayCardRequest {
             game_id: 1234567890,
             picks: vec![(0, CardTarget::Local), (1, CardTarget::Remote(1)), (2, CardTarget::Remote(1))],
         };
 
-        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
-        buf.push(&orig);
-        let result = buf.pull::<GamePlayCardRequest>();
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<GamePlayCardRequest>()?;
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig, result);
+        Ok(())
     }
 
     #[test]
-    fn test_response() {
+    fn test_response() -> Result<(), SizedBufferError> {
         let orig = GamePlayCardResponse {
             success: [true, false, true, false, true],
         };
 
-        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
-        buf.push(&orig);
-        let result = buf.pull::<GamePlayCardResponse>();
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<GamePlayCardResponse>()?;
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig, result);
+        Ok(())
     }
 }

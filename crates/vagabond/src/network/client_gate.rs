@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
 use bevy::prelude::Resource;
+use std::collections::HashMap;
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
@@ -8,7 +7,7 @@ use tokio::task::JoinHandle;
 
 use hall::core::{AttributeKind, MissionNodeIntent};
 use hall::message::*;
-use shared_net::{op, RoutedMessage, VClientMode, VSizedBuffer};
+use shared_net::{op, RoutedMessage, SizedBuffer, SizedBufferError, VClientMode};
 use shared_net::{AuthType, Bufferable, GameIdType, PartType};
 
 pub(crate) enum GateCommand {
@@ -46,89 +45,88 @@ pub(crate) struct GateClient {
 impl GateClient {
     pub(crate) fn start(iface: String, tx: UnboundedSender<GateCommand>, rx: UnboundedReceiver<RoutedMessage>, runtime: &Runtime) -> Option<JoinHandle<Result<(), ()>>> {
         let (dummy_tx, _) = mpsc::unbounded_channel();
-        Some(runtime.spawn(shared_net::async_client(
-            GateClient {
-                tx,
-            },
-            op::Flavor::Vagabond,
-            dummy_tx,
-            rx,
-            iface,
-            process_gate,
-        )))
+        let gate_client = GateClient {
+            tx,
+        };
+        Some(runtime.spawn(shared_net::async_client(gate_client, op::Flavor::Vagabond, dummy_tx, rx, iface, process_gate)))
     }
 }
 
-fn process_gate(context: GateClient, _tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
-    match buf.pull::<op::Command>() {
-        op::Command::Hello => recv_hello(context),
-        op::Command::Chat => recv_chat(&mut buf),
-        op::Command::DM => recv_dm(&mut buf),
-        op::Command::InvList => recv_inv_list(&mut buf),
-        op::Command::GameActivate => recv_response(context, &mut buf, GateCommand::GameActivate),
-        op::Command::GameBuild => recv_response(context, &mut buf, GateCommand::GameBuild),
-        op::Command::GameStartGame => recv_response(context, &mut buf, GateCommand::GameStartGame),
-        op::Command::GameChooseIntent => recv_response(context, &mut buf, GateCommand::GameChooseIntent),
-        op::Command::GameRoll => recv_response(context, &mut buf, GateCommand::GameRoll),
-        op::Command::GameChooseAttr => recv_response(context, &mut buf, GateCommand::GameChooseAttr),
-        op::Command::GameResources => recv_response(context, &mut buf, GateCommand::GameResources),
-        op::Command::GamePlayCard => recv_response(context, &mut buf, GateCommand::GamePlayCard),
-        op::Command::GameResolveCards => recv_response(context, &mut buf, GateCommand::GameResolveCards),
-        op::Command::GameEndTurn => recv_response(context, &mut buf, GateCommand::GameEndTurn),
-        op::Command::GameTick => recv_response(context, &mut buf, GateCommand::GameTick),
-        op::Command::GameEndGame => recv_response(context, &mut buf, GateCommand::GameEndGame),
-        op::Command::GameUpdateMission => recv_response(context, &mut buf, GateCommand::GameUpdateMission),
-        op::Command::GameUpdateTokens => recv_response(context, &mut buf, GateCommand::GameUpdateTokens),
-        op::Command::GameUpdateState => recv_response(context, &mut buf, GateCommand::GameUpdateState),
-        op::Command::NoOp | op::Command::Register | op::Command::Authorize | op::Command::UserAttr | op::Command::InvGen => VClientMode::Continue,
+fn process_gate(context: GateClient, _tx: UnboundedSender<RoutedMessage>, mut buf: SizedBuffer) -> VClientMode {
+    if let Ok(command) = buf.pull::<op::Command>() {
+        match command {
+            op::Command::Hello => recv_hello(context),
+            op::Command::Chat => recv_chat(&mut buf),
+            op::Command::DM => recv_dm(&mut buf),
+            op::Command::InvList => recv_inv_list(&mut buf),
+            op::Command::GameActivate => recv_response(context, &mut buf, GateCommand::GameActivate),
+            op::Command::GameBuild => recv_response(context, &mut buf, GateCommand::GameBuild),
+            op::Command::GameStartGame => recv_response(context, &mut buf, GateCommand::GameStartGame),
+            op::Command::GameChooseIntent => recv_response(context, &mut buf, GateCommand::GameChooseIntent),
+            op::Command::GameRoll => recv_response(context, &mut buf, GateCommand::GameRoll),
+            op::Command::GameChooseAttr => recv_response(context, &mut buf, GateCommand::GameChooseAttr),
+            op::Command::GameResources => recv_response(context, &mut buf, GateCommand::GameResources),
+            op::Command::GamePlayCard => recv_response(context, &mut buf, GateCommand::GamePlayCard),
+            op::Command::GameResolveCards => recv_response(context, &mut buf, GateCommand::GameResolveCards),
+            op::Command::GameEndTurn => recv_response(context, &mut buf, GateCommand::GameEndTurn),
+            op::Command::GameTick => recv_response(context, &mut buf, GateCommand::GameTick),
+            op::Command::GameEndGame => recv_response(context, &mut buf, GateCommand::GameEndGame),
+            op::Command::GameUpdateMission => recv_response(context, &mut buf, GateCommand::GameUpdateMission),
+            op::Command::GameUpdateTokens => recv_response(context, &mut buf, GateCommand::GameUpdateTokens),
+            op::Command::GameUpdateState => recv_response(context, &mut buf, GateCommand::GameUpdateState),
+            op::Command::NoOp | op::Command::Register | op::Command::Authorize | op::Command::UserAttr | op::Command::InvGen => Ok(VClientMode::Continue),
+        }
+        .unwrap_or(VClientMode::Continue)
+    } else {
+        VClientMode::Continue
     }
 }
 
-fn recv_hello(context: GateClient) -> VClientMode {
+fn recv_hello(context: GateClient) -> Result<VClientMode, SizedBufferError> {
     let _ = context.tx.send(GateCommand::Hello);
-    VClientMode::Continue
+    Ok(VClientMode::Continue)
 }
 
-fn recv_chat(buf: &mut VSizedBuffer) -> VClientMode {
-    let name = buf.pull::<String>();
-    if let Ok(msg) = String::from_utf8(buf.drain_bytes()) {
+fn recv_chat(buf: &mut SizedBuffer) -> Result<VClientMode, SizedBufferError> {
+    let name = buf.pull::<String>()?;
+    if let Ok(msg) = String::from_utf8(buf.pull_remaining()?) {
         println!("[Chat] {}: {}", name, msg.as_str());
     }
 
-    VClientMode::Continue
+    Ok(VClientMode::Continue)
 }
 
-fn recv_dm(buf: &mut VSizedBuffer) -> VClientMode {
-    let name = buf.pull::<String>();
-    if let Ok(msg) = String::from_utf8(buf.drain_bytes()) {
+fn recv_dm(buf: &mut SizedBuffer) -> Result<VClientMode, SizedBufferError> {
+    let name = buf.pull::<String>()?;
+    if let Ok(msg) = String::from_utf8(buf.pull_remaining()?) {
         println!("[DM] {}: {}", name, msg.as_str());
     }
 
-    VClientMode::Continue
+    Ok(VClientMode::Continue)
 }
 
-fn recv_inv_list(buf: &mut VSizedBuffer) -> VClientMode {
-    let count = buf.pull::<u16>();
+fn recv_inv_list(buf: &mut SizedBuffer) -> Result<VClientMode, SizedBufferError> {
+    let count = buf.pull::<u16>()?;
     println!("[InvList] {} objects", count);
     for _idx in 0..count {
-        println!("[InvList] * {:X}", buf.pull::<u64>());
+        println!("[InvList] * {:X}", buf.pull::<u64>()?);
     }
 
-    VClientMode::Continue
+    Ok(VClientMode::Continue)
 }
 
-fn recv_response<T: Bufferable>(context: GateClient, buf: &mut VSizedBuffer, as_enum: impl FnOnce(Box<T>) -> GateCommand) -> VClientMode {
-    let response = buf.pull::<T>();
+fn recv_response<T: Bufferable>(context: GateClient, buf: &mut SizedBuffer, as_enum: impl FnOnce(Box<T>) -> GateCommand) -> Result<VClientMode, SizedBufferError> {
+    let response = buf.pull::<T>()?;
     let _ = context.tx.send(as_enum(Box::new(response)));
-    VClientMode::Continue
+    Ok(VClientMode::Continue)
 }
 
 impl GateIFace {
     fn send_request<T: CommandMessage>(&self, request: T) -> bool {
-        let mut out = VSizedBuffer::new(T::COMMAND.size_in_buffer() + self.auth.size_in_buffer() + request.size_in_buffer());
-        out.push(&T::COMMAND);
-        out.push(&self.auth);
-        out.push(&request);
+        let mut out = SizedBuffer::new(T::COMMAND.size_in_buffer() + self.auth.size_in_buffer() + request.size_in_buffer());
+        let _ = out.push(&T::COMMAND);
+        let _ = out.push(&self.auth);
+        let _ = out.push(&request);
 
         let result = self.gtx.send(RoutedMessage {
             route: op::Route::Local,
@@ -204,10 +202,10 @@ impl GateIFace {
 
     #[allow(dead_code)]
     pub fn g_send_hack(&self) {
-        let mut out = VSizedBuffer::new(32);
-        out.push(&op::Command::InvGen);
-        out.push(&self.auth);
-        out.push(&123_u8);
+        let mut out = SizedBuffer::new(32);
+        let _ = out.push(&op::Command::InvGen);
+        let _ = out.push(&self.auth);
+        let _ = out.push(&123_u8);
 
         let _ = self.gtx.send(RoutedMessage {
             route: op::Route::Local,
@@ -217,10 +215,10 @@ impl GateIFace {
 
     #[allow(dead_code)]
     pub fn g_send_inv(&self) {
-        let mut out = VSizedBuffer::new(32);
-        out.push(&op::Command::InvList);
-        out.push(&self.auth);
-        out.push(&123_u8);
+        let mut out = SizedBuffer::new(32);
+        let _ = out.push(&op::Command::InvList);
+        let _ = out.push(&self.auth);
+        let _ = out.push(&123_u8);
 
         let _ = self.gtx.send(RoutedMessage {
             route: op::Route::Local,
@@ -230,10 +228,10 @@ impl GateIFace {
 
     #[allow(dead_code)]
     pub fn g_send_chat(&self, msg: &str) {
-        let mut out = VSizedBuffer::new(256);
-        out.push(&op::Command::Chat);
-        out.push(&self.auth);
-        out.push(&msg.to_string());
+        let mut out = SizedBuffer::new(256);
+        let _ = out.push(&op::Command::Chat);
+        let _ = out.push(&self.auth);
+        let _ = out.push(&msg.to_string());
 
         let _ = self.gtx.send(RoutedMessage {
             route: op::Route::Local,
@@ -243,11 +241,11 @@ impl GateIFace {
 
     #[allow(dead_code)]
     pub fn g_send_dm(&self, who: &str, msg: &str) {
-        let mut out = VSizedBuffer::new(256);
-        out.push(&op::Command::DM);
-        out.push(&self.auth);
-        out.push(&who.to_string());
-        out.push(&msg.to_string());
+        let mut out = SizedBuffer::new(256);
+        let _ = out.push(&op::Command::DM);
+        let _ = out.push(&self.auth);
+        let _ = out.push(&who.to_string());
+        let _ = out.push(&msg.to_string());
 
         let _ = self.gtx.send(RoutedMessage {
             route: op::Route::Local,

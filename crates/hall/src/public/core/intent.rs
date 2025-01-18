@@ -1,7 +1,7 @@
 use crate::core::{MissionNodeKind, MissionNodeLinkDir};
 use num_enum::{FromPrimitive, IntoPrimitive};
 use serde::{Deserialize, Serialize};
-use shared_net::{Bufferable, VSizedBuffer};
+use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
 #[repr(u8)]
 #[derive(Clone, Copy, PartialEq, Serialize, Deserialize, FromPrimitive, IntoPrimitive)]
@@ -126,7 +126,7 @@ fn unpack(packed: u16) -> (u8, u8) {
 }
 
 impl Bufferable for MissionNodeIntent {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
+    fn push_into(&self, buf: &mut SizedBuffer) -> Result<usize, SizedBufferError> {
         let packed = match self {
             MissionNodeIntent::None => 0u16,
             MissionNodeIntent::Link(dir) => pack(1, (*dir).into()),
@@ -139,12 +139,12 @@ impl Bufferable for MissionNodeIntent {
             MissionNodeIntent::Gateway(action) => pack(8, (*action).into()),
             MissionNodeIntent::Hardware(action) => pack(9, (*action).into()),
         };
-        packed.push_into(buf);
+        packed.push_into(buf)
     }
 
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        let (intent, action) = unpack(u16::pull_from(buf));
-        match intent {
+    fn pull_from(buf: &mut SizedBuffer) -> Result<Self, SizedBufferError> {
+        let (intent, action) = unpack(u16::pull_from(buf)?);
+        let result = match intent {
             1 => MissionNodeIntent::Link(action.into()),
             2 => MissionNodeIntent::AccessPoint(action.into()),
             3 => MissionNodeIntent::Backend(action.into()),
@@ -155,7 +155,8 @@ impl Bufferable for MissionNodeIntent {
             8 => MissionNodeIntent::Gateway(action.into()),
             9 => MissionNodeIntent::Hardware(action.into()),
             _ => MissionNodeIntent::None,
-        }
+        };
+        Ok(result)
     }
 
     fn size_in_buffer(&self) -> usize {

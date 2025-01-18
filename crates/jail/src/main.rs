@@ -2,7 +2,7 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, instrument};
 
-use shared_net::{op, NodeType, RoutedMessage, TimestampType, UserIdType, VClientMode, VSizedBuffer};
+use shared_net::{op, NodeType, RoutedMessage, SizedBuffer, SizedBufferError, TimestampType, UserIdType, VClientMode};
 
 #[derive(Clone)]
 struct NoContext;
@@ -39,19 +39,21 @@ async fn jail_main(courtyard: String) -> Result<(), JailError> {
     Ok(())
 }
 
-fn process_courtyard(_context: NoContext, _tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
-    if let op::Command::UserAttr = buf.pull::<op::Command>() {
-        c_userattr(buf)
-    }
+fn process_courtyard(_context: NoContext, _tx: UnboundedSender<RoutedMessage>, mut buf: SizedBuffer) -> VClientMode {
+    let _result = match buf.pull::<op::Command>() {
+        Ok(op::Command::UserAttr) => c_userattr(buf),
+        _ => Ok(()),
+    };
     VClientMode::Continue
 }
 
-fn c_userattr(mut buf: VSizedBuffer) {
+fn c_userattr(mut buf: SizedBuffer) -> Result<(), SizedBufferError> {
     let _ = buf.pull::<NodeType>(); // gate (discard)
 
-    let user = buf.pull::<UserIdType>();
-    let attr = buf.pull::<String>();
-    let time = buf.pull::<TimestampType>();
+    let user = buf.pull::<UserIdType>()?;
+    let attr = buf.pull::<String>()?;
+    let time = buf.pull::<TimestampType>()?;
 
     info!(user, attr, time);
+    Ok(())
 }

@@ -1,4 +1,4 @@
-use shared_net::{op, Bufferable, VSizedBuffer};
+use shared_net::{op, Bufferable, SizedBuffer, SizedBufferError};
 
 use crate::core::{AttributeKind, AttributeValueType, ErgType};
 use crate::message::CommandMessage;
@@ -23,10 +23,10 @@ mod test {
     use crate::core::AttributeKind;
     use crate::message::game_resources::GameResourcesMessage;
     use crate::view::GameUserStatePlayerView;
-    use shared_net::{Bufferable, VSizedBuffer};
+    use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]
-    fn test_response() {
+    fn test_response() -> Result<(), SizedBufferError> {
         let orig = GameResourcesMessage {
             player_state_view: GameUserStatePlayerView::default(),
             remote_attr: [4, 5, 6, 5],
@@ -35,11 +35,12 @@ mod test {
             remote_kind: AttributeKind::Compute,
         };
 
-        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
-        buf.push(&orig);
-        let result = buf.pull::<GameResourcesMessage>();
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<GameResourcesMessage>()?;
 
         assert_eq!(buf.size(), orig.size_in_buffer());
         assert_eq!(orig, result);
+
+        Ok(())
     }
 }

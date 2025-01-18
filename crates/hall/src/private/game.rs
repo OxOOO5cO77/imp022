@@ -1,3 +1,4 @@
+mod game_actor;
 mod game_machine;
 mod game_mission;
 mod game_mission_node;
@@ -9,6 +10,7 @@ mod game_user;
 mod game_user_mission_state;
 mod game_user_state;
 
+pub(crate) use game_actor::GameActor;
 pub(crate) use game_machine::GameMachine;
 pub(crate) use game_mission::GameMission;
 pub(crate) use game_mission_node::GameMissionNode;

@@ -1,5 +1,4 @@
-use shared_net::Bufferable;
-use shared_net::VSizedBuffer;
+use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
 use crate::core::PriorityType;
 use crate::player::PlayerCard;
@@ -30,18 +29,18 @@ impl GameProcessPlayerView {
 #[cfg(test)]
 mod test {
     use crate::view::GameProcessPlayerView;
-    use shared_net::{Bufferable, VSizedBuffer};
+    use shared_net::{SizedBuffer, SizedBufferError};
 
     #[test]
-    fn test_process_player_view() {
+    fn test_process_player_view() -> Result<(), SizedBufferError> {
         let orig = GameProcessPlayerView::test_default();
 
-        let mut buf = VSizedBuffer::new(orig.size_in_buffer());
-        buf.push(&orig);
-        let result = buf.pull::<GameProcessPlayerView>();
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<GameProcessPlayerView>()?;
 
         assert_eq!(orig.player_card, result.player_card);
         assert_eq!(orig.priority, result.priority);
         assert_eq!(orig.local, result.local);
+        Ok(())
     }
 }

@@ -1,7 +1,7 @@
 use num_enum::{FromPrimitive, IntoPrimitive};
 use serde::{Deserialize, Serialize};
 
-use shared_net::{Bufferable, VSizedBuffer};
+use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
 use crate::core::{MissionNodeIdType, MissionNodeLinkDamageType};
 

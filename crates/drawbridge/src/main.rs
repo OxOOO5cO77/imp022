@@ -3,7 +3,8 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, instrument};
 
-use shared_net::{op, IdMessage, NodeType, RoutedMessage, VClientMode, VSizedBuffer};
+use crate::DrawbridgeError::{Client, Server};
+use shared_net::{op, IdMessage, NodeType, RoutedMessage, SizedBuffer, VClientMode};
 
 #[derive(Clone)]
 struct NoContext;
@@ -51,51 +52,46 @@ fn process_drawbridge(_context: NoContext, tx: UnboundedSender<RoutedMessage>, m
     let id = msg.id;
     let mut buf = msg.buf;
     match buf.pull::<op::Command>() {
-        op::Command::Authorize => v_authorize(&tx, id, &mut buf),
-        _ => false,
+        Ok(op::Command::Authorize) => v_authorize(&tx, id, &mut buf),
+        _ => Err(Client(())),
     }
-}
-
-fn v_authorize(tx: &UnboundedSender<RoutedMessage>, id: u8, buf: &mut VSizedBuffer) -> bool {
-    let mut out = VSizedBuffer::new(256);
-    out.push(&op::Route::Any(op::Flavor::Lookout));
-    out.push(&op::Command::Authorize);
-    out.push(&id);
-    out.xfer_bytes(buf);
-
-    tx.send(RoutedMessage {
-        route: op::Route::Local,
-        buf: out,
-    })
     .is_ok()
 }
 
-fn process_courtyard(_context: NoContext, tx: UnboundedSender<RoutedMessage>, mut buf: VSizedBuffer) -> VClientMode {
-    if let op::Command::Authorize = buf.pull::<op::Command>() {
-        c_authorize(&tx, &mut buf)
-    } else {
-        VClientMode::Continue
-    }
+fn v_authorize(tx: &UnboundedSender<RoutedMessage>, id: u8, buf: &mut SizedBuffer) -> Result<(), DrawbridgeError> {
+    let mut out = SizedBuffer::new(256);
+    out.push(&op::Route::Any(op::Flavor::Lookout)).map_err(|_| Client(()))?;
+    out.push(&op::Command::Authorize).map_err(|_| Client(()))?;
+    out.push(&id).map_err(|_| Client(()))?;
+    out.xfer_bytes(buf).map_err(|_| Client(()))?;
+
+    let message = RoutedMessage {
+        route: op::Route::Local,
+        buf: out,
+    };
+    tx.send(message).map_err(|_| Client(()))
 }
 
-fn c_authorize(tx: &UnboundedSender<RoutedMessage>, buf: &mut VSizedBuffer) -> VClientMode {
-    let mut out = VSizedBuffer::new(256);
-    out.push(&op::Command::Authorize);
+fn process_courtyard(_context: NoContext, tx: UnboundedSender<RoutedMessage>, mut buf: SizedBuffer) -> VClientMode {
+    let result = match buf.pull::<op::Command>() {
+        Ok(op::Command::Authorize) => c_authorize(&tx, &mut buf),
+        _ => Ok(VClientMode::Continue),
+    };
+    result.unwrap_or(VClientMode::Disconnect)
+}
+
+fn c_authorize(tx: &UnboundedSender<RoutedMessage>, buf: &mut SizedBuffer) -> Result<VClientMode, DrawbridgeError> {
+    let mut out = SizedBuffer::new(256);
+    out.push(&op::Command::Authorize).map_err(|_| Server(()))?;
 
     let _ = buf.pull::<NodeType>(); //discard
-    let route_id = buf.pull::<NodeType>();
+    let route_id = buf.pull::<NodeType>().map_err(|_| Server(()))?;
 
-    out.xfer_bytes(buf);
+    out.xfer_bytes(buf).map_err(|_| Server(()))?;
 
-    if tx
-        .send(RoutedMessage {
-            route: op::Route::One(route_id),
-            buf: out,
-        })
-        .is_err()
-    {
-        VClientMode::Disconnect
-    } else {
-        VClientMode::Continue
-    }
+    let message = RoutedMessage {
+        route: op::Route::One(route_id),
+        buf: out,
+    };
+    tx.send(message).map_err(|_| Server(())).map(|_| VClientMode::Continue)
 }

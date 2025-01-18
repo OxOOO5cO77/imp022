@@ -4,7 +4,7 @@ use std::iter::zip;
 
 use rand::{distr::Uniform, rngs::ThreadRng, Rng};
 
-use hall::core::{AttributeValueType, Attributes, ErgType, Phase, RemoteIdType, Stage, TickType};
+use hall::core::{ActorIdType, AttributeValueType, Attributes, ErgType, Phase, RemoteIdType, Stage, TickType};
 use hall::hall::{HallCard, HallMission};
 use hall::message::GameUpdateStateResponse;
 use hall::player::PlayerCard;
@@ -12,15 +12,17 @@ use hall::util;
 use hall::view::{GameMachinePlayerView, GameUserStatePlayerView};
 use shared_net::{op, AuthType, UserIdType};
 
-use crate::private::game::{GameMachine, GameMission, GameRemote, GameUser, GameUserCommandState};
+use crate::private::game::{GameActor, GameMachine, GameMission, GameRemote, GameUser, GameUserCommandState};
 
 type UserMapType = HashMap<UserIdType, GameUser>;
 pub(crate) type RemoteMapType = HashMap<RemoteIdType, GameRemote>;
+type ActorMapType = HashMap<ActorIdType, GameActor>;
 
 #[derive(Default)]
 pub(crate) struct GameState {
     pub(crate) users: UserMapType,
     pub(crate) remotes: RemoteMapType,
+    pub(crate) _actors: ActorMapType,
     current_tick: TickType,
     stage: Stage,
     pub(crate) erg_roll: [ErgType; 4],
@@ -34,21 +36,44 @@ pub(crate) enum IdType {
     Remote(RemoteIdType),
 }
 
+fn random_unique<T, U>(existing: &HashMap<T, U>, rng: &mut impl Rng) -> T
+where
+    rand::distr::StandardUniform: rand::distr::Distribution<T>,
+    T: Eq,
+    T: std::hash::Hash,
+{
+    loop {
+        let attempt = rng.random();
+        if !existing.contains_key(&attempt) {
+            return attempt;
+        }
+    }
+}
+
 impl GameState {
-    pub(crate) fn new(hall_mission: HallMission, mut rng: &mut impl Rng) -> Self {
+    pub(crate) fn new(hall_mission: HallMission, rng: &mut impl Rng) -> Self {
         let mut remotes = HashMap::new();
+        let mut actors = HashMap::new();
 
         let mut mission = GameMission::from(hall_mission);
 
         for node in mission.node.iter_mut() {
-            let attributes = Attributes::from_arrays([util::pick_values(&mut rng), util::pick_values(&mut rng), util::pick_values(&mut rng), util::pick_values(&mut rng)]);
-            node.remote = rng.random();
+            let attributes = Attributes::from_arrays([util::pick_values(rng), util::pick_values(rng), util::pick_values(rng), util::pick_values(rng)]);
+            node.remote = random_unique(&remotes, rng);
             remotes.insert(node.remote, GameRemote::new(attributes));
+
+            let actor_count: usize = rng.random_range(..5);
+            for _ in 0..actor_count {
+                let actor = random_unique(&actors, rng);
+                node.users.push(actor);
+                actors.insert(actor, GameActor::new());
+            }
         }
 
         Self {
             remotes,
             mission,
+            _actors: actors,
             ..Default::default()
         }
     }

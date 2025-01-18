@@ -2,7 +2,7 @@ use std::mem::size_of;
 
 use serde::{Deserialize, Serialize};
 
-use shared_net::{Bufferable, VSizedBuffer};
+use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
 use crate::core::{CardNumberType, Rarity, SetType};
 use crate::hall::HallCard;
@@ -64,12 +64,12 @@ impl From<&HallCard> for PlayerCard {
 }
 
 impl Bufferable for PlayerCard {
-    fn push_into(&self, buf: &mut VSizedBuffer) {
-        self.pack().push_into(buf);
+    fn push_into(&self, buf: &mut SizedBuffer) -> Result<usize, SizedBufferError> {
+        self.pack().push_into(buf)
     }
 
-    fn pull_from(buf: &mut VSizedBuffer) -> Self {
-        Self::unpack(PackedCardType::pull_from(buf))
+    fn pull_from(buf: &mut SizedBuffer) -> Result<Self, SizedBufferError> {
+        Ok(Self::unpack(PackedCardType::pull_from(buf)?))
     }
 
     fn size_in_buffer(&self) -> usize {
@@ -81,22 +81,23 @@ impl Bufferable for PlayerCard {
 mod test {
     use crate::core::Rarity;
     use crate::player::PlayerCard;
-    use shared_net::{Bufferable, VSizedBuffer};
+    use shared_net::{SizedBuffer, SizedBufferError};
 
     #[test]
-    fn test_player_card() {
+    fn test_player_card() -> Result<(), SizedBufferError> {
         let orig_card = PlayerCard {
             rarity: Rarity::Legendary,
             number: 34,
             set: 12,
         };
 
-        let mut buf = VSizedBuffer::new(orig_card.size_in_buffer());
-        buf.push(&orig_card);
-        let new_card = buf.pull::<PlayerCard>();
+        let mut buf = SizedBuffer::from(&orig_card)?;
+        let new_card = buf.pull::<PlayerCard>()?;
 
         assert_eq!(orig_card.rarity, new_card.rarity);
         assert_eq!(orig_card.number, new_card.number);
         assert_eq!(orig_card.set, new_card.set);
+
+        Ok(())
     }
 }
