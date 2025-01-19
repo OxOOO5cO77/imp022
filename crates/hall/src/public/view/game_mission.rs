@@ -18,7 +18,7 @@ static UNKNOWN_NODE: GameMissionNodePlayerView = GameMissionNodePlayerView {
     links: Vec::new(),
     content: Vec::new(),
     remote: 0,
-    users: Vec::new(),
+    actors: Vec::new(),
 };
 
 impl GameMissionPlayerView {

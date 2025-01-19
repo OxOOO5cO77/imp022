@@ -6,7 +6,7 @@ use crate::manager::{AtlasManager, DataManager, ScreenLayoutManager, ScreenLayou
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::compose_init::ComposeInitHandoff;
 use crate::screen::compose_main::{components::*, events::*, resources::*, systems::*};
-use crate::screen::shared::{on_out_reset_color, on_update_tooltip, AppScreenExt, CardLayout, CardTooltip, UpdateCardTooltipEvent};
+use crate::screen::shared::{on_out_reset_color, on_update_card_tooltip, AppScreenExt, CardLayout, CardTooltip, UpdateCardTooltipEvent};
 use crate::system::ui_effects::{Glower, Hider, SetColorEvent, TextTip, UiFxTrackedColor, UiFxTrackedSize};
 use crate::system::AppState;
 
@@ -176,7 +176,7 @@ fn compose_enter(
     }
 
     let tooltip = CardLayout::build(&mut commands, layout, "tooltip");
-    let tooltip_id = commands.entity(tooltip).insert(Visibility::Hidden).observe(on_update_tooltip).id();
+    let tooltip_id = commands.entity(tooltip).insert(Visibility::Hidden).observe(on_update_card_tooltip).id();
     commands.insert_resource(CardTooltip::new(tooltip_id));
 
     commands.entity(layout.entity("gutter")).insert((DeckGutterGroup, Visibility::Hidden));

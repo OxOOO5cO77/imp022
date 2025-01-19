@@ -1,14 +1,14 @@
-use bevy::prelude::{Click, Commands, Entity, EntityCommands, Hwba, PickingBehavior, Pointer, Query, ResMut, Text2d, Trigger, Visibility};
+use bevy::prelude::*;
 
-use hall::core::{ActorIdType, MissionNodeIntent, MissionNodeKind, MissionNodeLinkDir, MissionNodeLinkState};
-use hall::view::{GameMissionPlayerView, MAX_CONTENT_COUNT, MAX_LINK_COUNT, MAX_LINK_DAMAGE, MAX_USER_COUNT};
+use hall::core::{ActorIdType, AuthLevel, MissionNodeIntent, MissionNodeKind, MissionNodeLinkDir, MissionNodeLinkState};
+use hall::view::{GameMissionPlayerView, MAX_ACTOR_COUNT, MAX_CONTENT_COUNT, MAX_LINK_COUNT, MAX_LINK_DAMAGE};
 
 use crate::manager::{ScreenLayout, WarehouseManager};
 use crate::screen::gameplay_main::components::{MissionNodeButton, MissionNodeContentButton};
 use crate::screen::gameplay_main::nodes::shared;
 use crate::screen::gameplay_main::resources::GameplayContext;
 use crate::screen::shared::{on_out_reset_color, GameMissionNodePlayerViewExt, MissionNodeKindExt};
-use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor};
+use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor, UiFxTrackedSize};
 
 struct BaseNodeLink {
     container: Entity,
@@ -39,17 +39,17 @@ impl BaseNodeLink {
     }
 }
 
-struct BaseNodeUser {
+struct BaseNodeActor {
     container: Entity,
     bg: Entity,
     text: Entity,
 }
 
-impl BaseNodeUser {
-    fn new(layout: &ScreenLayout, name: &str, user_name: &str) -> Self {
-        let container = layout.entity(&format!("{name}/{user_name}"));
-        let bg = layout.entity(&format!("{name}/{user_name}/bg"));
-        let text = layout.entity(&format!("{name}/{user_name}/text"));
+impl BaseNodeActor {
+    fn new(layout: &ScreenLayout, name: &str, actor_slot: &str) -> Self {
+        let container = layout.entity(&format!("{name}/{actor_slot}"));
+        let bg = layout.entity(&format!("{name}/{actor_slot}/bg"));
+        let text = layout.entity(&format!("{name}/{actor_slot}/text"));
         Self {
             container,
             bg,
@@ -58,14 +58,30 @@ impl BaseNodeUser {
     }
 }
 
+#[derive(Component)]
+struct ActorInfoHolder {
+    id: ActorIdType,
+    auth: AuthLevel,
+}
+
+impl ActorInfoHolder {
+    fn new(id: ActorIdType, auth: AuthLevel) -> Self {
+        Self {
+            id,
+            auth,
+        }
+    }
+}
+
 pub(crate) struct BaseNode {
     links: [BaseNodeLink; MAX_LINK_COUNT],
     content: [Entity; MAX_CONTENT_COUNT],
-    users: [BaseNodeUser; MAX_USER_COUNT],
+    actors: [BaseNodeActor; MAX_ACTOR_COUNT],
 }
 
 trait NodeLinkEntityCommandsExt {
     fn observe_link_button(self) -> Self;
+    fn observe_actor(self, actor_id: ActorIdType, auth: AuthLevel) -> Self;
 }
 
 impl NodeLinkEntityCommandsExt for &mut EntityCommands<'_> {
@@ -74,6 +90,13 @@ impl NodeLinkEntityCommandsExt for &mut EntityCommands<'_> {
             .queue(shared::local_observe(BaseNode::on_click_link))
             .queue(shared::local_observe(shared::on_over_node_action))
             .queue(shared::local_observe(on_out_reset_color))
+    }
+
+    fn observe_actor(self, actor_id: ActorIdType, auth: AuthLevel) -> Self {
+        self //
+            .queue(shared::local_observe(on_over_actor_action))
+            .queue(shared::local_observe(on_out_actor_action))
+            .insert(ActorInfoHolder::new(actor_id, auth))
     }
 }
 
@@ -91,16 +114,28 @@ impl BaseNode {
         }
         let links = LINKS.map(|(link, _)| BaseNodeLink::new(layout, name, link));
 
-        const USERS: &[&str; MAX_USER_COUNT] = &["user0", "user1", "user2", "user3", "user4", "user5", "user6", "user7"];
-        let users = USERS.map(|user| BaseNodeUser::new(layout, name, user));
+        const ACTORS: &[&str; MAX_ACTOR_COUNT] = &["actor0", "actor1", "actor2", "actor3", "actor4", "actor5", "actor6", "actor7"];
+        let actors = ACTORS.map(|actor| BaseNodeActor::new(layout, name, actor));
+        for actor in &actors {
+            commands.entity(actor.container).insert(PickingBehavior::default());
+        }
 
         const CONTENT: &[&str; MAX_CONTENT_COUNT] = &["content1", "content2", "content3", "content4"];
         let content = CONTENT.map(|content| commands.entity(layout.entity(&format!("{name}/{content}"))).insert((MissionNodeContentButton, PickingBehavior::default())).id());
 
+        let tooltip_entity = commands.entity(layout.entity(&format!("{name}/tooltip"))).insert(Visibility::Hidden).observe(on_update_actor_tooltip).id();
+        let tooltip = ActorTooltip {
+            container: tooltip_entity,
+            name: layout.entity(&format!("{name}/tooltip/name")),
+            location: layout.entity(&format!("{name}/tooltip/location")),
+            auth: layout.entity(&format!("{name}/tooltip/auth")),
+        };
+        commands.insert_resource(tooltip);
+
         Self {
             links,
             content,
-            users,
+            actors,
         }
     }
 
@@ -136,21 +171,24 @@ impl BaseNode {
             commands.entity(*e).insert(Self::is_visible(visible));
         }
 
-        for (idx, user) in self.users.iter().enumerate() {
-            let visible = idx < current_node.users.len();
+        for (idx, actor) in self.actors.iter().enumerate() {
+            let visible = idx < current_node.actors.len();
             if visible {
-                let hue = pick_hue(current_node.users[idx]);
+                let actor_id = current_node.actors[idx];
+                let actor_auth = infer_auth(actor_id);
+                commands.entity(actor.container).observe_actor(actor_id, actor_auth);
+                let hue = pick_hue(actor_id);
                 let color = Hwba::hwb(hue, 0.25, 0.25);
-                commands.entity(user.bg).trigger(SetColorEvent::new(user.bg, color.into()));
-                if let Ok(mut text_letter) = text_q.get_mut(user.text) {
-                    if let Ok(response) = wm.fetch_player(current_node.users[idx]) {
+                commands.entity(actor.bg).trigger(SetColorEvent::new(actor.bg, color.into()));
+                if let Ok(mut text_letter) = text_q.get_mut(actor.text) {
+                    if let Ok(response) = wm.fetch_player(actor_id) {
                         if let Some(bio) = response.player_bio.as_ref() {
                             *text_letter = bio.name.chars().next().unwrap_or('?').to_string().into();
                         }
                     }
                 }
             }
-            commands.entity(user.container).insert(Self::is_visible(visible));
+            commands.entity(actor.container).insert(Self::is_visible(visible));
         }
     }
 
@@ -180,4 +218,107 @@ fn pick_hue(id: ActorIdType) -> f32 {
     hue += (id >> 32) & 0xFFFF;
     hue += (id >> 48) & 0xFFFF;
     (hue as f32 / 0xFFFF as f32) * 360.0
+}
+
+fn on_over_actor_action(
+    //
+    event: Trigger<Pointer<Over>>,
+    mut commands: Commands,
+    holder_q: Query<&ActorInfoHolder>,
+    tooltip: Res<ActorTooltip>,
+) {
+    if let Ok(holder) = holder_q.get(event.target) {
+        commands.trigger_targets(UpdateActorTooltipEvent::new(event.pointer_location.position, holder.id, holder.auth), tooltip.container);
+    }
+}
+
+fn on_out_actor_action(
+    //
+    _event: Trigger<Pointer<Out>>,
+    mut commands: Commands,
+    tooltip: Res<ActorTooltip>,
+) {
+    commands.entity(tooltip.container).insert(Visibility::Hidden);
+}
+
+#[derive(Resource)]
+pub(crate) struct ActorTooltip {
+    pub(crate) container: Entity,
+    pub(crate) name: Entity,
+    pub(crate) location: Entity,
+    pub(crate) auth: Entity,
+}
+
+#[derive(Event)]
+pub(crate) struct UpdateActorTooltipEvent {
+    position: Vec2,
+    id: ActorIdType,
+    auth: AuthLevel,
+}
+
+impl UpdateActorTooltipEvent {
+    pub(crate) fn new(position: Vec2, id: ActorIdType, auth: AuthLevel) -> Self {
+        Self {
+            position,
+            id,
+            auth,
+        }
+    }
+}
+
+trait AuthLevelExt {
+    fn as_str(&self) -> &'static str;
+}
+
+impl AuthLevelExt for AuthLevel {
+    fn as_str(&self) -> &'static str {
+        match self {
+            AuthLevel::Guest => "Guest",
+            AuthLevel::User => "User",
+            AuthLevel::Admin => "Admin",
+            AuthLevel::Root => "Root",
+        }
+    }
+}
+
+fn infer_auth(actor_id: ActorIdType) -> AuthLevel {
+    match actor_id & 0x0F {
+        0..8 => AuthLevel::Guest,
+        8..12 => AuthLevel::User,
+        12..16 => AuthLevel::Admin,
+        16 => AuthLevel::Root,
+        _ => AuthLevel::Guest,
+    }
+}
+
+fn on_update_actor_tooltip(
+    // bevy system
+    event: Trigger<UpdateActorTooltipEvent>,
+    mut commands: Commands,
+    mut tooltip_q: Query<(&mut Transform, &GlobalTransform, &UiFxTrackedSize)>,
+    mut text_q: Query<&mut Text2d>,
+    window_q: Query<&Window>,
+    tooltip: Res<ActorTooltip>,
+    mut wm: ResMut<WarehouseManager>,
+) {
+    let target = event.entity();
+    let window = window_q.single();
+
+    if let Ok((mut transform, global_transform, tooltip_size)) = tooltip_q.get_mut(target) {
+        if let Some(bio) = wm.fetch_player(event.id).ok().and_then(|bio| bio.player_bio.as_ref()) {
+            if let Ok([mut name, mut location, mut auth]) = text_q.get_many_mut([tooltip.name, tooltip.location, tooltip.auth]) {
+                *name = bio.name.as_str().into();
+                *location = bio.birthplace().into();
+                *auth = event.auth.as_str().into();
+            }
+
+            let offset = global_transform.translation().xy() - transform.translation.xy();
+
+            let x = event.position.x.clamp(0.0, window.width() - tooltip_size.x);
+            let y = event.position.y.clamp(0.0, window.height() - tooltip_size.y);
+            transform.translation = (Vec2::new(x, -y) - offset).extend(transform.translation.z);
+
+            commands.entity(tooltip.container).insert(Visibility::Visible);
+        }
+    }
 }

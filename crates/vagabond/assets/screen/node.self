@@ -1,12 +1,12 @@
 #main_frame:frame%734,508@16,16,0!blue
-/user7:node_user%48,48@250,28,1
-/user6:node_user%48,48@312,28,1
-/user5:node_user%48,48@374,28,1
-/user4:node_user%48,48@436,28,1
-/user3:node_user%48,48@498,28,1
-/user2:node_user%48,48@560,28,1
-/user1:node_user%48,48@622,28,1
-/user0:node_user%48,48@684,28,1
+/actor7:node_user%48,48@250,28,1
+/actor6:node_user%48,48@312,28,1
+/actor5:node_user%48,48@374,28,1
+/actor4:node_user%48,48@436,28,1
+/actor3:node_user%48,48@498,28,1
+/actor2:node_user%48,48@560,28,1
+/actor1:node_user%48,48@622,28,1
+/actor0:node_user%48,48@684,28,1
 /a:node_a%700,284@32,90,2
 /b:node_b%700,284@32,90,2
 /c:node_c%700,284@32,90,2
@@ -23,3 +23,4 @@
 #content2:frame%218,120@766,145,0!blue
 #content3:frame%218,120@766,274,0!blue
 #content4:frame%218,120@766,403,0!blue
+/tooltip:actor_tooltip%256,80@0,0,10

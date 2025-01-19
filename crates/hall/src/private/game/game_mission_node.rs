@@ -34,7 +34,7 @@ impl GameMissionNode {
             links: self.links.clone(),
             content: self.content.clone(),
             remote: self.remote,
-            users: self.users.clone(),
+            actors: self.users.clone(),
         }
     }
 }

@@ -9,7 +9,7 @@ pub struct GameMissionNodePlayerView {
     pub links: Vec<MissionNodeLink>,
     pub content: Vec<MissionNodeContent>,
     pub remote: RemoteIdType,
-    pub users: Vec<ActorIdType>,
+    pub actors: Vec<ActorIdType>,
 }
 
 type PackedMissionNodeType = u16;
@@ -46,7 +46,7 @@ const MASK_FOR_LINK_DAMAGE: PackedMissionNodeLinkType = (1 << BITS_FOR_LINK_DAMA
 const MASK_FOR_LINK: PackedMissionNodeLinkType = (1 << BITS_FOR_LINK) - 1;
 
 pub const MAX_CONTENT_COUNT: usize = 4;
-pub const MAX_USER_COUNT: usize = 8;
+pub const MAX_ACTOR_COUNT: usize = 8;
 
 impl GameMissionNodePlayerView {
     fn pack_kind(kind: MissionNodeKind) -> PackedMissionNodeType {
@@ -127,7 +127,7 @@ impl Bufferable for GameMissionNodePlayerView {
         pushed += self.pack_links().push_into(buf)?;
         pushed += self.content.push_into(buf)?;
         pushed += self.remote.push_into(buf)?;
-        pushed += self.users.push_into(buf)?;
+        pushed += self.actors.push_into(buf)?;
         Ok(pushed)
     }
 
@@ -138,20 +138,20 @@ impl Bufferable for GameMissionNodePlayerView {
         let links = Self::unpack_links(packed_links);
         let content = <Vec<MissionNodeContent>>::pull_from(buf)?;
         let remote = RemoteIdType::pull_from(buf)?;
-        let users = <Vec<ActorIdType>>::pull_from(buf)?;
+        let actors = <Vec<ActorIdType>>::pull_from(buf)?;
         let result = Self {
             id,
             kind,
             links,
             content,
             remote,
-            users,
+            actors,
         };
         Ok(result)
     }
 
     fn size_in_buffer(&self) -> usize {
-        size_of::<PackedMissionNodeType>() + size_of::<PackedMissionNodeLinkType>() + self.content.size_in_buffer() + self.remote.size_in_buffer() + self.users.size_in_buffer()
+        size_of::<PackedMissionNodeType>() + size_of::<PackedMissionNodeLinkType>() + self.content.size_in_buffer() + self.remote.size_in_buffer() + self.actors.size_in_buffer()
     }
 }
 
@@ -189,7 +189,7 @@ impl GameMissionNodePlayerView {
             ],
             content: Vec::new(),
             remote: 12345678901234567890,
-            users: vec![123123123, 12312312351, 1231616123123, 1231391238],
+            actors: vec![123123123, 12312312351, 1231616123123, 1231391238],
         }
     }
 }

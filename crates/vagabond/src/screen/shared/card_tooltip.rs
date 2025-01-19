@@ -37,7 +37,7 @@ impl UpdateCardTooltipEvent {
     }
 }
 
-pub(crate) fn on_update_tooltip(
+pub(crate) fn on_update_card_tooltip(
     // bevy system
     event: Trigger<UpdateCardTooltipEvent>,
     mut commands: Commands,

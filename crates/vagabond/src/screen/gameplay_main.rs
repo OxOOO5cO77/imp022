@@ -10,7 +10,7 @@ use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::gameplay_init::GameplayInitHandoff;
 use crate::screen::gameplay_main::nodes::*;
 use crate::screen::gameplay_main::{components::*, events::*, resources::*, systems::*};
-use crate::screen::shared::{on_out_reset_color, on_update_tooltip, AppScreenExt, CardLayout, CardTooltip, GameMissionNodePlayerViewExt, MissionNodeKindExt, UpdateCardTooltipEvent};
+use crate::screen::shared::{on_out_reset_color, on_update_card_tooltip, AppScreenExt, CardLayout, CardTooltip, GameMissionNodePlayerViewExt, MissionNodeKindExt, UpdateCardTooltipEvent};
 use crate::system::ui_effects::{Blinker, SetColorEvent, TextTip, UiFxTrackedColor};
 use crate::system::AppState;
 
@@ -224,7 +224,7 @@ fn gameplay_enter(
     commands.insert_resource(node_layouts);
 
     let tooltip = CardLayout::build(&mut commands, layout, "tooltip");
-    let tooltip_id = commands.entity(tooltip).insert(Visibility::Hidden).observe(on_update_tooltip).id();
+    let tooltip_id = commands.entity(tooltip).insert(Visibility::Hidden).observe(on_update_card_tooltip).id();
     commands.insert_resource(CardTooltip::new(tooltip_id));
 
     let context = GameplayContext {
