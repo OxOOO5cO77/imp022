@@ -170,16 +170,15 @@ impl GameState {
     pub(crate) fn tick(&mut self) -> TickType {
         self.current_tick += 1;
 
+        let mut executables = Vec::new();
+
         for user in self.users.values_mut() {
             if let Some(player) = &user.player {
                 user.machine.tick(&player.attributes);
-                user.state.fill_hand();
+                executables.append(&mut user.machine.run(&player.attributes));
             }
-
-            user.mission_state.expire_tokens(self.current_tick);
         }
 
-        let mut executables = Vec::new();
         for remote in self.remotes.values_mut().filter(|remote| remote.machine.is_active()) {
             remote.machine.tick(&remote.attributes);
             executables.append(&mut remote.machine.run(&remote.attributes));
@@ -187,6 +186,11 @@ impl GameState {
 
         for executable in executables {
             executable.execute(&mut self.users, &mut self.remotes, &mut self.actors);
+        }
+
+        for user in self.users.values_mut() {
+            user.state.fill_hand();
+            user.mission_state.expire_tokens(self.current_tick);
         }
 
         for remote in self.remotes.values_mut() {
