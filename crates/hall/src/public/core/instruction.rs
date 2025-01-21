@@ -3,6 +3,19 @@ use serde::{Deserialize, Serialize};
 use crate::core::{AttributeKind, AttributeValueKind, Attributes, MachineValueType};
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
+pub enum CardTargetMachineValue {
+    Any,
+    Local,
+    Remote,
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
+pub enum CardTargetValue {
+    None,
+    Machine(CardTargetMachineValue),
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Amount {
     N(u8),
     Attribute(AttributeKind, AttributeValueKind),
@@ -28,11 +41,17 @@ pub enum ValueTarget {
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
-pub enum Instruction {
+pub enum LaunchInstruction {
     NoOp,
-    TTL(RuntimeAmount),
-    INC(ValueTarget, RuntimeAmount),
-    DEC(ValueTarget, RuntimeAmount),
+    Targ(CardTargetValue),
+    Loop(RuntimeAmount),
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
+pub enum RunInstruction {
+    NoOp,
+    IncV(ValueTarget, RuntimeAmount),
+    DecV(ValueTarget, RuntimeAmount),
 }
 
 impl RuntimeAmount {

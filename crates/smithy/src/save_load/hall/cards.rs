@@ -15,8 +15,9 @@ fn make_hall_card(card: &DbCard) -> HallCard {
         cost: card.cost,
         delay: card.delay,
         priority: card.priority,
-        launch_code: rules::parse_rules(&card.rules_launch),
-        run_code: rules::parse_rules(&card.rules_run),
+        host: card.host,
+        launch_code: rules::parse_rules_launch(&card.rules_launch),
+        run_code: rules::parse_rules_run(&card.rules_run),
     }
 }
 

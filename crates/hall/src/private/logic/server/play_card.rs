@@ -1,7 +1,7 @@
 use hall::core::Phase;
 use hall::message::{CardTarget, GameResolveCardsMessage};
 
-use crate::private::game::{GameState, IdType};
+use crate::private::game::{GameState, TargetIdType};
 use crate::private::logic::server::update_state::all_users_update_state;
 use crate::private::network::broadcaster::Broadcaster;
 
@@ -12,14 +12,15 @@ pub(crate) fn handle_play_card(game: &mut GameState, bx: &mut Broadcaster) {
         for (card, target) in played {
             user.state.remove_erg(card.kind, card.cost);
             user.state.add_to_heap(card.clone());
-            let played = match target {
-                CardTarget::Local => (IdType::Local(*user_id), card, IdType::Local(*user_id)),
+            let remote_id = game.mission.get_node(user.mission_state.current()).map(|n| n.remote).unwrap_or_default();
+            let target_id = match target {
+                CardTarget::Local => TargetIdType::Local(*user_id),
                 CardTarget::Remote(node) => {
-                    let remote = game.mission.get_node(node).or_else(|| game.mission.get_node(user.mission_state.current())).map(|n| n.remote).unwrap_or_default();
-                    (IdType::Local(*user_id), card, IdType::Remote(remote))
+                    let node_id = game.mission.get_node(node).map(|n| n.remote).unwrap_or(remote_id);
+                    TargetIdType::Remote(node_id)
                 }
             };
-            all_played.push(played);
+            all_played.push((*user_id, remote_id, card, target_id));
         }
     }
     let _results = game.resolve_cards(all_played);

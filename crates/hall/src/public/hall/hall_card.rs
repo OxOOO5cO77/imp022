@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::core::{AttributeKind, CardNumberType, CardSlot, DelayType, ErgType, Instruction, PriorityType, Rarity, SetType, Slot};
+use crate::core::{AttributeKind, CardNumberType, CardSlot, DelayType, ErgType, Host, LaunchInstruction, PriorityType, Rarity, RunInstruction, SetType, Slot};
 use crate::player::PlayerCard;
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -11,9 +11,10 @@ pub struct HallCard {
     pub kind: AttributeKind,
     pub cost: ErgType,
     pub delay: DelayType,
-    pub launch_code: Vec<Instruction>,
     pub priority: PriorityType,
-    pub run_code: Vec<Instruction>,
+    pub host: Host,
+    pub launch_code: Vec<LaunchInstruction>,
+    pub run_code: Vec<RunInstruction>,
 }
 
 impl HallCard {

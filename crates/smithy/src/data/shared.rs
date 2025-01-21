@@ -1,7 +1,7 @@
 use sqlx::postgres::PgRow;
 use sqlx::Row;
 
-use hall::core::{BuildNumberType, CardSlot, Rarity, Set, SetType, Slot};
+use hall::core::{BuildNumberType, CardSlot, Host, Rarity, Set, SetType, Slot};
 
 #[derive(sqlx::Type)]
 #[sqlx(type_name = "type_rarity")]
@@ -12,9 +12,9 @@ pub(crate) enum DbRarity {
     Legendary,
 }
 
-impl DbRarity {
-    pub(crate) fn to_rarity(&self) -> Rarity {
-        match self {
+impl From<DbRarity> for Rarity {
+    fn from(value: DbRarity) -> Self {
+        match value {
             DbRarity::Common => Rarity::Common,
             DbRarity::Uncommon => Rarity::Uncommon,
             DbRarity::Rare => Rarity::Rare,
@@ -31,17 +31,35 @@ struct DbCardSlot {
     number: i32,
 }
 
-impl DbCardSlot {
-    fn to_cardslot(&self) -> CardSlot {
+impl From<DbCardSlot> for CardSlot {
+    fn from(value: DbCardSlot) -> CardSlot {
         CardSlot(
-            Set(self.set as SetType),
-            self.rarity.to_rarity(),
-            if self.number == 0 {
+            Set(value.set as SetType),
+            value.rarity.into(),
+            if value.number == 0 {
                 Slot::Any
             } else {
-                Slot::Number(self.number as BuildNumberType)
+                Slot::Number(value.number as BuildNumberType)
             },
         )
+    }
+}
+
+#[derive(sqlx::Type)]
+#[sqlx(type_name = "type_host")]
+pub(crate) enum DbHost {
+    None,
+    Local,
+    Remote,
+}
+
+impl From<DbHost> for Host {
+    fn from(value: DbHost) -> Self {
+        match value {
+            DbHost::None => Host::None,
+            DbHost::Local => Host::Local,
+            DbHost::Remote => Host::Remote,
+        }
     }
 }
 
@@ -49,7 +67,7 @@ pub(crate) fn extract_cards(row: &PgRow, count: usize) -> Vec<CardSlot> {
     let mut cards: Vec<CardSlot> = Vec::new();
     for i in 1..=count {
         let row_name = format!("cardslot_{i}");
-        let slot = row.get::<DbCardSlot, _>(row_name.as_str()).to_cardslot();
+        let slot = row.get::<DbCardSlot, _>(row_name.as_str()).into();
         cards.push(slot);
     }
     cards

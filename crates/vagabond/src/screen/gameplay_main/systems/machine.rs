@@ -68,14 +68,14 @@ pub(super) fn on_machine_ui_update_state(
     }
 
     for (machine_component, mut sprite, queue_item) in sprite_q.iter_mut() {
-        let (machine, player_owned) = if *machine_component == MachineKind::Local {
-            (&event.local, true)
+        let machine = if *machine_component == MachineKind::Local {
+            &event.local
         } else {
-            (&event.remote, false)
+            &event.remote
         };
 
         sprite.color = if let Some(process) = machine.queue.iter().find(|(_, delay)| *delay == queue_item.delay).map(|(item, _)| item) {
-            if process.local == player_owned {
+            if process.local {
                 bevy::color::palettes::basic::GREEN
             } else {
                 bevy::color::palettes::basic::RED

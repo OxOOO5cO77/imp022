@@ -1,7 +1,7 @@
 use bevy::color::Color;
 use bevy::prelude::{Commands, Component, Entity, Event, Query, Res, Sprite, Text2d, Trigger, Visibility, With};
 
-use hall::core::{AttributeKind, Attributes, Instruction, ValueTarget};
+use hall::core::{AttributeKind, Attributes, Host, LaunchInstruction, RunInstruction, ValueTarget};
 use vagabond::data::VagabondCard;
 
 use crate::manager::{AtlasManager, ScreenLayout};
@@ -35,6 +35,7 @@ pub(crate) struct CardLayout {
     pub(crate) cost: Option<Entity>,
     pub(crate) delay: Option<Entity>,
     pub(crate) priority: Option<Entity>,
+    pub(crate) host: Option<Entity>,
     pub(crate) launch: Option<Entity>,
     pub(crate) run: Option<Entity>,
 }
@@ -48,6 +49,7 @@ impl CardLayout {
             cost: Self::maybe_get_entity(commands, screen_layout, &format!("{}/cost", base_name)),
             delay: Self::maybe_get_entity(commands, screen_layout, &format!("{}/delay", base_name)),
             priority: Self::maybe_get_entity(commands, screen_layout, &format!("{}/priority", base_name)),
+            host: Self::maybe_get_entity(commands, screen_layout, &format!("{}/host", base_name)),
             launch: Self::maybe_get_entity(commands, screen_layout, &format!("{}/launch", base_name)),
             run: Self::maybe_get_entity(commands, screen_layout, &format!("{}/run", base_name)),
         };
@@ -75,10 +77,11 @@ impl CardLayout {
             (Some(card), Ok(layout)) => {
                 layout.title.map(|title| text_q.get_mut(title).map(|mut title_text| *title_text = card.title.clone().into()));
                 layout.cost.map(|cost| text_q.get_mut(cost).map(|mut cost_text| *cost_text = card.cost.to_string().into()));
-                layout.launch.map(|launch| text_q.get_mut(launch).map(|mut launch_text| *launch_text = Self::explain_rules(&card.launch_rules, &event.attr).into()));
-                layout.run.map(|run| text_q.get_mut(run).map(|mut run_text| *run_text = Self::explain_rules(&card.run_rules, &event.attr).into()));
+                layout.launch.map(|launch| text_q.get_mut(launch).map(|mut launch_text| *launch_text = Self::explain_rules_launch(&card.launch_rules, &event.attr).into()));
+                layout.run.map(|run| text_q.get_mut(run).map(|mut run_text| *run_text = Self::explain_rules_run(&card.run_rules, &event.attr).into()));
                 layout.delay.map(|delay| text_q.get_mut(delay).map(|mut delay_text| *delay_text = card.delay.to_string().into()));
                 layout.priority.map(|priority| text_q.get_mut(priority).map(|mut priority_text| *priority_text = card.priority.to_string().into()));
+                layout.host.map(|host| text_q.get_mut(host).map(|mut host_text| *host_text = Self::explain_host(card.host).into()));
                 layout.icon.map(|icon| sprite_q.get_mut(icon).map(|mut icon_sprite| util::replace_kind_icon(&mut icon_sprite, card.kind, KindIconSize::Small, &am)));
                 layout.frame.map(|frame| {
                     let color = Self::map_kind_to_color(card.kind);
@@ -103,26 +106,45 @@ impl CardLayout {
         }
     }
 
-    fn explain_rules(rules: &[Instruction], attr: &Attributes) -> String {
-        rules.iter().filter_map(|rule| Self::explain_rule(rule, attr)).collect::<Vec<String>>().join("\n")
+    fn explain_rules_launch(rules: &[LaunchInstruction], attr: &Attributes) -> String {
+        rules.iter().filter_map(|rule| Self::explain_rule_launch(rule, attr)).collect::<Vec<String>>().join("\n")
     }
 
-    fn explain_rule(rule: &Instruction, attr: &Attributes) -> Option<String> {
+    fn explain_rule_launch(rule: &LaunchInstruction, attr: &Attributes) -> Option<String> {
         match rule {
-            Instruction::NoOp => None,
-            Instruction::TTL(value) => Some(format!("TTL:{}", value.resolve(attr))),
-            Instruction::INC(target, value) => Some(format!("{} -> {}", value.resolve(attr), Self::explain_target(target))),
-            Instruction::DEC(target, value) => Some(format!("-{} -> {}", value.resolve(attr), Self::explain_target(target))),
+            LaunchInstruction::NoOp => None,
+            LaunchInstruction::Targ(_) => None,
+            LaunchInstruction::Loop(value) => Some(format!("Loop {} times", value.resolve(attr))),
         }
     }
 
-    fn explain_target(target: &ValueTarget) -> &str {
+    fn explain_rules_run(rules: &[RunInstruction], attr: &Attributes) -> String {
+        rules.iter().filter_map(|rule| Self::explain_rule_run(rule, attr)).collect::<Vec<String>>().join("\n")
+    }
+
+    fn explain_rule_run(rule: &RunInstruction, attr: &Attributes) -> Option<String> {
+        match rule {
+            RunInstruction::NoOp => None,
+            RunInstruction::IncV(target, value) => Some(format!("Increase {} by {}", Self::explain_target(target), value.resolve(attr))),
+            RunInstruction::DecV(target, value) => Some(format!("Decrease {} by {}", Self::explain_target(target), value.resolve(attr))),
+        }
+    }
+
+    fn explain_target(target: &ValueTarget) -> &'static str {
         match target {
             ValueTarget::None => "???",
             ValueTarget::FreeSpace => "Free Space",
             ValueTarget::ThermalCapacity => "Thermal Capacity",
             ValueTarget::SystemHealth => "System Health",
             ValueTarget::OpenPorts => "Open Ports",
+        }
+    }
+
+    fn explain_host(host: Host) -> &'static str {
+        match host {
+            Host::None => "Immediate",
+            Host::Local => "Runs Locally",
+            Host::Remote => "Runs Remotely",
         }
     }
 }

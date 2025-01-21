@@ -4,25 +4,24 @@ use std::iter::zip;
 
 use rand::{distr::Uniform, rngs::ThreadRng, Rng};
 
-use hall::core::{ActorIdType, AttributeArray, Attributes, ErgArray, ErgType, Phase, RemoteIdType, Stage, TickType};
+use hall::core::{ActorIdType, AttributeArray, Attributes, ErgArray, ErgType, Host, Phase, RemoteIdType, Stage, TickType};
 use hall::hall::{HallCard, HallMission};
 use hall::message::GameUpdateStateResponse;
 use hall::player::PlayerCard;
 use hall::util;
-use hall::view::{GameMachinePlayerView, GameUserStatePlayerView};
 use shared_net::{op, AuthType, UserIdType};
 
 use crate::private::game::{GameActor, GameMachine, GameMission, GameRemote, GameUser, GameUserCommandState};
 
-type UserMapType = HashMap<UserIdType, GameUser>;
+pub(crate) type UserMapType = HashMap<UserIdType, GameUser>;
 pub(crate) type RemoteMapType = HashMap<RemoteIdType, GameRemote>;
-type ActorMapType = HashMap<ActorIdType, GameActor>;
+pub(crate) type ActorMapType = HashMap<ActorIdType, GameActor>;
 
 #[derive(Default)]
 pub(crate) struct GameState {
     pub(crate) users: UserMapType,
     pub(crate) remotes: RemoteMapType,
-    pub(crate) _actors: ActorMapType,
+    pub(crate) actors: ActorMapType,
     current_tick: TickType,
     stage: Stage,
     pub(crate) erg_roll: ErgArray,
@@ -30,8 +29,8 @@ pub(crate) struct GameState {
     pub(crate) mission: GameMission,
 }
 
-#[derive(PartialEq)]
-pub(crate) enum IdType {
+#[derive(Copy, Clone, PartialEq)]
+pub(crate) enum TargetIdType {
     Local(UserIdType),
     Remote(RemoteIdType),
 }
@@ -73,7 +72,7 @@ impl GameState {
         Self {
             remotes,
             mission,
-            _actors: actors,
+            actors,
             ..Default::default()
         }
     }
@@ -180,8 +179,17 @@ impl GameState {
             user.mission_state.expire_tokens(self.current_tick);
         }
 
-        for remote in self.remotes.values_mut() {
+        let mut executables = Vec::new();
+        for remote in self.remotes.values_mut().filter(|remote| remote.machine.is_active()) {
             remote.machine.tick(&remote.attributes);
+            executables.append(&mut remote.machine.run(&remote.attributes));
+        }
+
+        for executable in executables {
+            executable.execute(&mut self.users, &mut self.remotes, &mut self.actors);
+        }
+
+        for remote in self.remotes.values_mut() {
             remote.end_turn();
         }
 
@@ -219,15 +227,16 @@ impl GameState {
         (local_alloc, remote_alloc)
     }
 
-    pub(crate) fn resolve_cards(&mut self, cards: Vec<(IdType, HallCard, IdType)>) -> Vec<(IdType, PlayerCard, IdType)> {
+    pub(crate) fn resolve_cards(&mut self, cards: Vec<(UserIdType, RemoteIdType, HallCard, TargetIdType)>) -> Vec<(UserIdType, RemoteIdType, PlayerCard, TargetIdType)> {
         let mut result = Vec::new();
-        for (source, card, target) in cards.into_iter() {
-            let machine = match target {
-                IdType::Local(local_id) => self.users.get_mut(&local_id).map(|u| &mut u.machine),
-                IdType::Remote(remote_id) => self.remotes.get_mut(&remote_id).map(|r| &mut r.machine),
+        for (local_id, remote_id, card, target) in cards.into_iter() {
+            let machine = match card.host {
+                Host::Local => self.users.get_mut(&local_id).map(|u| &mut u.machine),
+                Host::Remote => self.remotes.get_mut(&remote_id).map(|r| &mut r.machine),
+                Host::None => None,
             };
-            if let Some(played) = machine.and_then(|m| m.enqueue(card, source == target)) {
-                result.push((source, played, target));
+            if let Some(played) = machine.and_then(|m| m.enqueue(card, target, local_id)) {
+                result.push((local_id, remote_id, played, target));
             }
         }
         result
@@ -235,11 +244,11 @@ impl GameState {
 }
 
 impl GameState {
-    pub(crate) fn make_response(user: &GameUser, remote: &GameMachine, mission: &GameMission) -> GameUpdateStateResponse {
+    pub(crate) fn make_response(id: UserIdType, user: &GameUser, remote: &GameMachine, mission: &GameMission) -> GameUpdateStateResponse {
         GameUpdateStateResponse {
-            player_state: GameUserStatePlayerView::from(&user.state),
-            local_machine: GameMachinePlayerView::from(&user.machine),
-            remote_machine: GameMachinePlayerView::from(remote),
+            player_state: user.state.to_player_view(),
+            local_machine: user.machine.to_player_view(id),
+            remote_machine: remote.to_player_view(id),
             mission: mission.to_player_view(&user.mission_state),
         }
     }

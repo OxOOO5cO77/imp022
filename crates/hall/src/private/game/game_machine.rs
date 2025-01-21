@@ -1,11 +1,13 @@
 use std::collections::VecDeque;
 
-use hall::core::{Attributes, DelayType, Instruction, MachineValueType, ValueTarget};
+use hall::core::{Attributes, DelayType, MachineValueType};
 use hall::hall::HallCard;
 use hall::player::PlayerCard;
 use hall::view::{GameMachinePlayerView, GameProcessPlayerView};
+use shared_net::UserIdType;
 
-use crate::private::game::GameProcess;
+use crate::private::game::game_process::{GameProcessExecutor, ProcessForPlayer};
+use crate::private::game::{GameProcess, TargetIdType};
 
 const QUEUE_SIZE: usize = 10;
 
@@ -17,7 +19,7 @@ pub(crate) struct GameMachineContext {
 }
 
 pub struct GameMachine {
-    context: GameMachineContext,
+    pub(crate) context: GameMachineContext,
     queue: VecDeque<Option<GameProcess>>,
     running: Vec<GameProcess>,
     state: GameMachineState,
@@ -50,8 +52,8 @@ enum GameMachineTerminationReason {
 }
 
 impl GameMachine {
-    pub fn enqueue(&mut self, card: HallCard, local: bool) -> Option<PlayerCard> {
-        let (process, mut index) = GameProcess::new_from_card(card, local);
+    pub(crate) fn enqueue(&mut self, card: HallCard, target: TargetIdType, owner_id: UserIdType) -> Option<PlayerCard> {
+        let (process, mut index) = GameProcess::new_from_card(card, target, owner_id);
         while let Some(Some(q)) = self.queue.get(index) {
             if q.get_priority() < process.get_priority() {
                 break;
@@ -69,25 +71,33 @@ impl GameMachine {
         }
     }
 
-    pub(crate) fn tick(&mut self, attrs: &Attributes) {
-        if self.state != GameMachineState::Active {
-            return;
-        }
+    pub(crate) fn is_active(&self) -> bool {
+        self.state != GameMachineState::Active
+    }
 
+    pub(crate) fn tick(&mut self, attrs: &Attributes) {
         if let Some(Some(mut process)) = self.queue.pop_front() {
-            process.launch(&mut self.context, attrs);
-            self.running.push(process);
+            let launched = process.launch(attrs);
+            if launched {
+                self.running.push(process);
+            }
         }
         self.queue.push_back(None);
 
-        self.running.retain(|process| process.get_ttl() > 0);
+        self.running.retain(|process| process.get_loop() > 0);
         self.running.sort();
 
-        for process in self.running.iter_mut() {
-            process.run(&mut self.context, attrs);
-        }
-
         self.state = self.context.check_termination();
+    }
+
+    pub(crate) fn run(&mut self, attrs: &Attributes) -> Vec<GameProcessExecutor> {
+        let mut executors = Vec::new();
+        for process in &mut self.running {
+            if process.tick() {
+                executors.push(process.build_executable(attrs));
+            }
+        }
+        executors
     }
 }
 
@@ -115,34 +125,14 @@ impl GameMachineContext {
             Active
         }
     }
-
-    pub(crate) fn execute(&mut self, instruction: Instruction, attrs: &Attributes) {
-        match instruction {
-            Instruction::INC(target, amount) => match target {
-                ValueTarget::None => {}
-                ValueTarget::FreeSpace => self.free_space = self.free_space.saturating_add(amount.resolve(attrs)),
-                ValueTarget::ThermalCapacity => self.thermal_capacity = self.thermal_capacity.saturating_add(amount.resolve(attrs)),
-                ValueTarget::SystemHealth => self.system_health = self.system_health.saturating_add(amount.resolve(attrs)),
-                ValueTarget::OpenPorts => self.open_ports = self.open_ports.saturating_add(amount.resolve(attrs)),
-            },
-            Instruction::DEC(target, amount) => match target {
-                ValueTarget::None => {}
-                ValueTarget::FreeSpace => self.free_space = self.free_space.saturating_sub(amount.resolve(attrs)),
-                ValueTarget::ThermalCapacity => self.thermal_capacity = self.thermal_capacity.saturating_sub(amount.resolve(attrs)),
-                ValueTarget::SystemHealth => self.system_health = self.system_health.saturating_sub(amount.resolve(attrs)),
-                ValueTarget::OpenPorts => self.open_ports = self.open_ports.saturating_sub(amount.resolve(attrs)),
-            },
-            _ => {}
-        }
-    }
 }
 
-impl From<&GameMachine> for GameMachinePlayerView {
-    fn from(value: &GameMachine) -> Self {
-        let vitals = [value.context.free_space, value.context.thermal_capacity, value.context.system_health, value.context.open_ports];
-        let queue = value.queue.iter().enumerate().filter_map(|(idx, item)| item.as_ref().map(|item| (GameProcessPlayerView::from(item), idx as DelayType))).collect::<Vec<_>>();
-        let running = value.running.iter().map(GameProcessPlayerView::from).collect::<Vec<_>>();
-        Self {
+impl GameMachine {
+    pub(crate) fn to_player_view(&self, user_id: UserIdType) -> GameMachinePlayerView {
+        let vitals = [self.context.free_space, self.context.thermal_capacity, self.context.system_health, self.context.open_ports];
+        let queue = self.queue.iter().enumerate().filter_map(|(idx, item)| item.as_ref().map(|item| (GameProcessPlayerView::process_for_player(item, user_id), idx as DelayType))).collect::<Vec<_>>();
+        let running = self.running.iter().map(|item| GameProcessPlayerView::process_for_player(item, user_id)).collect::<Vec<_>>();
+        GameMachinePlayerView {
             vitals,
             queue,
             running,

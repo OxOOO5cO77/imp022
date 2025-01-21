@@ -24,3 +24,10 @@ pub enum Slot {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct CardSlot(pub Set, pub Rarity, pub Slot);
+
+#[derive(Clone, Copy, Serialize, Deserialize)]
+pub enum Host {
+    None,
+    Local,
+    Remote,
+}

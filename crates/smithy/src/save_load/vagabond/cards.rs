@@ -14,8 +14,9 @@ fn make_vagabond_card(card: &DbCard) -> VagabondCard {
         cost: card.cost,
         delay: card.delay,
         priority: card.priority,
-        launch_rules: rules::parse_rules(&card.rules_launch),
-        run_rules: rules::parse_rules(&card.rules_run),
+        host: card.host,
+        launch_rules: rules::parse_rules_launch(&card.rules_launch),
+        run_rules: rules::parse_rules_run(&card.rules_run),
     }
 }
 

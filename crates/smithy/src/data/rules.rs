@@ -1,16 +1,27 @@
 use std::str::Chars;
 
-use hall::core::{Amount, AttributeKind, AttributeValueKind, Instruction, RuntimeAmount, ValueTarget};
+use hall::core::{Amount, AttributeKind, AttributeValueKind, CardTargetMachineValue, CardTargetValue, LaunchInstruction, RunInstruction, RuntimeAmount, ValueTarget};
 
-pub fn process_code(instruction_str: &str) -> Option<Instruction> {
-    use Instruction::*;
+pub fn process_code_launch(instruction_str: &str) -> Option<LaunchInstruction> {
+    use LaunchInstruction::*;
 
     let (code, remain) = instruction_str.split_once(':').unwrap_or((instruction_str, ""));
 
     match code {
-        "TTL" => Some(TTL(parse_runtime_expr(remain))),
-        "INC" => remain.split_once(':').map(|(target, value)| INC(parse_value_target(target), parse_runtime_expr(value))),
-        "DEC" => remain.split_once(':').map(|(target, value)| DEC(parse_value_target(target), parse_runtime_expr(value))),
+        "TARG" => Some(Targ(parse_card_target(remain))),
+        "LOOP" => Some(Loop(parse_runtime_expr(remain))),
+        _ => None,
+    }
+}
+
+pub fn process_code_run(instruction_str: &str) -> Option<RunInstruction> {
+    use RunInstruction::*;
+
+    let (code, remain) = instruction_str.split_once(':').unwrap_or((instruction_str, ""));
+
+    match code {
+        "INCV" => remain.split_once(':').map(|(target, value)| IncV(parse_value_target(target), parse_runtime_expr(value))),
+        "DECV" => remain.split_once(':').map(|(target, value)| DecV(parse_value_target(target), parse_runtime_expr(value))),
         _ => None,
     }
 }
@@ -73,55 +84,67 @@ fn parse_runtime_expr(remain: &str) -> RuntimeAmount {
     }
 }
 
-pub(crate) fn parse_rules(rules: &str) -> Vec<Instruction> {
-    rules.split('|').filter_map(process_code).collect()
+fn parse_card_target(remain: &str) -> CardTargetValue {
+    match remain {
+        "MA" => CardTargetValue::Machine(CardTargetMachineValue::Any),
+        "ML" => CardTargetValue::Machine(CardTargetMachineValue::Local),
+        "MR" => CardTargetValue::Machine(CardTargetMachineValue::Remote),
+        _ => CardTargetValue::None,
+    }
+}
+
+pub(crate) fn parse_rules_launch(rules: &str) -> Vec<LaunchInstruction> {
+    rules.split('|').filter_map(process_code_launch).collect()
+}
+pub(crate) fn parse_rules_run(rules: &str) -> Vec<RunInstruction> {
+    rules.split('|').filter_map(process_code_run).collect()
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::data::rules::process_code;
-    use hall::core::{Amount::*, AttributeKind::*, AttributeValueKind::*, Instruction::*, RuntimeAmount::*, ValueTarget::*};
+    use crate::data::rules::{process_code_launch, process_code_run};
+    use hall::core::{Amount::*, AttributeKind::*, AttributeValueKind::*, LaunchInstruction::*, RunInstruction::*, RuntimeAmount::*, ValueTarget::*};
 
     #[test]
-    fn test_ttl_one_digit() {
-        let instruction = process_code("TTL:1");
-        assert_eq!(instruction, Some(TTL(Value(N(1)))));
-    }
-
-    #[test]
-    fn test_ttl_two_digits() {
-        let instruction = process_code("TTL:99");
-        assert_eq!(instruction, Some(TTL(Value(N(99)))));
+    fn test_loop_one_digit() {
+        let instruction = process_code_launch("LOOP:1");
+        assert_eq!(instruction, Some(Loop(Value(N(1)))));
     }
 
     #[test]
-    fn test_dec_two_digits() {
-        let instruction = process_code("DEC:FS:05");
-        assert_eq!(instruction, Some(DEC(FreeSpace, Value(N(5)))));
+    fn test_loop_two_digits() {
+        let instruction = process_code_launch("LOOP:99");
+        assert_eq!(instruction, Some(Loop(Value(N(99)))));
+    }
+
+    #[test]
+    fn test_decv_two_digits() {
+        let instruction = process_code_run("DECV:FS:05");
+        assert_eq!(instruction, Some(DecV(FreeSpace, Value(N(5)))));
     }
     #[test]
-    fn test_dec_attr() {
-        let instruction = process_code("DEC:TC:AA");
-        assert_eq!(instruction, Some(DEC(ThermalCapacity, Value(Attribute(Analyze, Amplitude)))));
+    fn test_decv_attr() {
+        let instruction = process_code_run("DECV:TC:AA");
+        assert_eq!(instruction, Some(DecV(ThermalCapacity, Value(Attribute(Analyze, Amplitude)))));
     }
     #[test]
-    fn test_dec_attr_add_value() {
-        let instruction = process_code("DEC:SH:BB+10");
-        assert_eq!(instruction, Some(DEC(SystemHealth, Add(Attribute(Breach, Beat), N(10)))));
+    fn test_decv_attr_add_value() {
+        let instruction = process_code_run("DECV:SH:BB+10");
+        assert_eq!(instruction, Some(DecV(SystemHealth, Add(Attribute(Breach, Beat), N(10)))));
     }
     #[test]
-    fn test_dec_attr_mul_attr() {
-        let instruction = process_code("DEC:OP:CC*DD");
-        assert_eq!(instruction, Some(DEC(OpenPorts, Mul(Attribute(Compute, Control), Attribute(Disrupt, Duration)))));
+    fn test_decv_attr_mul_attr() {
+        let instruction = process_code_run("DECV:OP:CC*DD");
+        assert_eq!(instruction, Some(DecV(OpenPorts, Mul(Attribute(Compute, Control), Attribute(Disrupt, Duration)))));
     }
     #[test]
-    fn test_inc_value_sub_attr() {
-        let instruction = process_code("INC:FS:10-AB");
-        assert_eq!(instruction, Some(INC(FreeSpace, Sub(N(10), Attribute(Analyze, Beat)))));
+    fn test_incv_value_sub_attr() {
+        let instruction = process_code_run("INCV:FS:10-AB");
+        assert_eq!(instruction, Some(IncV(FreeSpace, Sub(N(10), Attribute(Analyze, Beat)))));
     }
     #[test]
-    fn test_inc_value_add_value() {
-        let instruction = process_code("INC:TC:05+10");
-        assert_eq!(instruction, Some(INC(ThermalCapacity, Add(N(5), N(10)))));
+    fn test_incv_value_add_value() {
+        let instruction = process_code_run("INCV:TC:05+10");
+        assert_eq!(instruction, Some(IncV(ThermalCapacity, Add(N(5), N(10)))));
     }
 }

@@ -1,5 +1,5 @@
-use crate::data::shared::DbRarity;
-use hall::core::{AttributeKind, CardNumberType, DelayType, ErgType, PriorityType, Rarity, SetType};
+use crate::data::shared::{DbHost, DbRarity};
+use hall::core::{AttributeKind, CardNumberType, DelayType, ErgType, Host, PriorityType, Rarity, SetType};
 use sqlx::postgres::PgRow;
 use sqlx::{Pool, Postgres, Row};
 
@@ -12,6 +12,7 @@ pub(crate) struct DbCard {
     pub cost: ErgType,
     pub delay: DelayType,
     pub priority: PriorityType,
+    pub host: Host,
     pub rules_launch: String,
     pub rules_run: String,
 }
@@ -39,13 +40,14 @@ impl DbKind {
 fn row_to_card(row: &PgRow) -> DbCard {
     DbCard {
         title: row.get("title"),
-        rarity: row.get::<DbRarity, _>("rarity").to_rarity(),
+        rarity: row.get::<DbRarity, _>("rarity").into(),
         number: row.get::<i32, _>("number") as CardNumberType,
         set: row.get::<i32, _>("set") as SetType,
         kind: row.get::<DbKind, _>("kind").to_kind(),
         cost: row.get::<i32, _>("cost") as ErgType,
         delay: row.get::<i32, _>("delay") as DelayType,
         priority: row.get::<i32, _>("priority") as PriorityType,
+        host: row.get::<DbHost, _>("host").into(),
         rules_launch: row.get("rules_launch"),
         rules_run: row.get("rules_run"),
     }

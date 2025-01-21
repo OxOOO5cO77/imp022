@@ -119,19 +119,19 @@ impl GameUserState {
     }
 }
 
-impl From<&GameUserState> for GameUserStatePlayerView {
-    fn from(player_state: &GameUserState) -> Self {
-        Self {
-            attr: player_state.attr.to_arrays(),
-            deck: player_state.deck.len() as DeckCountType,
-            heap: player_state.heap.iter().map(HallCard::to_player_card).collect(),
-            hand: player_state.hand.iter().flatten().map(HallCard::to_player_card).collect(),
+impl GameUserState {
+    pub(crate) fn to_player_view(&self) -> GameUserStatePlayerView {
+        GameUserStatePlayerView {
+            attr: self.attr.to_arrays(),
+            deck: self.deck.len() as DeckCountType,
+            heap: self.heap.iter().map(HallCard::to_player_card).collect(),
+            hand: self.hand.iter().flatten().map(HallCard::to_player_card).collect(),
             erg: [
                 //
-                *player_state.erg.get(&AttributeKind::Analyze).unwrap_or(&0),
-                *player_state.erg.get(&AttributeKind::Breach).unwrap_or(&0),
-                *player_state.erg.get(&AttributeKind::Compute).unwrap_or(&0),
-                *player_state.erg.get(&AttributeKind::Disrupt).unwrap_or(&0),
+                *self.erg.get(&AttributeKind::Analyze).unwrap_or(&0),
+                *self.erg.get(&AttributeKind::Breach).unwrap_or(&0),
+                *self.erg.get(&AttributeKind::Compute).unwrap_or(&0),
+                *self.erg.get(&AttributeKind::Disrupt).unwrap_or(&0),
             ],
         }
     }
