@@ -1,17 +1,16 @@
-id,title,rarity,number,set,kind,cost,delay,priority,rules_launch,rules_run
-1,Common 1,Common,1,1,Analyze,1,1,99, , 
-2,Common 2,Common,2,1,Breach,1,1,99, , 
-3,Common 3,Common,3,1,Compute,1,1,99, , 
-4,Common 4,Common,4,1,Disrupt,1,1,99, , 
-5,Uncommon 1,Uncommon,1,1,Analyze,1,1,99, , 
-6,Uncommon 2,Uncommon,2,1,Breach,1,1,99, , 
-7,Uncommon 3,Uncommon,3,1,Compute,1,1,99, , 
-8,Uncommon 4,Uncommon,4,1,Disrupt,1,1,99, , 
-9,Rare 1,Rare,1,1,Analyze,1,1,99, , 
-10,Rare 2,Rare,2,1,Breach,1,1,99, , 
-11,Rare 3,Rare,3,1,Compute,1,1,99, , 
-12,Rare 4,Rare,4,1,Disrupt,1,1,99, , 
-13,Legendary 1,Legendary,1,1,Analyze,1,1,99, , 
-14,Legendary 2,Legendary,2,1,Breach,1,1,99, , 
-15,Legendary 3,Legendary,3,1,Compute,1,1,99, , 
-16,Legendary 4,Legendary,4,1,Disrupt,1,1,99, , 
+1,The Hate,Common,1,1,Analyze,1,1,99,TARG:MA|LOOP:05,DECV:FS:05,Local
+2,Le Reve,Common,2,1,Breach,1,1,99,TARG:MA|LOOP:05,DECV:TC:AA,Remote
+3,Martyrium,Common,3,1,Compute,1,1,99,TARG:MA|LOOP:05,DECV:SH:BB+10,Local
+4,Machine Moderne,Common,4,1,Disrupt,1,1,99,TARG:MA|LOOP:05,DECV:OP:CC*DD,Remote
+5,Luminary,Uncommon,1,1,Analyze,1,1,99,TARG:MA|LOOP:05,INCV:FS:10-AB,Local
+6,L'Âme Électrique,Uncommon,2,1,Breach,1,1,99,TARG:MA|LOOP:05,INCV:TC:CD,Remote
+7,Hallucigenia,Uncommon,3,1,Compute,1,1,99,TARG:MA|LOOP:05,INCV:SH:BD,Local
+8,Unreal Cinema,Uncommon,4,1,Disrupt,1,1,99,TARG:MA|LOOP:05,INCV:OP:CA,Remote
+9,Rosa Aeterna,Rare,1,1,Analyze,1,1,99,TARG:MA|LOOP:05,DECV:FS:05|INCV:SH:BD,Local
+10,Phenomena,Rare,2,1,Breach,1,1,99,TARG:MA|LOOP:05,DECV:TC:AA|INCV:FS:10-AB,Remote
+11,Visitation,Rare,3,1,Compute,1,1,99,TARG:MA|LOOP:05,DECV:SH:BB+10|INCV:TC:CD,Local
+12,La Somnambule,Rare,4,1,Disrupt,1,1,99,TARG:MA|LOOP:05,DECV:OP:CC*DD|DECV:FS:05,Remote
+13,Ad Infinitum,Legendary,1,1,Analyze,1,1,99,TARG:MA|LOOP:05,INCV:FS:10-AB|INCV:OP:CA,Local
+14,Confessions,Legendary,2,1,Breach,1,1,99,TARG:MA|LOOP:05,INCV:TC:CD|DECV:OP:CC*DD,Remote
+15,Duality,Legendary,3,1,Compute,1,1,99,TARG:MA|LOOP:05,INCV:SH:BD|DECV:TC:AA,Local
+16,InHuman,Legendary,4,1,Disrupt,1,1,99,TARG:MA|LOOP:05,INCV:OP:CA|DECV:SH:BB+10,Remote
