@@ -1,8 +1,8 @@
 use std::collections::{HashMap, VecDeque};
 
 use bevy::prelude::Resource;
-use hall::core::{AttributeKind, TickType};
-use hall::message::{CardIdxType, CardTarget};
+use hall::core::{AttributeKind, PickedCardTarget, TickType};
+use hall::message::CardIdxType;
 use hall::view::{GameMissionPlayerView, GameUserStatePlayerView};
 use vagabond::data::{VagabondCard, VagabondMachine};
 
@@ -15,7 +15,7 @@ pub(crate) struct GameplayContext {
     pub(crate) tick: TickType,
     pub(crate) phase: VagabondGamePhase,
     pub(crate) attr_pick: Option<AttributeKind>,
-    pub(crate) card_picks: HashMap<CardIdxType, CardTarget>,
+    pub(crate) card_picks: HashMap<CardIdxType, PickedCardTarget>,
     pub(crate) node_action: MissionNodeAction,
     pub(crate) hand: Vec<VagabondCard>,
     pub(crate) tty: HashMap<MachineKind, VecDeque<String>>,
@@ -32,12 +32,8 @@ impl GameplayContext {
         self.tick = tick;
     }
 
-    pub(crate) fn add_card_pick(&mut self, index: usize, target: MachineKind) {
+    pub(crate) fn add_card_pick(&mut self, index: usize, target: PickedCardTarget) {
         let card_idx = index as CardIdxType;
-        let card_target = match target {
-            MachineKind::Local => CardTarget::Local,
-            MachineKind::Remote => CardTarget::Remote(self.cached_mission.current().id),
-        };
-        self.card_picks.insert(card_idx, card_target);
+        self.card_picks.insert(card_idx, target);
     }
 }

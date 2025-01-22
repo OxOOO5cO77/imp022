@@ -2,8 +2,10 @@ use std::cmp::PartialEq;
 use std::collections::HashMap;
 
 use bevy::prelude::*;
-use hall::core::{AttributeKind, Attributes, DelayType, MissionNodeKind, TokenKind};
+
+use hall::core::{AttributeKind, Attributes, CardTargetMachineKind, CardTargetValue, DelayType, LaunchInstruction, MissionNodeKind, PickedCardTarget, TokenKind};
 use hall::message::*;
+use vagabond::data::VagabondCard;
 
 use crate::manager::{AtlasManager, ScreenLayoutManager, ScreenLayoutManagerParams};
 use crate::network::client_gate::{GateCommand, GateIFace};
@@ -171,10 +173,10 @@ fn gameplay_enter(
     commands.entity(layout.entity("attributes/row_c")).observe_pickable_row(AttributeKind::Compute);
     commands.entity(layout.entity("attributes/row_d")).observe_pickable_row(AttributeKind::Disrupt);
 
-    const MACHINES: &[(&str, MachineKind)] = &[("local", MachineKind::Local), ("remote", MachineKind::Remote)];
+    const MACHINES: &[(&str, MachineKind, PickedCardTarget)] = &[("local", MachineKind::Local, PickedCardTarget::MachineLocal), ("remote", MachineKind::Remote, PickedCardTarget::MachineRemote)];
 
-    for (machine_name, machine_kind) in MACHINES {
-        commands.entity(layout.entity(machine_name)).insert((*machine_kind, PickingBehavior::default())).observe(on_card_drop);
+    for (machine_name, machine_kind, target) in MACHINES {
+        commands.entity(layout.entity(machine_name)).insert((*machine_kind, CardDropTarget::new(*target), PickingBehavior::default())).observe(on_card_drop);
 
         commands.entity(layout.entity(&format!("{machine_name}/title"))).insert((*machine_kind, MachineText::new(MachineTextKind::Title)));
         commands.entity(layout.entity(&format!("{machine_name}/id"))).insert((*machine_kind, MachineText::new(MachineTextKind::Id)));
@@ -409,24 +411,41 @@ fn on_card_drop(
     event: Trigger<Pointer<DragDrop>>,
     mut commands: Commands,
     mut indicator_q: Query<&mut Indicator, With<IndicatorActive>>,
-    mut machine_q: Query<&MachineKind>,
+    mut drop_q: Query<&CardDropTarget>,
     hand_q: Query<&HandCard>,
     mut context: ResMut<GameplayContext>,
 ) {
     let dropped_on = event.target;
 
     if let Ok(mut indicator) = indicator_q.get_single_mut() {
-        indicator.target = machine_q.get_mut(dropped_on).ok().copied();
-        if let Some(target) = indicator.target {
+        if let Ok(drop) = drop_q.get_mut(dropped_on) {
             if let Ok(hand) = hand_q.get(indicator.parent) {
-                context.add_card_pick(hand.index, target);
-                if let Some((kind, cost)) = context.hand.get_mut(hand.index).map(|card| (card.kind, card.cost)) {
-                    context.cached_state.erg[map_kind_to_index(kind)] -= cost;
-                    commands.trigger(PlayerErgTrigger::new(context.cached_state.erg));
+                if let Some(card) = context.hand.get(hand.index).cloned() {
+                    if valid_target(&card, drop.target) {
+                        indicator.target = Some(drop.target);
+                        context.add_card_pick(hand.index, drop.target);
+                        context.cached_state.erg[map_kind_to_index(card.kind)] -= card.cost;
+                        commands.trigger(PlayerErgTrigger::new(context.cached_state.erg));
+                    }
                 }
             }
         }
     }
+}
+
+fn valid_target(card: &VagabondCard, target: PickedCardTarget) -> bool {
+    card.launch_rules.iter().any(|instruction| match instruction {
+        LaunchInstruction::Targ(targ) => match targ {
+            CardTargetValue::None => false,
+            CardTargetValue::Machine(targ_machine) => match targ_machine {
+                CardTargetMachineKind::Any => matches!(target, PickedCardTarget::MachineLocal | PickedCardTarget::MachineRemote),
+                CardTargetMachineKind::Local => matches!(target, PickedCardTarget::MachineLocal),
+                CardTargetMachineKind::Remote => matches!(target, PickedCardTarget::MachineRemote),
+            },
+            CardTargetValue::Actor => matches!(target, PickedCardTarget::Actor(_)),
+        },
+        _ => false,
+    })
 }
 
 fn on_over_process(

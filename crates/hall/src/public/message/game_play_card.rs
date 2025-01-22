@@ -1,19 +1,11 @@
-use crate::core::MissionNodeIdType;
-use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
 use shared_net::{op, Bufferable, GameIdType, SizedBuffer, SizedBufferError};
+
+use crate::core::PickedCardTarget;
+use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
 
 pub type CardIdxType = u8;
 
-#[repr(u8)]
-#[derive(Copy, Clone, Default)]
-#[cfg_attr(test, derive(Debug, PartialEq))]
-pub enum CardTarget {
-    #[default]
-    Local,
-    Remote(MissionNodeIdType),
-}
-
-pub type PicksType = Vec<(CardIdxType, CardTarget)>;
+pub type PicksType = Vec<(CardIdxType, PickedCardTarget)>;
 
 #[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
@@ -32,28 +24,6 @@ impl GameRequestMessage for GamePlayCardRequest {
     }
 }
 
-impl Bufferable for CardTarget {
-    fn push_into(&self, buf: &mut SizedBuffer) -> Result<usize, SizedBufferError> {
-        match self {
-            CardTarget::Local => 0u8,
-            CardTarget::Remote(node) => *node,
-        }
-        .push_into(buf)
-    }
-
-    fn pull_from(buf: &mut SizedBuffer) -> Result<Self, SizedBufferError> {
-        let result = match u8::pull_from(buf)? {
-            0 => CardTarget::Local,
-            node => CardTarget::Remote(node),
-        };
-        Ok(result)
-    }
-
-    fn size_in_buffer(&self) -> usize {
-        size_of::<MissionNodeIdType>()
-    }
-}
-
 #[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct GamePlayCardResponse {
@@ -68,14 +38,15 @@ impl GameResponseMessage for GamePlayCardResponse {}
 
 #[cfg(test)]
 mod test {
-    use crate::message::game_play_card::{CardTarget, GamePlayCardRequest, GamePlayCardResponse};
+    use crate::core::PickedCardTarget;
+    use crate::message::game_play_card::{GamePlayCardRequest, GamePlayCardResponse};
     use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]
     fn test_request() -> Result<(), SizedBufferError> {
         let orig = GamePlayCardRequest {
             game_id: 1234567890,
-            picks: vec![(0, CardTarget::Local), (1, CardTarget::Remote(1)), (2, CardTarget::Remote(1))],
+            picks: vec![(0, PickedCardTarget::MachineLocal), (1, PickedCardTarget::MachineRemote), (2, PickedCardTarget::Actor(4))],
         };
 
         let mut buf = SizedBuffer::from(&orig)?;

@@ -5,7 +5,7 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
-use hall::core::{AttributeKind, MissionNodeIntent};
+use hall::core::{AttributeKind, MissionNodeIntent, PickedCardTarget};
 use hall::message::*;
 use shared_net::{op, RoutedMessage, SizedBuffer, SizedBufferError, VClientMode};
 use shared_net::{AuthType, Bufferable, GameIdType, PartType};
@@ -175,7 +175,7 @@ impl GateIFace {
         }
     }
 
-    pub fn send_game_play_cards(&self, picks_map: &HashMap<CardIdxType, CardTarget>) -> bool {
+    pub fn send_game_play_cards(&self, picks_map: &HashMap<CardIdxType, PickedCardTarget>) -> bool {
         let request = GamePlayCardRequest {
             game_id: self.game_id,
             picks: picks_map.iter().map(|(&idx, &target)| (idx, target)).collect(),

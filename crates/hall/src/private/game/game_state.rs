@@ -31,8 +31,10 @@ pub(crate) struct GameState {
 
 #[derive(Copy, Clone, PartialEq)]
 pub(crate) enum TargetIdType {
+    None,
     Local(UserIdType),
     Remote(RemoteIdType),
+    Actor(ActorIdType),
 }
 
 fn random_unique<T, U>(existing: &HashMap<T, U>, rng: &mut impl Rng) -> T
@@ -64,7 +66,7 @@ impl GameState {
             let actor_count: usize = rng.random_range(..5);
             for _ in 0..actor_count {
                 let actor = random_unique(&actors, rng);
-                node.users.push(actor);
+                node.actors.push(actor);
                 actors.insert(actor, GameActor::new());
             }
         }
@@ -172,7 +174,7 @@ impl GameState {
 
         let mut executables = Vec::new();
 
-        for user in self.users.values_mut() {
+        for user in self.users.values_mut().filter(|user| user.machine.is_active()) {
             if let Some(player) = &user.player {
                 user.machine.tick(&player.attributes);
                 executables.append(&mut user.machine.run(&player.attributes));

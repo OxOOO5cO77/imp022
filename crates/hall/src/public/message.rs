@@ -20,7 +20,7 @@ pub use game_choose_attr::{GameChooseAttrRequest, GameChooseAttrResponse};
 pub use game_choose_intent::{GameChooseIntentRequest, GameChooseIntentResponse};
 pub use game_end_game::{GameEndGameRequest, GameEndGameResponse};
 pub use game_end_turn::{GameEndTurnRequest, GameEndTurnResponse};
-pub use game_play_card::{CardIdxType, CardTarget, GamePlayCardRequest, GamePlayCardResponse, PicksType};
+pub use game_play_card::{CardIdxType, GamePlayCardRequest, GamePlayCardResponse, PicksType};
 pub use game_update_state::{GameUpdateStateRequest, GameUpdateStateResponse};
 
 pub use game_resolve_cards::GameResolveCardsMessage;

@@ -2,9 +2,9 @@ use std::collections::{HashMap, VecDeque};
 
 use rand::{seq::SliceRandom, Rng};
 
-use hall::core::{AttributeKind, Attributes, DeckCountType, ErgArray, ErgType, MissionNodeIntent};
+use hall::core::{AttributeKind, Attributes, DeckCountType, ErgArray, ErgType, MissionNodeIntent, PickedCardTarget};
 use hall::hall::HallCard;
-use hall::message::{CardTarget, PicksType};
+use hall::message::PicksType;
 use hall::view::GameUserStatePlayerView;
 use shared_net::op;
 
@@ -43,7 +43,7 @@ pub struct GameUserState {
     heap: Vec<HallCard>,
     hand: [Option<HallCard>; HAND_SIZE],
     erg: HashMap<AttributeKind, ErgType>,
-    play: Vec<(HallCard, CardTarget)>,
+    play: Vec<(HallCard, PickedCardTarget)>,
     pub command: GameUserCommandState,
     pub resolve_kind: Option<AttributeKind>,
     pub intent: MissionNodeIntent,
@@ -70,12 +70,12 @@ impl GameUserState {
         }
     }
 
-    fn play_card(&mut self, index: usize, target: &CardTarget, erg: &mut HashMap<AttributeKind, ErgType>) -> bool {
+    fn play_card(&mut self, index: usize, target: PickedCardTarget, erg: &mut HashMap<AttributeKind, ErgType>) -> bool {
         if let Some(Some(card)) = self.hand.get(index) {
             let erg = erg.entry(card.kind).or_insert(0);
             if *erg >= card.cost {
                 *erg -= card.cost;
-                self.play.push((card.clone(), *target));
+                self.play.push((card.clone(), target));
                 self.hand[index] = None;
                 return true;
             }
@@ -89,13 +89,13 @@ impl GameUserState {
 
         for (index, target) in picks {
             let index = *index as usize;
-            result[index] = result[index] && self.play_card(index, target, &mut temp_erg);
+            result[index] = result[index] && self.play_card(index, *target, &mut temp_erg);
         }
 
         result
     }
 
-    pub fn played_cards(&mut self) -> Vec<(HallCard, CardTarget)> {
+    pub fn played_cards(&mut self) -> Vec<(HallCard, PickedCardTarget)> {
         self.play.drain(..).collect::<Vec<_>>()
     }
 

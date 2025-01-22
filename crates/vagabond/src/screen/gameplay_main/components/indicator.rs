@@ -1,13 +1,12 @@
 use bevy::prelude::*;
-
-use crate::screen::gameplay_main::components::MachineKind;
+use hall::core::PickedCardTarget;
 
 #[derive(Component)]
 pub(crate) struct Indicator {
     pub(crate) translation: Vec3,
     pub(crate) offset: Vec2,
     pub(crate) parent: Entity,
-    pub(crate) target: Option<MachineKind>,
+    pub(crate) target: Option<PickedCardTarget>,
 }
 
 #[derive(Component)]
@@ -15,6 +14,19 @@ pub(crate) struct IndicatorTracker;
 
 #[derive(Component)]
 pub(crate) struct IndicatorActive;
+
+#[derive(Component)]
+pub(crate) struct CardDropTarget {
+    pub(crate) target: PickedCardTarget,
+}
+
+impl CardDropTarget {
+    pub(crate) fn new(target: PickedCardTarget) -> Self {
+        Self {
+            target,
+        }
+    }
+}
 
 impl Indicator {
     pub(crate) fn make_bundle(parent: Entity, translation: Vec3, offset: Vec2, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<ColorMaterial>>) -> impl Bundle {

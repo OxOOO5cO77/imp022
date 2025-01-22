@@ -29,9 +29,9 @@ pub(crate) struct HandCard {
 }
 
 impl HandCard {
-    pub(crate) fn new(slot: usize) -> Self {
+    pub(crate) fn new(index: usize) -> Self {
         Self {
-            index: slot,
+            index,
         }
     }
 }

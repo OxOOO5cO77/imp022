@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use crate::private::game::game_machine::GameMachineContext;
 use crate::private::game::game_state::{ActorMapType, UserMapType};
 use crate::private::game::{GameMachine, RemoteMapType, TargetIdType};
-use hall::core::{Attributes, CardTargetMachineValue, CardTargetValue, LaunchInstruction, MachineValueType, PriorityType, RunInstruction, ValueTarget};
+use hall::core::{Attributes, CardTargetMachineKind, CardTargetValue, LaunchInstruction, MachineValueType, PriorityType, RunInstruction, ValueTarget};
 use hall::hall::HallCard;
 use hall::player::PlayerCard;
 use hall::view::GameProcessPlayerView;
@@ -81,10 +81,11 @@ impl GameProcess {
         match card_target {
             CardTargetValue::None => false,
             CardTargetValue::Machine(machine_kind) => match machine_kind {
-                CardTargetMachineValue::Any => matches!(self.target, TargetIdType::Local(_) | TargetIdType::Remote(_)),
-                CardTargetMachineValue::Local => matches!(self.target, TargetIdType::Local(_)),
-                CardTargetMachineValue::Remote => matches!(self.target, TargetIdType::Remote(_)),
+                CardTargetMachineKind::Any => matches!(self.target, TargetIdType::Local(_) | TargetIdType::Remote(_)),
+                CardTargetMachineKind::Local => matches!(self.target, TargetIdType::Local(_)),
+                CardTargetMachineKind::Remote => matches!(self.target, TargetIdType::Remote(_)),
             },
+            CardTargetValue::Actor => matches!(self.target, TargetIdType::Actor(_)),
         }
     }
 }
@@ -150,8 +151,10 @@ impl GameProcessExecutor {
 
     fn resolve_target_machine<'a>(target: TargetIdType, users: &'a mut UserMapType, remotes: &'a mut RemoteMapType) -> Option<&'a mut GameMachine> {
         match target {
+            TargetIdType::None => None,
             TargetIdType::Local(id) => users.get_mut(&id).map(|user| &mut user.machine),
             TargetIdType::Remote(id) => remotes.get_mut(&id).map(|remote| &mut remote.machine),
+            TargetIdType::Actor(_) => None,
         }
     }
 
