@@ -9,7 +9,7 @@ pub struct GameMissionNode {
     pub links: Vec<MissionNodeLink>,
     pub content: Vec<MissionNodeContent>,
     pub remote: RemoteIdType,
-    pub users: Vec<ActorIdType>,
+    pub actors: Vec<ActorIdType>,
 }
 
 impl GameMissionNode {
@@ -21,7 +21,7 @@ impl GameMissionNode {
             links: node.links.clone(),
             content: node.content.clone(),
             remote,
-            users: Vec::new(),
+            actors: Vec::new(),
         }
     }
 }
@@ -34,7 +34,7 @@ impl GameMissionNode {
             links: self.links.clone(),
             content: self.content.clone(),
             remote: self.remote,
-            actors: self.users.clone(),
+            actors: self.actors.clone(),
         }
     }
 }
