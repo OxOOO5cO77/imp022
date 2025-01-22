@@ -72,7 +72,7 @@ impl GameMachine {
     }
 
     pub(crate) fn is_active(&self) -> bool {
-        self.state != GameMachineState::Active
+        self.state == GameMachineState::Active
     }
 
     pub(crate) fn tick(&mut self, attrs: &Attributes) {
