@@ -5,8 +5,10 @@
 &title:main.12.center%184,18@24,5,2!white|CARD
 #cost_bg:capsule_x%20,16@212,5,1!dim
 &cost:main.12.center%20,18@212,4,2!white|0
-#launch_bg:rect%220,100@8,56,1!whitish
-&launch:main.12.left%212,92@12,60,2!black|LAUNCH
+#host_bg:rect%220,20@8,36,1!whitish
+&host:main.12.left%212,20@12,36,2!black|HOST
+#launch_bg:rect%220,80@8,76,1!whitish
+&launch:main.12.left%212,72@12,80,2!black|LAUNCH
 #run_bg:rect%220,100@8,172,1!whitish
 &run:main.12.left%212,92@12,176,2!black|RUN
 #priority_bg:capsule_x%20,16@174,294,1!whitish
