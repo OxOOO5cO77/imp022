@@ -1,7 +1,7 @@
 use hall::core::{Phase, PickedCardTarget};
 use hall::message::GameResolveCardsMessage;
 
-use crate::private::game::{GameState, TargetIdType};
+use crate::private::game::{CardResolve, GameState, TargetIdType};
 use crate::private::logic::server::update_state::all_users_update_state;
 use crate::private::network::broadcaster::Broadcaster;
 
@@ -26,7 +26,9 @@ pub(crate) fn handle_play_card(game: &mut GameState, bx: &mut Broadcaster) {
                     }
                 }
             };
-            all_played.push((*user_id, remote_id, card, target_id));
+            if let Some(player) = user.player.as_ref() {
+                all_played.push(CardResolve::new(*user_id, remote_id, card, target_id, player.attributes));
+            }
         }
     }
     let _results = game.resolve_cards(all_played);

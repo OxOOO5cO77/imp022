@@ -175,15 +175,13 @@ impl GameState {
         let mut executables = Vec::new();
 
         for user in self.users.values_mut().filter(|user| user.machine.is_active()) {
-            if let Some(player) = &user.player {
-                user.machine.tick(&player.attributes);
-                executables.append(&mut user.machine.run(&player.attributes));
-            }
+            user.machine.tick();
+            executables.append(&mut user.machine.run());
         }
 
         for remote in self.remotes.values_mut().filter(|remote| remote.machine.is_active()) {
-            remote.machine.tick(&remote.attributes);
-            executables.append(&mut remote.machine.run(&remote.attributes));
+            remote.machine.tick();
+            executables.append(&mut remote.machine.run());
         }
 
         for executable in executables {
@@ -233,16 +231,16 @@ impl GameState {
         (local_alloc, remote_alloc)
     }
 
-    pub(crate) fn resolve_cards(&mut self, cards: Vec<(UserIdType, RemoteIdType, HallCard, TargetIdType)>) -> Vec<(UserIdType, RemoteIdType, PlayerCard, TargetIdType)> {
+    pub(crate) fn resolve_cards(&mut self, cards: Vec<CardResolve>) -> Vec<PlayerCard> {
         let mut result = Vec::new();
-        for (local_id, remote_id, card, target) in cards.into_iter() {
-            let machine = match card.host {
-                Host::Local => self.users.get_mut(&local_id).map(|u| &mut u.machine),
-                Host::Remote => self.remotes.get_mut(&remote_id).map(|r| &mut r.machine),
+        for resolve in cards.into_iter() {
+            let machine = match resolve.card.host {
+                Host::Local => self.users.get_mut(&resolve.local_id).map(|u| &mut u.machine),
+                Host::Remote => self.remotes.get_mut(&resolve.remote_id).map(|r| &mut r.machine),
                 Host::None => None,
             };
-            if let Some(played) = machine.and_then(|m| m.enqueue(card, target, local_id)) {
-                result.push((local_id, remote_id, played, target));
+            if let Some(played) = machine.and_then(|m| m.enqueue(&resolve)) {
+                result.push(played);
             }
         }
         result
@@ -256,6 +254,26 @@ impl GameState {
             local_machine: user.machine.to_player_view(id),
             remote_machine: remote.to_player_view(id),
             mission: mission.to_player_view(&user.mission_state),
+        }
+    }
+}
+
+pub(crate) struct CardResolve {
+    pub(crate) local_id: UserIdType,
+    pub(crate) remote_id: RemoteIdType,
+    pub(crate) card: HallCard,
+    pub(crate) target: TargetIdType,
+    pub(crate) attributes: Attributes,
+}
+
+impl CardResolve {
+    pub(crate) fn new(local_id: UserIdType, remote_id: RemoteIdType, card: HallCard, target: TargetIdType, attributes: Attributes) -> Self {
+        Self {
+            local_id,
+            remote_id,
+            card,
+            target,
+            attributes,
         }
     }
 }

@@ -1,10 +1,9 @@
 use std::cmp::Ordering;
 
 use crate::private::game::game_machine::GameMachineContext;
-use crate::private::game::game_state::{ActorMapType, UserMapType};
+use crate::private::game::game_state::{ActorMapType, CardResolve, UserMapType};
 use crate::private::game::{GameMachine, RemoteMapType, TargetIdType};
 use hall::core::{Attributes, CardTargetMachineKind, CardTargetValue, LaunchInstruction, MachineValueType, PriorityType, RunInstruction, ValueTarget};
-use hall::hall::HallCard;
 use hall::player::PlayerCard;
 use hall::view::GameProcessPlayerView;
 use shared_net::UserIdType;
@@ -19,28 +18,30 @@ pub(crate) struct GameProcess {
     loop_count: LoopType,
     target: TargetIdType,
     owner_id: UserIdType,
+    attributes: Attributes,
 }
 
 impl GameProcess {
-    pub(crate) fn new_from_card(card: HallCard, target: TargetIdType, owner_id: UserIdType) -> (Self, usize) {
+    pub(crate) fn new_from_card_resolve(resolve: &CardResolve) -> (Self, usize) {
         (
             Self {
-                player_card: (&card).into(),
-                launch_code: card.launch_code,
-                run_code: card.run_code,
-                priority: card.priority,
+                player_card: (&resolve.card).into(),
+                launch_code: resolve.card.launch_code.clone(),
+                run_code: resolve.card.run_code.clone(),
+                priority: resolve.card.priority,
                 loop_count: 0,
-                target,
-                owner_id,
+                target: resolve.target,
+                owner_id: resolve.local_id,
+                attributes: resolve.attributes,
             },
-            card.delay as usize,
+            resolve.card.delay as usize,
         )
     }
 
-    pub(crate) fn launch(&mut self, attrs: &Attributes) -> bool {
+    pub(crate) fn launch(&mut self) -> bool {
         for code in &self.launch_code {
             match code {
-                LaunchInstruction::Loop(loop_count) => self.loop_count = loop_count.resolve(attrs) as LoopType,
+                LaunchInstruction::Loop(loop_count) => self.loop_count = loop_count.resolve(&self.attributes) as LoopType,
                 LaunchInstruction::Targ(target) => {
                     if !self.target_valid(target) {
                         return false;
@@ -52,11 +53,11 @@ impl GameProcess {
         true
     }
 
-    pub(crate) fn build_executable(&self, attrs: &Attributes) -> GameProcessExecutor {
+    pub(crate) fn build_executable(&self) -> GameProcessExecutor {
         GameProcessExecutor {
             target: self.target,
             run_code: self.run_code.clone(),
-            attrs: *attrs,
+            attributes: self.attributes,
         }
     }
 
@@ -120,6 +121,7 @@ impl ProcessForPlayer for GameProcessPlayerView {
             player_card: process.player_card,
             priority: process.priority,
             local: process.owner_id == user_id,
+            attributes: process.attributes.to_arrays(),
         }
     }
 }
@@ -127,7 +129,7 @@ impl ProcessForPlayer for GameProcessPlayerView {
 pub(crate) struct GameProcessExecutor {
     target: TargetIdType,
     run_code: Vec<RunInstruction>,
-    attrs: Attributes,
+    attributes: Attributes,
 }
 
 impl GameProcessExecutor {
@@ -136,12 +138,12 @@ impl GameProcessExecutor {
             match instruction {
                 RunInstruction::IncV(value, amount) => {
                     if let Some(machine) = Self::resolve_target_machine(self.target, users, remotes) {
-                        Self::execute_incv(&mut machine.context, *value, amount.resolve(&self.attrs));
+                        Self::execute_incv(&mut machine.context, *value, amount.resolve(&self.attributes));
                     }
                 }
                 RunInstruction::DecV(value, amount) => {
                     if let Some(machine) = Self::resolve_target_machine(self.target, users, remotes) {
-                        Self::execute_decv(&mut machine.context, *value, amount.resolve(&self.attrs));
+                        Self::execute_decv(&mut machine.context, *value, amount.resolve(&self.attributes));
                     }
                 }
                 RunInstruction::NoOp => {}

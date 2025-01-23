@@ -1,4 +1,4 @@
-use hall::core::PriorityType;
+use hall::core::{AttributeArrays, PriorityType};
 
 use crate::data::VagabondCard;
 
@@ -7,4 +7,5 @@ pub struct VagabondProcess {
     pub card: VagabondCard,
     pub priority: PriorityType,
     pub local: bool,
+    pub attributes: AttributeArrays,
 }

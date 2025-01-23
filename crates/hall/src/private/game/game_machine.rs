@@ -1,13 +1,13 @@
 use std::collections::VecDeque;
 
-use hall::core::{Attributes, DelayType, MachineValueType};
-use hall::hall::HallCard;
+use hall::core::{DelayType, MachineValueType};
 use hall::player::PlayerCard;
 use hall::view::{GameMachinePlayerView, GameProcessPlayerView};
 use shared_net::UserIdType;
 
 use crate::private::game::game_process::{GameProcessExecutor, ProcessForPlayer};
-use crate::private::game::{GameProcess, TargetIdType};
+use crate::private::game::game_state::CardResolve;
+use crate::private::game::GameProcess;
 
 const QUEUE_SIZE: usize = 10;
 
@@ -52,8 +52,8 @@ enum GameMachineTerminationReason {
 }
 
 impl GameMachine {
-    pub(crate) fn enqueue(&mut self, card: HallCard, target: TargetIdType, owner_id: UserIdType) -> Option<PlayerCard> {
-        let (process, mut index) = GameProcess::new_from_card(card, target, owner_id);
+    pub(crate) fn enqueue(&mut self, resolve: &CardResolve) -> Option<PlayerCard> {
+        let (process, mut index) = GameProcess::new_from_card_resolve(resolve);
         while let Some(Some(q)) = self.queue.get(index) {
             if q.get_priority() < process.get_priority() {
                 break;
@@ -75,9 +75,9 @@ impl GameMachine {
         self.state == GameMachineState::Active
     }
 
-    pub(crate) fn tick(&mut self, attrs: &Attributes) {
+    pub(crate) fn tick(&mut self) {
         if let Some(Some(mut process)) = self.queue.pop_front() {
-            let launched = process.launch(attrs);
+            let launched = process.launch();
             if launched {
                 self.running.push(process);
             }
@@ -90,11 +90,11 @@ impl GameMachine {
         self.state = self.context.check_termination();
     }
 
-    pub(crate) fn run(&mut self, attrs: &Attributes) -> Vec<GameProcessExecutor> {
+    pub(crate) fn run(&mut self) -> Vec<GameProcessExecutor> {
         let mut executors = Vec::new();
         for process in &mut self.running {
             if process.tick() {
-                executors.push(process.build_executable(attrs));
+                executors.push(process.build_executable());
             }
         }
         executors

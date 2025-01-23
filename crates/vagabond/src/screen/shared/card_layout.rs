@@ -25,6 +25,13 @@ impl CardPopulateEvent {
             attr,
         }
     }
+
+    pub(crate) fn empty() -> Self {
+        Self {
+            card: None,
+            attr: Attributes::default(),
+        }
+    }
 }
 
 #[derive(Component, Clone)]

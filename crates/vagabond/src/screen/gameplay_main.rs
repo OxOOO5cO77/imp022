@@ -461,8 +461,11 @@ fn on_over_process(
             MachineKind::Local => &context.cached_local,
             MachineKind::Remote => &context.cached_remote,
         };
-        let card = cached.queue.iter().find(|(_, d)| queue_item.delay == *d).map(|(c, _)| c.card.clone());
-        commands.trigger_targets(UpdateCardTooltipEvent::new(event.pointer_location.position, card, Attributes::from_arrays(context.cached_state.attr)), tooltip.entity);
+        if let Some(process) = cached.queue.iter().find(|(_, d)| queue_item.delay == *d).map(|(c, _)| c) {
+            let card = Some(process.card.clone());
+            let attributes = Attributes::from_arrays(process.attributes);
+            commands.trigger_targets(UpdateCardTooltipEvent::new(event.pointer_location.position, card, attributes), tooltip.entity);
+        }
     }
 }
 
@@ -479,8 +482,11 @@ fn on_over_running(
             MachineKind::Local => &context.cached_local,
             MachineKind::Remote => &context.cached_remote,
         };
-        let card = cached.running.get(running.index).map(|process| process.card.clone());
-        commands.trigger_targets(UpdateCardTooltipEvent::new(event.pointer_location.position, card, Attributes::from_arrays(context.cached_state.attr)), tooltip.entity);
+        if let Some(process) = cached.running.get(running.index) {
+            let card = Some(process.card.clone());
+            let attributes = Attributes::from_arrays(process.attributes);
+            commands.trigger_targets(UpdateCardTooltipEvent::new(event.pointer_location.position, card, attributes), tooltip.entity);
+        }
     }
 }
 

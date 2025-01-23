@@ -15,6 +15,7 @@ fn convert_process(process: &GameProcessPlayerView, dm: &DataManager) -> Option<
         card: dm.convert_card(&process.player_card)?,
         priority: process.priority,
         local: process.local,
+        attributes: process.attributes,
     };
     Some(vagabond_process)
 }
@@ -92,7 +93,12 @@ pub(super) fn on_machine_ui_update_state(
         } else {
             &event.remote
         };
-        let card = machine.running.get(running.index).and_then(|process| dm.convert_card(&process.player_card));
-        commands.entity(entity).trigger(CardPopulateEvent::new(card, Attributes::from_arrays(context.cached_state.attr)));
+        let trigger = if let Some(process) = machine.running.get(running.index) {
+            let card = dm.convert_card(&process.player_card);
+            CardPopulateEvent::new(card, Attributes::from_arrays(process.attributes))
+        } else {
+            CardPopulateEvent::empty()
+        };
+        commands.entity(entity).trigger(trigger);
     }
 }
