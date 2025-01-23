@@ -22,6 +22,7 @@ pub fn process_code_run(instruction_str: &str) -> Option<RunInstruction> {
     match code {
         "INCV" => remain.split_once(':').map(|(target, value)| IncV(parse_value_target(target), parse_runtime_expr(value))),
         "DECV" => remain.split_once(':').map(|(target, value)| DecV(parse_value_target(target), parse_runtime_expr(value))),
+        "CRED" => Some(Cred),
         _ => None,
     }
 }
@@ -86,6 +87,7 @@ fn parse_runtime_expr(remain: &str) -> RuntimeAmount {
 
 fn parse_card_target(remain: &str) -> CardTargetValue {
     match remain {
+        "AA" => CardTargetValue::Actor,
         "MA" => CardTargetValue::Machine(CardTargetMachineKind::Any),
         "ML" => CardTargetValue::Machine(CardTargetMachineKind::Local),
         "MR" => CardTargetValue::Machine(CardTargetMachineKind::Remote),

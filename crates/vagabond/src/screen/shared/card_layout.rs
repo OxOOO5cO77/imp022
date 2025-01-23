@@ -134,6 +134,7 @@ impl CardLayout {
             RunInstruction::NoOp => None,
             RunInstruction::IncV(target, value) => Some(format!("Increase {} by {}", Self::explain_target(target), value.resolve(attr))),
             RunInstruction::DecV(target, value) => Some(format!("Decrease {} by {}", Self::explain_target(target), value.resolve(attr))),
+            RunInstruction::Cred => Some("Copy Credentials".to_string()),
         }
     }
 
@@ -149,7 +150,7 @@ impl CardLayout {
 
     fn explain_host(host: Host) -> &'static str {
         match host {
-            Host::None => "Immediate",
+            Host::None => "Runs Immediately",
             Host::Local => "Runs Locally",
             Host::Remote => "Runs Remotely",
         }

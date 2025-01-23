@@ -32,13 +32,15 @@ pub enum Host {
     Remote,
 }
 
+pub type ActorIndexType = u8;
+
 #[derive(Clone, Copy)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub enum PickedCardTarget {
     None,
     MachineLocal,
     MachineRemote,
-    Actor(u8),
+    Actor(ActorIndexType),
 }
 
 impl Bufferable for PickedCardTarget {

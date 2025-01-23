@@ -2,8 +2,8 @@ use std::cmp::Ordering;
 
 use crate::private::game::game_machine::GameMachineContext;
 use crate::private::game::game_state::{ActorMapType, CardResolve, UserMapType};
-use crate::private::game::{GameMachine, RemoteMapType, TargetIdType};
-use hall::core::{Attributes, CardTargetMachineKind, CardTargetValue, LaunchInstruction, MachineValueType, PriorityType, RunInstruction, ValueTarget};
+use crate::private::game::{GameActor, GameMachine, RemoteMapType, TargetIdType};
+use hall::core::{Attributes, CardTargetMachineKind, CardTargetValue, LaunchInstruction, MachineValueType, PriorityType, RunInstruction, TickType, Token, TokenKind, ValueTarget, DEFAULT_TOKEN_EXPIRY};
 use hall::player::PlayerCard;
 use hall::view::GameProcessPlayerView;
 use shared_net::UserIdType;
@@ -17,7 +17,7 @@ pub(crate) struct GameProcess {
     priority: PriorityType,
     loop_count: LoopType,
     target: TargetIdType,
-    owner_id: UserIdType,
+    owner: UserIdType,
     attributes: Attributes,
 }
 
@@ -31,7 +31,7 @@ impl GameProcess {
                 priority: resolve.card.priority,
                 loop_count: 0,
                 target: resolve.target,
-                owner_id: resolve.local_id,
+                owner: resolve.local_id,
                 attributes: resolve.attributes,
             },
             resolve.card.delay as usize,
@@ -55,6 +55,7 @@ impl GameProcess {
 
     pub(crate) fn build_executable(&self) -> GameProcessExecutor {
         GameProcessExecutor {
+            owner: self.owner,
             target: self.target,
             run_code: self.run_code.clone(),
             attributes: self.attributes,
@@ -120,22 +121,24 @@ impl ProcessForPlayer for GameProcessPlayerView {
         Self {
             player_card: process.player_card,
             priority: process.priority,
-            local: process.owner_id == user_id,
+            local: process.owner == user_id,
             attributes: process.attributes.to_arrays(),
         }
     }
 }
 
 pub(crate) struct GameProcessExecutor {
+    owner: UserIdType,
     target: TargetIdType,
     run_code: Vec<RunInstruction>,
     attributes: Attributes,
 }
 
 impl GameProcessExecutor {
-    pub(crate) fn execute(&self, users: &mut UserMapType, remotes: &mut RemoteMapType, _actors: &mut ActorMapType) {
+    pub(crate) fn execute(&self, tick: TickType, users: &mut UserMapType, remotes: &mut RemoteMapType, actors: &mut ActorMapType) {
         for instruction in &self.run_code {
             match instruction {
+                RunInstruction::NoOp => {}
                 RunInstruction::IncV(value, amount) => {
                     if let Some(machine) = Self::resolve_target_machine(self.target, users, remotes) {
                         Self::execute_incv(&mut machine.context, *value, amount.resolve(&self.attributes));
@@ -146,17 +149,30 @@ impl GameProcessExecutor {
                         Self::execute_decv(&mut machine.context, *value, amount.resolve(&self.attributes));
                     }
                 }
-                RunInstruction::NoOp => {}
+                RunInstruction::Cred => {
+                    if let Some(actor) = Self::resolve_target_actor(self.target, actors) {
+                        if let Some(user) = users.get_mut(&self.owner) {
+                            let token = Token::new(TokenKind::Credentials(actor.auth_level), tick + DEFAULT_TOKEN_EXPIRY);
+                            user.mission_state.add_token(token.clone());
+                        }
+                    }
+                }
             }
         }
     }
 
     fn resolve_target_machine<'a>(target: TargetIdType, users: &'a mut UserMapType, remotes: &'a mut RemoteMapType) -> Option<&'a mut GameMachine> {
         match target {
-            TargetIdType::None => None,
             TargetIdType::Local(id) => users.get_mut(&id).map(|user| &mut user.machine),
             TargetIdType::Remote(id) => remotes.get_mut(&id).map(|remote| &mut remote.machine),
-            TargetIdType::Actor(_) => None,
+            _ => None,
+        }
+    }
+
+    fn resolve_target_actor(target: TargetIdType, actors: &ActorMapType) -> Option<&GameActor> {
+        match target {
+            TargetIdType::Actor(id) => actors.get(&id),
+            _ => None,
         }
     }
 

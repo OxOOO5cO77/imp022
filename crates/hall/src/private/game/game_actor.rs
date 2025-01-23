@@ -4,16 +4,16 @@ enum ActorKind {
     Guest,
 }
 
-pub struct GameActor {
+pub(crate) struct GameActor {
     _kind: ActorKind,
-    _auth_level: AuthLevel,
+    pub(crate) auth_level: AuthLevel,
 }
 
 impl GameActor {
     pub(crate) fn new() -> Self {
         Self {
             _kind: ActorKind::Guest,
-            _auth_level: AuthLevel::Guest,
+            auth_level: AuthLevel::Guest,
         }
     }
 }

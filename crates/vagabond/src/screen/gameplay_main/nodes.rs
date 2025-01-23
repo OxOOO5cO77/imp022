@@ -20,7 +20,7 @@ pub(crate) use shared::deselect_node_action;
 use hall::core::*;
 
 #[derive(Default)]
-pub(super) struct MissionNodeAction {
+pub(crate) struct MissionNodeAction {
     pub(super) intent: Option<MissionNodeIntent>,
     pub(super) entity: Option<Entity>,
     pub(super) color: Srgba,

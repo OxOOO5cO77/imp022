@@ -1,11 +1,12 @@
 use bevy::prelude::*;
 
-use hall::core::{ActorIdType, AuthLevel, MissionNodeIntent, MissionNodeKind, MissionNodeLinkDir, MissionNodeLinkState};
+use hall::core::{ActorIdType, ActorIndexType, AuthLevel, MissionNodeIntent, MissionNodeKind, MissionNodeLinkDir, MissionNodeLinkState, PickedCardTarget};
 use hall::view::{GameMissionPlayerView, MAX_ACTOR_COUNT, MAX_CONTENT_COUNT, MAX_LINK_COUNT, MAX_LINK_DAMAGE};
 
 use crate::manager::{ScreenLayout, WarehouseManager};
-use crate::screen::gameplay_main::components::{MissionNodeButton, MissionNodeContentButton};
+use crate::screen::gameplay_main::components::{CardDropTarget, MissionNodeButton, MissionNodeContentButton};
 use crate::screen::gameplay_main::nodes::shared;
+use crate::screen::gameplay_main::on_card_drop;
 use crate::screen::gameplay_main::resources::GameplayContext;
 use crate::screen::shared::{on_out_reset_color, GameMissionNodePlayerViewExt, MissionNodeKindExt};
 use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor, UiFxTrackedSize};
@@ -81,7 +82,7 @@ pub(crate) struct BaseNode {
 
 trait NodeLinkEntityCommandsExt {
     fn observe_link_button(self) -> Self;
-    fn observe_actor(self, actor_id: ActorIdType, auth: AuthLevel) -> Self;
+    fn observe_actor(self, actor_id: ActorIdType, auth: AuthLevel, index: usize) -> Self;
 }
 
 impl NodeLinkEntityCommandsExt for &mut EntityCommands<'_> {
@@ -92,11 +93,13 @@ impl NodeLinkEntityCommandsExt for &mut EntityCommands<'_> {
             .queue(shared::local_observe(on_out_reset_color))
     }
 
-    fn observe_actor(self, actor_id: ActorIdType, auth: AuthLevel) -> Self {
+    fn observe_actor(self, actor_id: ActorIdType, auth: AuthLevel, index: usize) -> Self {
         self //
             .queue(shared::local_observe(on_over_actor_action))
             .queue(shared::local_observe(on_out_actor_action))
+            .queue(shared::local_observe(on_card_drop))
             .insert(ActorInfoHolder::new(actor_id, auth))
+            .insert(CardDropTarget::new(PickedCardTarget::Actor(index as ActorIndexType)))
     }
 }
 
@@ -176,7 +179,7 @@ impl BaseNode {
             if visible {
                 let actor_id = current_node.actors[idx];
                 let actor_auth = infer_auth(actor_id);
-                commands.entity(actor.container).observe_actor(actor_id, actor_auth);
+                commands.entity(actor.container).observe_actor(actor_id, actor_auth, idx);
                 let hue = pick_hue(actor_id);
                 let color = Hwba::hwb(hue, 0.25, 0.25);
                 commands.entity(actor.bg).trigger(SetColorEvent::new(actor.bg, color.into()));

@@ -185,7 +185,7 @@ impl GameState {
         }
 
         for executable in executables {
-            executable.execute(&mut self.users, &mut self.remotes, &mut self.actors);
+            executable.execute(self.current_tick, &mut self.users, &mut self.remotes, &mut self.actors);
         }
 
         for user in self.users.values_mut() {

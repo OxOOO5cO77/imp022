@@ -50,13 +50,13 @@ impl Plugin for GameplayMainPlugin {
 const INDICATOR_Z: f32 = 100.0;
 
 #[derive(Clone, Copy, PartialEq)]
-enum WaitKind {
+pub(crate) enum WaitKind {
     One,
     All,
 }
 
 #[derive(Default, Clone, Copy, PartialEq)]
-enum VagabondGamePhase {
+pub(crate) enum VagabondGamePhase {
     #[default]
     Start,
     Pick,
@@ -406,19 +406,19 @@ fn on_card_drag_end(
     }
 }
 
-fn on_card_drop(
+pub(crate) fn on_card_drop(
     // bevy system
     event: Trigger<Pointer<DragDrop>>,
     mut commands: Commands,
     mut indicator_q: Query<&mut Indicator, With<IndicatorActive>>,
-    mut drop_q: Query<&CardDropTarget>,
+    drop_q: Query<&CardDropTarget>,
     hand_q: Query<&HandCard>,
     mut context: ResMut<GameplayContext>,
 ) {
     let dropped_on = event.target;
 
     if let Ok(mut indicator) = indicator_q.get_single_mut() {
-        if let Ok(drop) = drop_q.get_mut(dropped_on) {
+        if let Ok(drop) = drop_q.get(dropped_on) {
             if let Ok(hand) = hand_q.get(indicator.parent) {
                 if let Some(card) = context.hand.get(hand.index).cloned() {
                     if valid_target(&card, drop.target) {

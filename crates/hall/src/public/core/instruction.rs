@@ -53,6 +53,7 @@ pub enum RunInstruction {
     NoOp,
     IncV(ValueTarget, RuntimeAmount),
     DecV(ValueTarget, RuntimeAmount),
+    Cred,
 }
 
 impl RuntimeAmount {
