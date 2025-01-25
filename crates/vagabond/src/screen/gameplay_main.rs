@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
-use hall::core::{AttributeKind, Attributes, CardTargetMachineKind, CardTargetValue, DelayType, LaunchInstruction, MissionNodeKind, PickedCardTarget, TokenKind};
+use hall::core::{AttributeKind, Attributes, CardTargetValue, DelayType, LaunchInstruction, MissionNodeKind, PickedCardTarget, TokenKind};
 use hall::message::*;
 use vagabond::data::VagabondCard;
 
@@ -437,11 +437,7 @@ fn valid_target(card: &VagabondCard, target: PickedCardTarget) -> bool {
     card.launch_rules.iter().any(|instruction| match instruction {
         LaunchInstruction::Targ(targ) => match targ {
             CardTargetValue::None => false,
-            CardTargetValue::Machine(targ_machine) => match targ_machine {
-                CardTargetMachineKind::Any => matches!(target, PickedCardTarget::MachineLocal | PickedCardTarget::MachineRemote),
-                CardTargetMachineKind::Local => matches!(target, PickedCardTarget::MachineLocal),
-                CardTargetMachineKind::Remote => matches!(target, PickedCardTarget::MachineRemote),
-            },
+            CardTargetValue::Machine => matches!(target, PickedCardTarget::MachineLocal | PickedCardTarget::MachineRemote),
             CardTargetValue::Actor => matches!(target, PickedCardTarget::Actor(_)),
         },
         _ => false,

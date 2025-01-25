@@ -3,16 +3,9 @@ use serde::{Deserialize, Serialize};
 use crate::core::{AttributeKind, AttributeValueKind, Attributes, MachineValueType};
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
-pub enum CardTargetMachineKind {
-    Any,
-    Local,
-    Remote,
-}
-
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
 pub enum CardTargetValue {
     None,
-    Machine(CardTargetMachineKind),
+    Machine,
     Actor,
 }
 

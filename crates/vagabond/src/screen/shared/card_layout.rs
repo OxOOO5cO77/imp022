@@ -1,7 +1,7 @@
 use bevy::color::Color;
 use bevy::prelude::{Commands, Component, Entity, Event, Query, Res, Sprite, Text2d, Trigger, Visibility, With};
 
-use hall::core::{AttributeKind, Attributes, Host, LaunchInstruction, RunInstruction, ValueTarget};
+use hall::core::{AttributeKind, Attributes, CardTargetValue, Host, LaunchInstruction, RunInstruction, ValueTarget};
 use vagabond::data::VagabondCard;
 
 use crate::manager::{AtlasManager, ScreenLayout};
@@ -120,7 +120,14 @@ impl CardLayout {
     fn explain_rule_launch(rule: &LaunchInstruction, attr: &Attributes) -> Option<String> {
         match rule {
             LaunchInstruction::NoOp => None,
-            LaunchInstruction::Targ(_) => None,
+            LaunchInstruction::Targ(target) => {
+                let str = match target {
+                    CardTargetValue::None => "No target",
+                    CardTargetValue::Machine => "Target: Machine",
+                    CardTargetValue::Actor => "Target: User",
+                };
+                Some(str.to_string())
+            }
             LaunchInstruction::Loop(value) => Some(format!("Loop {} times", value.resolve(attr))),
         }
     }

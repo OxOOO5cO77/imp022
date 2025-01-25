@@ -1,6 +1,6 @@
 use std::str::Chars;
 
-use hall::core::{Amount, AttributeKind, AttributeValueKind, CardTargetMachineKind, CardTargetValue, LaunchInstruction, RunInstruction, RuntimeAmount, ValueTarget};
+use hall::core::{Amount, AttributeKind, AttributeValueKind, CardTargetValue, LaunchInstruction, RunInstruction, RuntimeAmount, ValueTarget};
 
 pub fn process_code_launch(instruction_str: &str) -> Option<LaunchInstruction> {
     use LaunchInstruction::*;
@@ -88,9 +88,7 @@ fn parse_runtime_expr(remain: &str) -> RuntimeAmount {
 fn parse_card_target(remain: &str) -> CardTargetValue {
     match remain {
         "AA" => CardTargetValue::Actor,
-        "MA" => CardTargetValue::Machine(CardTargetMachineKind::Any),
-        "ML" => CardTargetValue::Machine(CardTargetMachineKind::Local),
-        "MR" => CardTargetValue::Machine(CardTargetMachineKind::Remote),
+        "MA" => CardTargetValue::Machine,
         _ => CardTargetValue::None,
     }
 }

@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use crate::private::game::game_machine::GameMachineContext;
 use crate::private::game::game_state::{ActorMapType, CardResolve, UserMapType};
 use crate::private::game::{GameActor, GameMachine, RemoteMapType, TargetIdType};
-use hall::core::{Attributes, CardTargetMachineKind, CardTargetValue, LaunchInstruction, MachineValueType, PriorityType, RunInstruction, TickType, Token, TokenKind, ValueTarget, DEFAULT_TOKEN_EXPIRY};
+use hall::core::{Attributes, CardTargetValue, LaunchInstruction, MachineValueType, PriorityType, RunInstruction, TickType, Token, TokenKind, ValueTarget, DEFAULT_TOKEN_EXPIRY};
 use hall::player::PlayerCard;
 use hall::view::GameProcessPlayerView;
 use shared_net::UserIdType;
@@ -82,11 +82,7 @@ impl GameProcess {
     fn target_valid(&self, card_target: &CardTargetValue) -> bool {
         match card_target {
             CardTargetValue::None => false,
-            CardTargetValue::Machine(machine_kind) => match machine_kind {
-                CardTargetMachineKind::Any => matches!(self.target, TargetIdType::Local(_) | TargetIdType::Remote(_)),
-                CardTargetMachineKind::Local => matches!(self.target, TargetIdType::Local(_)),
-                CardTargetMachineKind::Remote => matches!(self.target, TargetIdType::Remote(_)),
-            },
+            CardTargetValue::Machine => matches!(self.target, TargetIdType::Local(_) | TargetIdType::Remote(_)),
             CardTargetValue::Actor => matches!(self.target, TargetIdType::Actor(_)),
         }
     }
