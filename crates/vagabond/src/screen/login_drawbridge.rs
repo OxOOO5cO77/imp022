@@ -8,6 +8,7 @@ use crate::manager::{AtlasManager, NetworkManager, ScreenLayoutManager, ScreenLa
 use crate::network::client_drawbridge;
 use crate::network::client_drawbridge::{AuthInfo, DrawbridgeClient, DrawbridgeIFace};
 use crate::screen::shared::AppScreenExt;
+use crate::system::ui_effects::SetColorEvent;
 use crate::system::AppState;
 
 const SCREEN_LAYOUT: &str = "login";
@@ -136,11 +137,11 @@ fn drawbridge_update(
     mut app_state: ResMut<NextState<AppState>>,
     mut commands: Commands,
     mut drawbridge: ResMut<DrawbridgeIFace>,
-    mut sprite_q: Query<&mut Sprite, With<ConnectedIcon>>,
+    connected_q: Query<Entity, With<ConnectedIcon>>,
 ) {
     if let Ok(auth_info) = drawbridge.drx.try_recv() {
-        if let Ok(mut sprite) = sprite_q.get_single_mut() {
-            sprite.color = bevy::color::palettes::css::YELLOW.into()
+        if let Ok(connected) = connected_q.get_single() {
+            commands.entity(connected).trigger(SetColorEvent::new(connected, bevy::color::palettes::css::YELLOW));
         }
         commands.insert_resource(DrawbridgeHandoff::new(auth_info));
         app_state.set(AppState::LoginGate);

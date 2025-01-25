@@ -1,6 +1,6 @@
 *frame:common.card%236,312@0,0,0!white
 #icon_bg:capsule_x%24,16@0,5,1!dim
-*icon:common.A016%16,16@4,5,2!white
+&icon:main.16.center%16,16@4,5,2!white|⏿
 #title_bg:capsule_x%180,16@28,5,1!dim
 &title:main.12.center%184,18@24,5,2!white|CARD
 #cost_bg:capsule_x%20,16@212,5,1!dim

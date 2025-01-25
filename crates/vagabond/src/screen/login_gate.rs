@@ -7,6 +7,7 @@ use crate::manager::{NetworkManager, ScreenLayoutManager};
 use crate::network::client_gate::{GateClient, GateCommand, GateIFace};
 use crate::screen::login_drawbridge::DrawbridgeHandoff;
 use crate::screen::shared::AppScreenExt;
+use crate::system::ui_effects::SetColorEvent;
 use crate::system::AppState;
 
 const SCREEN_LAYOUT: &str = "login";
@@ -54,12 +55,13 @@ fn gate_enter(
 fn gate_update(
     // bevy system
     mut app_state: ResMut<NextState<AppState>>,
+    mut commands: Commands,
     mut gate: ResMut<GateIFace>,
-    mut sprite_q: Query<&mut Sprite, With<ConnectedIcon>>,
+    connected_q: Query<Entity, With<ConnectedIcon>>,
 ) {
     if let Ok(gate_command) = gate.grx.try_recv() {
-        if let Ok(mut sprite) = sprite_q.get_single_mut() {
-            sprite.color = bevy::color::palettes::css::GREEN.into()
+        if let Ok(connected) = connected_q.get_single() {
+            commands.entity(connected).trigger(SetColorEvent::new(connected, bevy::color::palettes::css::GREEN));
         }
         match gate_command {
             GateCommand::Hello => app_state.set(AppState::ComposeInit),

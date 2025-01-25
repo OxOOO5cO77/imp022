@@ -1,13 +1,11 @@
-use bevy::color::Color;
-use bevy::prelude::{Commands, Component, Entity, Event, Query, Res, Sprite, Text2d, Trigger, Visibility, With};
+use bevy::prelude::{Commands, Component, Entity, Event, Query, Srgba, Text2d, Trigger, Visibility, With};
 
 use hall::core::{AttributeKind, Attributes, CardTargetValue, Host, LaunchInstruction, RunInstruction, ValueTarget};
 use vagabond::data::VagabondCard;
 
-use crate::manager::{AtlasManager, ScreenLayout};
+use crate::manager::ScreenLayout;
 use crate::screen::shared::util;
-use crate::screen::shared::util::KindIconSize;
-use crate::system::ui_effects::UiFxTrackedColor;
+use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor};
 
 #[derive(Component)]
 pub(crate) struct CardLayoutPiece;
@@ -76,8 +74,6 @@ impl CardLayout {
         mut commands: Commands,
         layout_q: Query<&CardLayout>,
         mut text_q: Query<&mut Text2d, With<CardLayoutPiece>>,
-        mut sprite_q: Query<&mut Sprite>,
-        am: Res<AtlasManager>,
     ) {
         let target = event.entity();
         match (&event.card, layout_q.get(target)) {
@@ -89,12 +85,11 @@ impl CardLayout {
                 layout.delay.map(|delay| text_q.get_mut(delay).map(|mut delay_text| *delay_text = card.delay.to_string().into()));
                 layout.priority.map(|priority| text_q.get_mut(priority).map(|mut priority_text| *priority_text = card.priority.to_string().into()));
                 layout.host.map(|host| text_q.get_mut(host).map(|mut host_text| *host_text = Self::explain_host(card.host).into()));
-                layout.icon.map(|icon| sprite_q.get_mut(icon).map(|mut icon_sprite| util::replace_kind_icon(&mut icon_sprite, card.kind, KindIconSize::Small, &am)));
-                layout.frame.map(|frame| {
+                layout.icon.map(|icon| text_q.get_mut(icon).map(|mut icon_text| *icon_text = util::kind_icon(card.kind).into()));
+                if let Some(frame) = layout.frame {
                     let color = Self::map_kind_to_color(card.kind);
-                    commands.entity(frame).insert(UiFxTrackedColor::from(color.to_srgba()));
-                    sprite_q.get_mut(frame).map(|mut frame_sprite| frame_sprite.color = color)
-                });
+                    commands.entity(frame).insert(UiFxTrackedColor::from(color)).trigger(SetColorEvent::new(frame, color));
+                }
 
                 commands.entity(target).insert(Visibility::Visible);
             }
@@ -104,12 +99,12 @@ impl CardLayout {
         };
     }
 
-    fn map_kind_to_color(kind: AttributeKind) -> Color {
+    fn map_kind_to_color(kind: AttributeKind) -> Srgba {
         match kind {
-            AttributeKind::Analyze => Color::srgb_u8(128, 0, 128),
-            AttributeKind::Breach => Color::srgb_u8(0, 128, 0),
-            AttributeKind::Compute => Color::srgb_u8(0, 0, 128),
-            AttributeKind::Disrupt => Color::srgb_u8(128, 128, 0),
+            AttributeKind::Analyze => Srgba::rgb_u8(128, 0, 128),
+            AttributeKind::Breach => Srgba::rgb_u8(0, 128, 0),
+            AttributeKind::Compute => Srgba::rgb_u8(0, 0, 128),
+            AttributeKind::Disrupt => Srgba::rgb_u8(128, 128, 0),
         }
     }
 
@@ -145,13 +140,13 @@ impl CardLayout {
         }
     }
 
-    fn explain_target(target: &ValueTarget) -> &'static str {
+    fn explain_target(target: &ValueTarget) -> char {
         match target {
-            ValueTarget::None => "???",
-            ValueTarget::FreeSpace => "Free Space",
-            ValueTarget::ThermalCapacity => "Thermal Capacity",
-            ValueTarget::SystemHealth => "System Health",
-            ValueTarget::OpenPorts => "Open Ports",
+            ValueTarget::None => '?',
+            ValueTarget::FreeSpace => '🖫',
+            ValueTarget::ThermalCapacity => '🌡',
+            ValueTarget::SystemHealth => '✚',
+            ValueTarget::OpenPorts => '🖧',
         }
     }
 

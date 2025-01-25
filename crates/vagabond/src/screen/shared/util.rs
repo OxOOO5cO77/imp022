@@ -1,9 +1,8 @@
-use bevy::prelude::{Commands, Out, Pointer, Query, Sprite, Trigger};
+use bevy::prelude::{Commands, Out, Pointer, Query, Trigger};
 
 use hall::core::{AttributeKind, MissionNodeKind};
 use hall::view::GameMissionNodePlayerView;
 
-use crate::manager::AtlasManager;
 use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor};
 
 pub(crate) trait MissionNodeKindExt {
@@ -63,28 +62,11 @@ pub(crate) fn on_out_reset_color(
     }
 }
 
-pub(crate) enum KindIconSize {
-    Small,
-    //    Medium,
-    Large,
-}
-
-pub(crate) fn replace_kind_icon(sprite: &mut Sprite, kind: AttributeKind, kind_icon_size: KindIconSize, am: &AtlasManager) {
-    let texture_letter = match kind {
-        AttributeKind::Analyze => 'A',
-        AttributeKind::Breach => 'B',
-        AttributeKind::Compute => 'C',
-        AttributeKind::Disrupt => 'D',
-    };
-
-    let texture_name = match kind_icon_size {
-        KindIconSize::Small => format!("{}016", texture_letter),
-        //        KindIconSize::Medium => format!("{}048", texture_letter),
-        KindIconSize::Large => format!("{}064", texture_letter),
-    };
-
-    if let Some((atlas, image)) = am.get_atlas_texture("common", &texture_name) {
-        sprite.image = image;
-        sprite.texture_atlas = Some(atlas);
+pub(crate) fn kind_icon(kind: AttributeKind) -> &'static str {
+    match kind {
+        AttributeKind::Analyze => "⏿",
+        AttributeKind::Breach => "⎆",
+        AttributeKind::Compute => "⌨",
+        AttributeKind::Disrupt => "𐆅",
     }
 }
