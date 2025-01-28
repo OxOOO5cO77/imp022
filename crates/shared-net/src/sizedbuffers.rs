@@ -6,7 +6,8 @@ use std::string::FromUtf8Error;
 pub enum SizedBufferError {
     Read(usize, usize),
     Write(usize, usize),
-    Utf8Error(FromUtf8Error),
+    Utf8(FromUtf8Error),
+    UnexpectedEnum(u8),
 }
 
 pub trait Bufferable: Sized {
@@ -209,7 +210,7 @@ impl Bufferable for String {
         let mut slice = vec![0; len];
         slice.copy_from_slice(&buf.raw[buf.rpos..buf.rpos + len]);
         buf.visited(len);
-        String::from_utf8(slice).map_err(SizedBufferError::Utf8Error)
+        String::from_utf8(slice).map_err(SizedBufferError::Utf8)
     }
 
     fn size_in_buffer(&self) -> usize {
