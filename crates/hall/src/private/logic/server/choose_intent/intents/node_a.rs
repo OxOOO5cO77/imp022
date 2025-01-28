@@ -11,15 +11,10 @@ pub(crate) fn process_intent(intent: AccessPointIntent, mission: &mut GameMissio
 }
 
 fn process_authenticate(_mission: &mut GameMission, user: &mut GameUser, tick: TickType) -> Option<IntentResult> {
-    let cred = user.mission_state.get_token(TokenKind::Credentials(AuthLevel::Guest));
-    let kind = match cred {
-        Some(existing) => match existing.kind {
-            TokenKind::Credentials(level) => TokenKind::Authorization(level),
-            _ => TokenKind::Authorization(AuthLevel::Guest),
-        },
-        None => TokenKind::Authorization(AuthLevel::Guest),
-    };
-    let token = Token::new(kind, tick + DEFAULT_TOKEN_EXPIRY);
-    user.mission_state.add_token(token.clone());
-    Some(IntentResult::TokenChange(token))
+    let mut messages = user.mission_state.upgrade_cred_to_auth();
+    if !user.mission_state.any_auth() {
+        let token = Token::new(TokenKind::Authorization(AuthLevel::Guest), tick + DEFAULT_TOKEN_EXPIRY);
+        messages.push(user.mission_state.add_token(token));
+    }
+    Some(IntentResult::TokenChange(messages))
 }

@@ -29,7 +29,7 @@ pub use game_roll::GameRollMessage;
 pub use game_start_game::GameStartGameMessage;
 pub use game_tick::GameTickMessage;
 pub use game_update_mission::GameUpdateMissionMessage;
-pub use game_update_tokens::GameUpdateTokensMessage;
+pub use game_update_tokens::{GameUpdateTokensMessage, UpdateTokenMessage};
 
 use shared_net::{op, Bufferable, GameIdType};
 

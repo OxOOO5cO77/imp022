@@ -2,6 +2,7 @@ use hall::core::{MissionIdType, MissionNodeIdType, MissionNodeState};
 use hall::hall::HallMission;
 use hall::view::{GameMissionObjectivePlayerView, GameMissionPlayerView};
 
+use crate::private::game::game_state::ActorMapType;
 use crate::private::game::{GameMissionNode, GameMissionObjective, GameUserMissionState};
 
 #[derive(Default)]
@@ -41,10 +42,10 @@ impl GameMission {
         state
     }
 
-    pub(crate) fn to_player_view(&self, mission_state: &GameUserMissionState) -> GameMissionPlayerView {
+    pub(crate) fn to_player_view(&self, mission_state: &GameUserMissionState, actors: &ActorMapType) -> GameMissionPlayerView {
         let id = self.id;
         let current_node = mission_state.current();
-        let node_map = mission_state.known_nodes.iter().filter_map(|id| self.get_node(*id)).map(|node| node.to_player_view()).collect();
+        let node_map = mission_state.known_nodes.iter().filter_map(|id| self.get_node(*id)).map(|node| node.to_player_view(actors)).collect();
         let tokens = mission_state.tokens.clone();
         let objective = self.objective.iter().map(GameMissionObjectivePlayerView::from).collect();
 

@@ -1,4 +1,5 @@
-use crate::core::{ActorIdType, MissionNodeContent, MissionNodeIdType, MissionNodeKind, MissionNodeLink, MissionNodeLinkDamageType, MissionNodeLinkDir, MissionNodeLinkState, RemoteIdType};
+use crate::core::{MissionNodeContent, MissionNodeIdType, MissionNodeKind, MissionNodeLink, MissionNodeLinkDamageType, MissionNodeLinkDir, MissionNodeLinkState, RemoteIdType};
+use crate::view::game_actor::GameActorPlayerView;
 use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
 #[derive(Default, Clone)]
@@ -9,7 +10,7 @@ pub struct GameMissionNodePlayerView {
     pub links: Vec<MissionNodeLink>,
     pub content: Vec<MissionNodeContent>,
     pub remote: RemoteIdType,
-    pub actors: Vec<ActorIdType>,
+    pub actors: Vec<GameActorPlayerView>,
 }
 
 type PackedMissionNodeType = u16;
@@ -138,7 +139,7 @@ impl Bufferable for GameMissionNodePlayerView {
         let links = Self::unpack_links(packed_links);
         let content = <Vec<MissionNodeContent>>::pull_from(buf)?;
         let remote = RemoteIdType::pull_from(buf)?;
-        let actors = <Vec<ActorIdType>>::pull_from(buf)?;
+        let actors = <Vec<GameActorPlayerView>>::pull_from(buf)?;
         let result = Self {
             id,
             kind,
@@ -189,7 +190,7 @@ impl GameMissionNodePlayerView {
             ],
             content: Vec::new(),
             remote: 12345678901234567890,
-            actors: vec![123123123, 12312312351, 1231616123123, 1231391238],
+            actors: vec![GameActorPlayerView::test_default(), GameActorPlayerView::test_default(), GameActorPlayerView::test_default(), GameActorPlayerView::test_default()],
         }
     }
 }

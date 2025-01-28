@@ -1,3 +1,4 @@
+use crate::private::game::game_state::ActorMapType;
 use hall::core::{ActorIdType, MissionNodeContent, MissionNodeIdType, MissionNodeKind, MissionNodeLink, MissionNodeState, RemoteIdType};
 use hall::hall::HallMissionNode;
 use hall::view::GameMissionNodePlayerView;
@@ -27,14 +28,14 @@ impl GameMissionNode {
 }
 
 impl GameMissionNode {
-    pub(crate) fn to_player_view(&self) -> GameMissionNodePlayerView {
+    pub(crate) fn to_player_view(&self, all_actors: &ActorMapType) -> GameMissionNodePlayerView {
         GameMissionNodePlayerView {
             id: self.id,
             kind: self.kind,
             links: self.links.clone(),
             content: self.content.clone(),
             remote: self.remote,
-            actors: self.actors.clone(),
+            actors: self.actors.iter().filter_map(|id| all_actors.get(id).map(|a| a.to_player_view(*id))).collect(),
         }
     }
 }

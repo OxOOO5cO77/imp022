@@ -16,7 +16,7 @@ pub(crate) fn handle_play_card(game: &mut GameState, bx: &mut Broadcaster) {
             let remote_id = current_node.map(|n| n.remote).unwrap_or_default();
             let target_id = match target {
                 PickedCardTarget::None => TargetIdType::None,
-                PickedCardTarget::MachineLocal => TargetIdType::Local(*user_id),
+                PickedCardTarget::MachineLocal => TargetIdType::User(*user_id),
                 PickedCardTarget::MachineRemote => TargetIdType::Remote(remote_id),
                 PickedCardTarget::Actor(index) => {
                     if let Some(actor) = current_node.and_then(|n| n.actors.get(index as usize)) {

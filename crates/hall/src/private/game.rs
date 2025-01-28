@@ -15,7 +15,7 @@ pub(crate) use game_machine::GameMachine;
 pub(crate) use game_mission::GameMission;
 pub(crate) use game_mission_node::GameMissionNode;
 pub(crate) use game_mission_objective::GameMissionObjective;
-pub(crate) use game_process::GameProcess;
+pub(crate) use game_process::{ExecutionResultKind, GameProcess};
 pub(crate) use game_remote::GameRemote;
 pub(crate) use game_state::{CardResolve, GameState, RemoteMapType, TargetIdType};
 pub(crate) use game_user::GameUser;

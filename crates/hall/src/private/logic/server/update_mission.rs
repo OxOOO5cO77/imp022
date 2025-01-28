@@ -6,7 +6,7 @@ use shared_net::UserIdType;
 use crate::private::game::GameState;
 use crate::private::network::broadcaster::Broadcaster;
 
-pub(crate) fn some_users_update_mission(game: &mut GameState, bx: &mut Broadcaster, users: HashSet<&UserIdType>) {
+pub(crate) fn some_users_update_mission(game: &mut GameState, bx: &mut Broadcaster, users: HashSet<UserIdType>) {
     for id in &users {
         if game.users.contains_key(id) {
             let message = GameUpdateMissionMessage::new(true);

@@ -11,6 +11,7 @@ use hall::player::PlayerCard;
 use hall::util;
 use shared_net::{op, AuthType, UserIdType};
 
+use crate::private::game::game_process::{ExecutionResult, ExecutionResultKind};
 use crate::private::game::{GameActor, GameMachine, GameMission, GameRemote, GameUser, GameUserCommandState};
 
 pub(crate) type UserMapType = HashMap<UserIdType, GameUser>;
@@ -32,7 +33,7 @@ pub(crate) struct GameState {
 #[derive(Copy, Clone, PartialEq)]
 pub(crate) enum TargetIdType {
     None,
-    Local(UserIdType),
+    User(UserIdType),
     Remote(RemoteIdType),
     Actor(ActorIdType),
 }
@@ -67,7 +68,7 @@ impl GameState {
             for _ in 0..actor_count {
                 let actor = random_unique(&actors, rng);
                 node.actors.push(actor);
-                actors.insert(actor, GameActor::new());
+                actors.insert(actor, GameActor::new(rng));
             }
         }
 
@@ -169,7 +170,7 @@ impl GameState {
         self.current_tick
     }
 
-    pub(crate) fn tick(&mut self) -> TickType {
+    pub(crate) fn tick(&mut self) -> Vec<ExecutionResult> {
         self.current_tick += 1;
 
         let mut executables = Vec::new();
@@ -184,20 +185,25 @@ impl GameState {
             executables.append(&mut remote.machine.run());
         }
 
+        let mut results = Vec::new();
         for executable in executables {
-            executable.execute(self.current_tick, &mut self.users, &mut self.remotes, &mut self.actors);
+            results.extend(executable.execute(self.current_tick, &mut self.users, &mut self.remotes, &mut self.actors));
         }
 
-        for user in self.users.values_mut() {
+        for (id, user) in &mut self.users {
             user.state.fill_hand();
-            user.mission_state.expire_tokens(self.current_tick);
+            let mut messages = user.mission_state.expire_tokens(self.current_tick);
+            if !messages.is_empty() {
+                let result = messages.drain(..).map(|message| ExecutionResult::new(*id, TargetIdType::User(*id), ExecutionResultKind::TokenChange(message)));
+                results.extend(result);
+            }
         }
 
         for remote in self.remotes.values_mut() {
             remote.end_turn();
         }
 
-        self.current_tick
+        results
     }
 
     pub(crate) fn roll(&mut self) {
@@ -248,12 +254,12 @@ impl GameState {
 }
 
 impl GameState {
-    pub(crate) fn make_response(id: UserIdType, user: &GameUser, remote: &GameMachine, mission: &GameMission) -> GameUpdateStateResponse {
+    pub(crate) fn make_response(id: UserIdType, user: &GameUser, remote: &GameMachine, mission: &GameMission, actors: &ActorMapType) -> GameUpdateStateResponse {
         GameUpdateStateResponse {
             player_state: user.state.to_player_view(),
             local_machine: user.machine.to_player_view(id),
             remote_machine: remote.to_player_view(id),
-            mission: mission.to_player_view(&user.mission_state),
+            mission: mission.to_player_view(&user.mission_state, actors),
         }
     }
 }

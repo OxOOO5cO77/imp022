@@ -10,7 +10,7 @@ pub(crate) fn recv_game_update_state(context: &HallContext, request: GameUpdateS
     if let Some(game) = games.get(&request.game_id) {
         if let Some(user) = game.get_user_auth(header.user, header.auth) {
             if let Some(remote) = game.mission.get_node(user.mission_state.current()).and_then(|r| game.get_remote(r.remote)) {
-                let response = GameState::make_response(header.user, user, &remote.machine, &game.mission);
+                let response = GameState::make_response(header.user, user, &remote.machine, &game.mission, &game.actors);
                 return Some(response);
             }
         }

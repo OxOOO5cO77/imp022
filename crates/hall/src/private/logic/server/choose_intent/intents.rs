@@ -1,6 +1,6 @@
-use hall::core::{MissionNodeIntent, TickType, Token};
-
 use crate::private::game::{GameMission, GameUser, RemoteMapType};
+use hall::core::{MissionNodeIntent, TickType};
+use hall::message::UpdateTokenMessage;
 
 mod link;
 mod node_a;
@@ -14,7 +14,7 @@ mod node_h;
 
 pub(crate) enum IntentResult {
     NodeChange,
-    TokenChange(Token),
+    TokenChange(Vec<UpdateTokenMessage>),
 }
 
 pub(crate) fn process_intent(intent: MissionNodeIntent, mission: &mut GameMission, user: &mut GameUser, remotes: &mut RemoteMapType, tick: TickType) -> Option<IntentResult> {

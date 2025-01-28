@@ -4,6 +4,7 @@ use crate::private::game::game_machine::GameMachineContext;
 use crate::private::game::game_state::{ActorMapType, CardResolve, UserMapType};
 use crate::private::game::{GameActor, GameMachine, RemoteMapType, TargetIdType};
 use hall::core::{Attributes, CardTargetValue, LaunchInstruction, MachineValueType, PriorityType, RunInstruction, TickType, Token, TokenKind, ValueTarget, DEFAULT_TOKEN_EXPIRY};
+use hall::message::UpdateTokenMessage;
 use hall::player::PlayerCard;
 use hall::view::GameProcessPlayerView;
 use shared_net::UserIdType;
@@ -82,7 +83,7 @@ impl GameProcess {
     fn target_valid(&self, card_target: &CardTargetValue) -> bool {
         match card_target {
             CardTargetValue::None => false,
-            CardTargetValue::Machine => matches!(self.target, TargetIdType::Local(_) | TargetIdType::Remote(_)),
+            CardTargetValue::Machine => matches!(self.target, TargetIdType::User(_) | TargetIdType::Remote(_)),
             CardTargetValue::Actor => matches!(self.target, TargetIdType::Actor(_)),
         }
     }
@@ -130,36 +131,66 @@ pub(crate) struct GameProcessExecutor {
     attributes: Attributes,
 }
 
+pub(crate) enum ExecutionResultKind {
+    ValueChange(ValueTarget, MachineValueType),
+    TokenChange(UpdateTokenMessage),
+}
+
+pub(crate) struct ExecutionResult {
+    pub(crate) owner: UserIdType,
+    pub(crate) target: TargetIdType,
+    pub(crate) kind: ExecutionResultKind,
+}
+
+impl ExecutionResult {
+    pub(crate) fn new(owner: UserIdType, target: TargetIdType, kind: ExecutionResultKind) -> Self {
+        Self {
+            owner,
+            target,
+            kind,
+        }
+    }
+}
+
 impl GameProcessExecutor {
-    pub(crate) fn execute(&self, tick: TickType, users: &mut UserMapType, remotes: &mut RemoteMapType, actors: &mut ActorMapType) {
+    pub(crate) fn execute(&self, tick: TickType, users: &mut UserMapType, remotes: &mut RemoteMapType, actors: &mut ActorMapType) -> Vec<ExecutionResult> {
+        let mut results = Vec::new();
         for instruction in &self.run_code {
-            match instruction {
-                RunInstruction::NoOp => {}
+            let result = match instruction {
+                RunInstruction::NoOp => None,
                 RunInstruction::IncV(value, amount) => {
                     if let Some(machine) = Self::resolve_target_machine(self.target, users, remotes) {
-                        Self::execute_incv(&mut machine.context, *value, amount.resolve(&self.attributes));
+                        Self::execute_incv(&mut machine.context, *value, amount.resolve(&self.attributes))
+                    } else {
+                        None
                     }
                 }
                 RunInstruction::DecV(value, amount) => {
                     if let Some(machine) = Self::resolve_target_machine(self.target, users, remotes) {
-                        Self::execute_decv(&mut machine.context, *value, amount.resolve(&self.attributes));
+                        Self::execute_decv(&mut machine.context, *value, amount.resolve(&self.attributes))
+                    } else {
+                        None
                     }
                 }
                 RunInstruction::Cred => {
-                    if let Some(actor) = Self::resolve_target_actor(self.target, actors) {
-                        if let Some(user) = users.get_mut(&self.owner) {
-                            let token = Token::new(TokenKind::Credentials(actor.auth_level), tick + DEFAULT_TOKEN_EXPIRY);
-                            user.mission_state.add_token(token.clone());
-                        }
+                    if let (Some(actor), Some(user)) = (Self::resolve_target_actor(self.target, actors), users.get_mut(&self.owner)) {
+                        let kind = ExecutionResultKind::TokenChange(user.mission_state.add_token(Token::new(TokenKind::Credentials(actor.auth_level), tick + DEFAULT_TOKEN_EXPIRY)));
+                        Some(kind)
+                    } else {
+                        None
                     }
                 }
+            };
+            if let Some(result) = result {
+                results.push(ExecutionResult::new(self.owner, self.target, result));
             }
         }
+        results
     }
 
     fn resolve_target_machine<'a>(target: TargetIdType, users: &'a mut UserMapType, remotes: &'a mut RemoteMapType) -> Option<&'a mut GameMachine> {
         match target {
-            TargetIdType::Local(id) => users.get_mut(&id).map(|user| &mut user.machine),
+            TargetIdType::User(id) => users.get_mut(&id).map(|user| &mut user.machine),
             TargetIdType::Remote(id) => remotes.get_mut(&id).map(|remote| &mut remote.machine),
             _ => None,
         }
@@ -172,23 +203,33 @@ impl GameProcessExecutor {
         }
     }
 
-    fn execute_incv(context: &mut GameMachineContext, value: ValueTarget, amount: MachineValueType) {
-        match value {
-            ValueTarget::None => {}
-            ValueTarget::FreeSpace => context.free_space = context.free_space.saturating_add(amount),
-            ValueTarget::ThermalCapacity => context.thermal_capacity = context.thermal_capacity.saturating_add(amount),
-            ValueTarget::SystemHealth => context.system_health = context.system_health.saturating_add(amount),
-            ValueTarget::OpenPorts => context.open_ports = context.open_ports.saturating_add(amount),
-        }
+    fn execute_value_change(context: &mut GameMachineContext, target: ValueTarget, amount: MachineValueType, op: fn(MachineValueType, MachineValueType) -> MachineValueType) -> Option<ExecutionResultKind> {
+        let orig_value = match target {
+            ValueTarget::None => return None,
+            ValueTarget::FreeSpace => context.free_space,
+            ValueTarget::ThermalCapacity => context.thermal_capacity,
+            ValueTarget::SystemHealth => context.system_health,
+            ValueTarget::OpenPorts => context.open_ports,
+        };
+
+        let new_value = op(orig_value, amount);
+
+        match target {
+            ValueTarget::None => return None,
+            ValueTarget::FreeSpace => context.free_space = new_value,
+            ValueTarget::ThermalCapacity => context.thermal_capacity = new_value,
+            ValueTarget::SystemHealth => context.system_health = new_value,
+            ValueTarget::OpenPorts => context.open_ports = new_value,
+        };
+
+        Some(ExecutionResultKind::ValueChange(target, new_value))
     }
 
-    fn execute_decv(context: &mut GameMachineContext, value: ValueTarget, amount: MachineValueType) {
-        match value {
-            ValueTarget::None => {}
-            ValueTarget::FreeSpace => context.free_space = context.free_space.saturating_sub(amount),
-            ValueTarget::ThermalCapacity => context.thermal_capacity = context.thermal_capacity.saturating_sub(amount),
-            ValueTarget::SystemHealth => context.system_health = context.system_health.saturating_sub(amount),
-            ValueTarget::OpenPorts => context.open_ports = context.open_ports.saturating_sub(amount),
-        }
+    fn execute_incv(context: &mut GameMachineContext, value: ValueTarget, amount: MachineValueType) -> Option<ExecutionResultKind> {
+        Self::execute_value_change(context, value, amount, MachineValueType::saturating_add)
+    }
+
+    fn execute_decv(context: &mut GameMachineContext, value: ValueTarget, amount: MachineValueType) -> Option<ExecutionResultKind> {
+        Self::execute_value_change(context, value, amount, MachineValueType::saturating_sub)
     }
 }

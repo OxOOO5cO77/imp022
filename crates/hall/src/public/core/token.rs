@@ -14,20 +14,28 @@ pub const DEFAULT_TOKEN_EXPIRY: TickType = 10;
 #[cfg_attr(test, derive(Debug))]
 pub enum AuthLevel {
     #[default]
+    Anonymous,
     Guest,
     User,
     Admin,
     Root,
 }
 
+impl AuthLevel {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            AuthLevel::Anonymous => "Anonymous",
+            AuthLevel::Guest => "Guest",
+            AuthLevel::User => "User",
+            AuthLevel::Admin => "Admin",
+            AuthLevel::Root => "Root",
+        }
+    }
+}
+
 impl Display for AuthLevel {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            AuthLevel::Guest => write!(f, "Guest"),
-            AuthLevel::User => write!(f, "User"),
-            AuthLevel::Admin => write!(f, "Admin"),
-            AuthLevel::Root => write!(f, "Root"),
-        }
+        write!(f, "{}", self.as_str())
     }
 }
 
@@ -38,22 +46,6 @@ pub enum TokenKind {
     Invalid,
     Authorization(AuthLevel),
     Credentials(AuthLevel),
-}
-
-impl TokenKind {
-    pub fn matches(&self, other: &TokenKind) -> bool {
-        match self {
-            TokenKind::Invalid => false,
-            TokenKind::Authorization(self_level) => match other {
-                TokenKind::Authorization(other_level) => *self_level >= *other_level,
-                _ => false,
-            },
-            TokenKind::Credentials(self_level) => match other {
-                TokenKind::Credentials(other_level) => *self_level >= *other_level,
-                _ => false,
-            },
-        }
-    }
 }
 
 #[derive(Default, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -68,6 +60,26 @@ impl Token {
         Self {
             kind,
             expiry,
+        }
+    }
+}
+
+impl Display for TokenKind {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TokenKind::Invalid => write!(f, "[Invalid]"),
+            TokenKind::Authorization(level) => write!(f, "{level} Auth"),
+            TokenKind::Credentials(level) => write!(f, "{level} Creds"),
+        }
+    }
+}
+
+impl TokenKind {
+    pub fn level(&self) -> AuthLevel {
+        match self {
+            TokenKind::Invalid => AuthLevel::Anonymous,
+            TokenKind::Authorization(level) => *level,
+            TokenKind::Credentials(level) => *level,
         }
     }
 }
@@ -155,7 +167,7 @@ impl Bufferable for Token {
 impl Token {
     pub(crate) fn test_default(idx: usize) -> Self {
         match idx {
-            1 => Token::new(TokenKind::Authorization(AuthLevel::Admin), 12345),
+            1 => Token::new(TokenKind::Credentials(AuthLevel::Admin), 12345),
             2 => Token::new(TokenKind::Authorization(AuthLevel::User), 54321),
             _ => Token::new(TokenKind::Authorization(AuthLevel::Guest), 0),
         }

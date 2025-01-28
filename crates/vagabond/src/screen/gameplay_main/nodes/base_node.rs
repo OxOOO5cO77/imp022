@@ -174,24 +174,23 @@ impl BaseNode {
             commands.entity(*e).insert(Self::is_visible(visible));
         }
 
-        for (idx, actor) in self.actors.iter().enumerate() {
+        for (idx, actor_ui) in self.actors.iter().enumerate() {
             let visible = idx < current_node.actors.len();
             if visible {
-                let actor_id = current_node.actors[idx];
-                let actor_auth = infer_auth(actor_id);
-                commands.entity(actor.container).observe_actor(actor_id, actor_auth, idx);
-                let hue = pick_hue(actor_id);
+                let actor = &current_node.actors[idx];
+                commands.entity(actor_ui.container).observe_actor(actor.id, actor.auth_level, idx);
+                let hue = pick_hue(actor.id);
                 let color = Hwba::hwb(hue, 0.25, 0.25);
-                commands.entity(actor.bg).trigger(SetColorEvent::new(actor.bg, color.into()));
-                if let Ok(mut text_letter) = text_q.get_mut(actor.text) {
-                    if let Ok(response) = wm.fetch_player(actor_id) {
+                commands.entity(actor_ui.bg).trigger(SetColorEvent::new(actor_ui.bg, color.into()));
+                if let Ok(mut text_letter) = text_q.get_mut(actor_ui.text) {
+                    if let Ok(response) = wm.fetch_player(actor.id) {
                         if let Some(bio) = response.player_bio.as_ref() {
                             *text_letter = bio.name.chars().next().unwrap_or('?').to_string().into();
                         }
                     }
                 }
             }
-            commands.entity(actor.container).insert(Self::is_visible(visible));
+            commands.entity(actor_ui.container).insert(Self::is_visible(visible));
         }
     }
 
@@ -266,31 +265,6 @@ impl UpdateActorTooltipEvent {
             id,
             auth,
         }
-    }
-}
-
-trait AuthLevelExt {
-    fn as_str(&self) -> &'static str;
-}
-
-impl AuthLevelExt for AuthLevel {
-    fn as_str(&self) -> &'static str {
-        match self {
-            AuthLevel::Guest => "Guest",
-            AuthLevel::User => "User",
-            AuthLevel::Admin => "Admin",
-            AuthLevel::Root => "Root",
-        }
-    }
-}
-
-fn infer_auth(actor_id: ActorIdType) -> AuthLevel {
-    match actor_id & 0x0F {
-        0..8 => AuthLevel::Guest,
-        8..12 => AuthLevel::User,
-        12..16 => AuthLevel::Admin,
-        16 => AuthLevel::Root,
-        _ => AuthLevel::Guest,
     }
 }
 

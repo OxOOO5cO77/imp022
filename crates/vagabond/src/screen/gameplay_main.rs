@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
-use hall::core::{AttributeKind, Attributes, CardTargetValue, DelayType, LaunchInstruction, MissionNodeKind, PickedCardTarget, TokenKind};
+use hall::core::{AttributeKind, Attributes, CardTargetValue, DelayType, LaunchInstruction, MissionNodeKind, PickedCardTarget};
 use hall::message::*;
 use vagabond::data::VagabondCard;
 
@@ -621,15 +621,23 @@ fn recv_update_mission(commands: &mut Commands, response: GameUpdateMissionMessa
 }
 
 fn recv_update_tokens(commands: &mut Commands, response: GameUpdateTokensMessage) -> Option<VagabondGamePhase> {
-    match response.token.kind {
-        TokenKind::Invalid => {}
-        TokenKind::Authorization(level) => {
-            commands.trigger(TTYMessageTrigger::new(MachineKind::Local, &format!("{level} Authorization")));
-            commands.trigger(TTYMessageTrigger::new(MachineKind::Remote, &format!("Authorized {level}")));
+    let mut events = Vec::with_capacity(response.messages.len());
+    for message in &response.messages {
+        let (local, remote) = match message {
+            UpdateTokenMessage::Add(token) => (Some(format!("Add: {} (exp={})", token.kind, token.expiry)), None),
+            UpdateTokenMessage::Expire(token) => (Some(format!("Exp: {}", token.kind)), None),
+            UpdateTokenMessage::Convert(from, to) => (Some(format!("Authorize: {} (exp={})", from.kind, to.expiry)), Some("Processed Authorization")),
+        };
+        if let Some(msg) = remote {
+            events.push(TTYMessageTrigger::new(MachineKind::Remote, msg))
         }
-        TokenKind::Credentials(level) => {
-            commands.trigger(TTYMessageTrigger::new(MachineKind::Local, &format!("{level} Credentials")));
+        if let Some(msg) = local {
+            events.push(TTYMessageTrigger::new(MachineKind::Local, &msg))
         }
+    }
+
+    for event in events {
+        commands.trigger(event);
     }
 
     None
