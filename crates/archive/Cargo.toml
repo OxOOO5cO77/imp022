@@ -10,6 +10,6 @@ sqlx = { version = "0.8.3", features = ["postgres", "macros", "uuid", "runtime-t
 tokio = { version = "1.43.0", features = ["macros", "rt-multi-thread"] }
 tracing = { version = "0.1.41" }
 tracing-subscriber = { version = "0.3.19" }
-uuid = { version = "1.11.0", features = ["v4"] }
+uuid = { version = "1.12.1", features = ["v4"] }
 gate = { path = "../gate" }
 shared-net = { path = "../shared-net" }
