@@ -40,15 +40,15 @@ fn row_to_detail(row: &PgRow) -> DbDetail {
     }
 }
 
-pub(crate) async fn process_detail(pool: &Pool<Postgres>) -> Result<(Vec<DbDetail>, Vec<(GeneralType, String)>, Vec<(SpecificType, String)>), sqlx::Error> {
+pub(crate) async fn process_detail(pool: &Pool<Postgres>) -> Result<(Vec<DbDetail>, Vec<(GeneralType, String, String)>, Vec<(SpecificType, String, String)>), sqlx::Error> {
     let rows = sqlx::query("SELECT * FROM detail").fetch_all(pool).await?;
 
     let details = rows.iter().map(row_to_detail).collect::<Vec<DbDetail>>();
 
-    let general_rows = sqlx::query("SELECT id,name FROM \"detail/general\"").fetch_all(pool).await?;
-    let mut general = general_rows.iter().map(|row| (row.get::<i32, _>("id") as GeneralType, row.get("name"))).collect::<Vec<(GeneralType, String)>>();
-    let specific_rows = sqlx::query("SELECT id,name FROM \"detail/specific\"").fetch_all(pool).await?;
-    let mut specific = specific_rows.iter().map(|row| (row.get::<i32, _>("id") as SpecificType, row.get("name"))).collect::<Vec<(SpecificType, String)>>();
+    let general_rows = sqlx::query("SELECT id,name,glyph FROM \"detail/general\"").fetch_all(pool).await?;
+    let mut general = general_rows.iter().map(|row| (row.get::<i32, _>("id") as GeneralType, row.get("name"), row.get("glyph"))).collect::<Vec<(GeneralType, String, String)>>();
+    let specific_rows = sqlx::query("SELECT id,name,glyph FROM \"detail/specific\"").fetch_all(pool).await?;
+    let mut specific = specific_rows.iter().map(|row| (row.get::<i32, _>("id") as SpecificType, row.get("name"), row.get("glyph"))).collect::<Vec<(SpecificType, String, String)>>();
 
     general.sort();
     specific.sort();

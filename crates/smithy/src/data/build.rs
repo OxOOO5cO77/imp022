@@ -41,14 +41,14 @@ fn row_to_build(row: &PgRow) -> DbBuild {
     }
 }
 
-pub(crate) async fn process_build(pool: &Pool<Postgres>) -> Result<(Vec<DbBuild>, Vec<(CompanyType, String)>, Vec<(MarketType, String)>), sqlx::Error> {
+pub(crate) async fn process_build(pool: &Pool<Postgres>) -> Result<(Vec<DbBuild>, Vec<(CompanyType, String, String)>, Vec<(MarketType, String, String)>), sqlx::Error> {
     let rows = sqlx::query("SELECT * FROM build").fetch_all(pool).await?;
 
     let builds = rows.iter().map(row_to_build).collect::<Vec<DbBuild>>();
-    let company_rows = sqlx::query("SELECT id,name FROM \"build/company\"").fetch_all(pool).await?;
-    let mut company = company_rows.iter().map(|row| (row.get::<i32, _>("id") as CompanyType, row.get("name"))).collect::<Vec<(CompanyType, String)>>();
-    let market_rows = sqlx::query("SELECT id,name FROM \"build/market\"").fetch_all(pool).await?;
-    let mut market = market_rows.iter().map(|row| (row.get::<i32, _>("id") as MarketType, row.get("name"))).collect::<Vec<(MarketType, String)>>();
+    let company_rows = sqlx::query("SELECT id,name,glyph FROM \"build/company\"").fetch_all(pool).await?;
+    let mut company = company_rows.iter().map(|row| (row.get::<i32, _>("id") as CompanyType, row.get("name"), row.get("glyph"))).collect::<Vec<(CompanyType, String, String)>>();
+    let market_rows = sqlx::query("SELECT id,name,glyph FROM \"build/market\"").fetch_all(pool).await?;
+    let mut market = market_rows.iter().map(|row| (row.get::<i32, _>("id") as MarketType, row.get("name"), row.get("glyph"))).collect::<Vec<(MarketType, String, String)>>();
 
     company.sort();
     market.sort();
