@@ -1,4 +1,4 @@
-use hall::core::{MissionIdType, MissionNodeIdType, MissionNodeState};
+use hall::core::{GeneralType, MissionIdType, MissionNodeIdType, MissionNodeState, SpecificType};
 use hall::hall::HallMission;
 use hall::view::{GameMissionObjectivePlayerView, GameMissionPlayerView};
 
@@ -8,14 +8,16 @@ use crate::private::game::{GameMissionNode, GameMissionObjective, GameUserMissio
 #[derive(Default)]
 pub(crate) struct GameMission {
     pub(crate) id: MissionIdType,
+    pub(crate) institution: (GeneralType, SpecificType),
     pub(crate) node: Vec<GameMissionNode>,
     pub(crate) objective: Vec<GameMissionObjective>,
 }
 
-impl From<HallMission> for GameMission {
-    fn from(value: HallMission) -> Self {
+impl GameMission {
+    pub(crate) fn new(value: &HallMission, institution: (GeneralType, SpecificType)) -> Self {
         Self {
             id: value.id,
+            institution,
             node: value.node.iter().map(|node| GameMissionNode::new(node, 0)).collect(),
             objective: value.objective.iter().map(GameMissionObjective::from).collect(),
         }
@@ -44,6 +46,7 @@ impl GameMission {
 
     pub(crate) fn to_player_view(&self, mission_state: &GameUserMissionState, actors: &ActorMapType) -> GameMissionPlayerView {
         let id = self.id;
+        let institution = self.institution;
         let current_node = mission_state.current();
         let node_map = mission_state.known_nodes.iter().filter_map(|id| self.get_node(*id)).map(|node| node.to_player_view(actors)).collect();
         let tokens = mission_state.tokens.clone();
@@ -51,6 +54,7 @@ impl GameMission {
 
         GameMissionPlayerView {
             id,
+            institution,
             current_node,
             node_map,
             tokens,

@@ -1,7 +1,7 @@
 use std::io::{Error, ErrorKind};
 use std::path::Path;
 
-use hall::core::{Build, CardSlot, Detail};
+use hall::core::{Build, CardSlot, Detail, GeneralType, SpecificType};
 use hall::hall::{HallBuild, HallCard, HallDetail, HallMission};
 use hall::player::PlayerCard;
 use rand::prelude::*;
@@ -45,21 +45,28 @@ impl DataManager {
         detail
     }
 
-    fn pick_card(&self, rng: &mut impl Rng, slot: &CardSlot) -> Option<HallCard> {
-        self.card.iter().filter(|o| o.matches(slot)).choose(rng).cloned()
+    fn pick_card(&self, rng: &mut impl Rng, slot: &CardSlot) -> Option<&HallCard> {
+        self.card.iter().filter(|o| o.matches(slot)).choose(rng)
     }
 
-    pub(crate) fn pick_cards(&self, rng: &mut impl Rng, from: &[CardSlot], count: u8) -> Vec<HallCard> {
+    pub(crate) fn pick_cards(&self, rng: &mut impl Rng, from: &[CardSlot], count: u8) -> Vec<&HallCard> {
         let slots = from.choose_multiple(rng, count as usize).cloned().collect::<Vec<_>>();
         slots.iter().filter_map(|slot| self.pick_card(rng, slot)).collect()
     }
 
-    pub(crate) fn lookup_player_card(&self, player_card: &PlayerCard) -> Option<HallCard> {
-        self.card.iter().find(|o| o.set == player_card.set && o.rarity == player_card.rarity && o.number == player_card.number).cloned()
+    pub(crate) fn lookup_player_card(&self, player_card: &PlayerCard) -> Option<&HallCard> {
+        self.card.iter().find(|o| o.set == player_card.set && o.rarity == player_card.rarity && o.number == player_card.number)
     }
 
-    pub(crate) fn pick_mission(&self, rng: &mut impl Rng) -> Option<HallMission> {
-        self.mission.choose(rng).cloned()
+    pub(crate) fn pick_mission(&self, rng: &mut impl Rng) -> Option<&HallMission> {
+        self.mission.choose(rng)
+    }
+
+    pub(crate) fn pick_institution(&self, rng: &mut impl Rng) -> Option<(GeneralType, SpecificType)> {
+        self.detail.iter().filter(|detail| matches!(&detail.detail, Detail::Institution(_, _))).choose(rng).and_then(|detail| match detail.detail {
+            Detail::Institution(general, specific) => Some((general, specific)),
+            _ => None,
+        })
     }
 }
 

@@ -2,10 +2,10 @@ use std::io::{Error, ErrorKind};
 use std::path::Path;
 
 use bevy::prelude::Resource;
-use hall::core::Detail;
+use hall::core::{GeneralType, SpecificType};
 use hall::player::{PlayerBuild, PlayerCard, PlayerDetail, PlayerPart};
-use rand::prelude::IteratorRandom;
-use rand::SeedableRng;
+
+use hall::core::Detail::Institution;
 use vagabond::data::{VagabondBuild, VagabondCard, VagabondDetail, VagabondPart};
 
 #[derive(Resource)]
@@ -40,6 +40,10 @@ impl DataManager {
         self.detail.iter().find(|detail| detail.detail == in_build.detail && detail.number == in_build.number).cloned()
     }
 
+    pub(crate) fn convert_institution(&self, (general, specific): (GeneralType, SpecificType)) -> Option<&VagabondDetail> {
+        self.detail.iter().find(|detail| detail.detail == Institution(general, specific))
+    }
+
     pub(crate) fn convert_part(&self, in_part: &PlayerPart) -> Option<VagabondPart> {
         let part = VagabondPart {
             seed: in_part.seed,
@@ -60,12 +64,6 @@ impl DataManager {
             ],
         };
         Some(part)
-    }
-
-    pub(crate) fn deduce_institution(&self, seed: u64) -> Option<&VagabondDetail> {
-        let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
-        let institution = self.detail.iter().filter(|detail| matches!(&detail.detail, Detail::Institution(_, _))).choose(&mut rng);
-        institution
     }
 }
 

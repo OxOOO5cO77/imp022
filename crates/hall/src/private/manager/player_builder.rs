@@ -102,11 +102,11 @@ impl PlayerBuilder {
         let mut deck = VecDeque::new();
 
         let build_zip = zip(&self.build.build, self.build_values.values);
-        let build_cards = build_zip.flat_map(|(item, value)| dm.pick_cards(rng, &item.cards, value)).map(|hall_card| PlayerCard::from(&hall_card));
+        let build_cards = build_zip.flat_map(|(item, value)| dm.pick_cards(rng, &item.cards, value)).map(PlayerCard::from);
         deck.extend(build_cards);
 
         let detail_zip = zip(&self.detail.detail, self.detail_values.values);
-        let detail_cards = detail_zip.flat_map(|(item, value)| dm.pick_cards(rng, &item.cards, value)).map(|hall_card| PlayerCard::from(&hall_card));
+        let detail_cards = detail_zip.flat_map(|(item, value)| dm.pick_cards(rng, &item.cards, value)).map(PlayerCard::from);
 
         deck.extend(detail_cards);
 

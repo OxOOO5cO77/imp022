@@ -53,8 +53,8 @@ impl GameUserState {
     pub fn set_attr(&mut self, attr: Attributes) {
         self.attr = attr;
     }
-    pub fn setup_deck(&mut self, deck: Vec<HallCard>, rng: &mut impl Rng) {
-        self.deck = deck.into();
+    pub fn setup_deck(&mut self, deck: Vec<&HallCard>, rng: &mut impl Rng) {
+        self.deck = deck.into_iter().cloned().collect::<Vec<_>>().into();
         self.shuffle_deck(rng);
         self.fill_hand();
     }

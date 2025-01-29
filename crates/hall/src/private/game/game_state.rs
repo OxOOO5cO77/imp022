@@ -1,10 +1,9 @@
+use rand::{distr::Uniform, rngs::ThreadRng, Rng};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::iter::zip;
 
-use rand::{distr::Uniform, rngs::ThreadRng, Rng};
-
-use hall::core::{ActorIdType, AttributeArray, Attributes, ErgArray, ErgType, Host, Phase, RemoteIdType, Stage, TickType};
+use hall::core::{ActorIdType, AttributeArray, Attributes, ErgArray, ErgType, GeneralType, Host, Phase, RemoteIdType, SpecificType, Stage, TickType};
 use hall::hall::{HallCard, HallMission};
 use hall::message::GameUpdateStateResponse;
 use hall::player::PlayerCard;
@@ -53,11 +52,11 @@ where
 }
 
 impl GameState {
-    pub(crate) fn new(hall_mission: HallMission, rng: &mut impl Rng) -> Self {
+    pub(crate) fn new(hall_mission: &HallMission, institution: (GeneralType, SpecificType), rng: &mut impl Rng) -> Self {
         let mut remotes = HashMap::new();
         let mut actors = HashMap::new();
 
-        let mut mission = GameMission::from(hall_mission);
+        let mut mission = GameMission::new(hall_mission, institution);
 
         for node in mission.node.iter_mut() {
             let attributes = Attributes::from_arrays([util::pick_values(rng), util::pick_values(rng), util::pick_values(rng), util::pick_values(rng)]);

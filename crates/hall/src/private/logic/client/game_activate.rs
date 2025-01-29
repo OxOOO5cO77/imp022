@@ -34,8 +34,9 @@ pub(crate) fn recv_game_activate(context: &HallContext, request: GameActivateReq
     {
         let mut games = context.games.write().ok()?;
         let game = games.entry(game_id).or_insert_with(|| {
-            let mission = dm.pick_mission(&mut rng);
-            GameState::new(mission.unwrap(), &mut rng)
+            let mission = dm.pick_mission(&mut rng).unwrap();
+            let institution = dm.pick_institution(&mut rng).unwrap();
+            GameState::new(mission, institution, &mut rng)
         });
 
         user.mission_state = game.mission.to_player_state(game.mission.node.first()?.id);

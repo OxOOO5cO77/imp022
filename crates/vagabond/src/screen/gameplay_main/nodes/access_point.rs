@@ -48,7 +48,7 @@ impl AccessPoint {
     }
 
     pub(crate) fn activate(&self, commands: &mut Commands, mission: &GameMissionPlayerView, text_q: &mut Query<&mut Text2d>, dm: &DataManager, wm: &mut WarehouseManager) -> Option<()> {
-        let institution = dm.deduce_institution(mission.id);
+        let institution = dm.convert_institution(mission.institution);
         let access_point = format!("Access Point {:03}", mission.id & 0xFF);
         let location = match wm.fetch_location(mission.id) {
             Ok(response) => response.location.as_ref()?.location(),
