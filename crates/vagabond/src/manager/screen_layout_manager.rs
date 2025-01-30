@@ -34,19 +34,20 @@ pub(crate) struct ScreenLayout {
 }
 
 enum Element {
+    Layout(LayoutElement),
     Shape(ShapeElement),
     Sprite(SpriteElement),
     Text(TextElement),
-    Layout(LayoutElement),
     UiInputBox(UiInputBoxElement),
 }
 
 enum ShapeKind {
-    Rect,
     CapsuleX,
-    Frame,
-    DashFrame,
     Circle,
+    DashFrame,
+    Frame,
+    Rect,
+    Region,
 }
 
 struct ShapeElement {
@@ -116,11 +117,12 @@ impl ScreenLayout {
 
     fn parse_shape_kind(shape_kind: &str) -> Result<ShapeKind, String> {
         match shape_kind {
-            "rect" => Ok(ShapeKind::Rect),
             "capsule_x" => Ok(ShapeKind::CapsuleX),
-            "frame" => Ok(ShapeKind::Frame),
-            "dash_frame" => Ok(ShapeKind::DashFrame),
             "circle" => Ok(ShapeKind::Circle),
+            "dash_frame" => Ok(ShapeKind::DashFrame),
+            "frame" => Ok(ShapeKind::Frame),
+            "rect" => Ok(ShapeKind::Rect),
+            "region" => Ok(ShapeKind::Region),
             _ => Err(format!("shape_kind: {shape_kind}")),
         }
     }
@@ -290,6 +292,7 @@ impl ScreenLayoutManager {
         //todo: pre-populate with CSS colors?
 
         let mut resources = ScreenResources::default();
+        resources.color_map.insert("none".to_string(), Srgba::NONE);
         resources.color_map.insert("black".to_string(), Srgba::BLACK);
         resources.color_map.insert("white".to_string(), Srgba::WHITE);
 
@@ -393,6 +396,13 @@ impl ScreenLayoutManager {
         let transform = Transform::from_translation(element.position);
 
         parent.spawn((mesh, material, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::IGNORE)).id()
+    }
+
+    fn spawn_shape_bundle_region(parent: &mut ChildBuilder, element: &ShapeElement, meshes: &mut Assets<Mesh>) -> Entity {
+        let mesh = Mesh2d(meshes.add(Rectangle::new(element.size.x, element.size.y)));
+        let transform = Transform::from_translation(element.position);
+
+        parent.spawn((mesh, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::default())).id()
     }
 
     fn spawn_shape_bundle_rect(parent: &mut ChildBuilder, element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> Entity {
@@ -515,11 +525,12 @@ impl ScreenLayoutManager {
             let full_name = Self::make_name(base_name, name);
             let id = match element {
                 Element::Shape(e) => match e.kind {
-                    ShapeKind::Rect => Self::spawn_shape_bundle_rect(parent, e, &mut slm_params.meshes, &mut slm_params.materials_color),
                     ShapeKind::CapsuleX => Self::spawn_shape_bundle_capsule_x(parent, e, &mut slm_params.meshes, &mut slm_params.materials_color),
-                    ShapeKind::Frame => Self::spawn_shape_bundle_frame(parent, e, 0.0, &mut slm_params.meshes, &mut slm_params.materials_frame),
-                    ShapeKind::DashFrame => Self::spawn_shape_bundle_frame(parent, e, 8.0, &mut slm_params.meshes, &mut slm_params.materials_frame),
                     ShapeKind::Circle => Self::spawn_shape_bundle_circle(parent, e, &mut slm_params.meshes, &mut slm_params.materials_color),
+                    ShapeKind::DashFrame => Self::spawn_shape_bundle_frame(parent, e, 8.0, &mut slm_params.meshes, &mut slm_params.materials_frame),
+                    ShapeKind::Frame => Self::spawn_shape_bundle_frame(parent, e, 0.0, &mut slm_params.meshes, &mut slm_params.materials_frame),
+                    ShapeKind::Rect => Self::spawn_shape_bundle_rect(parent, e, &mut slm_params.meshes, &mut slm_params.materials_color),
+                    ShapeKind::Region => Self::spawn_shape_bundle_region(parent, e, &mut slm_params.meshes),
                 },
                 Element::Sprite(e) => {
                     if let Some(sprite) = Self::spawn_sprite_bundle(parent, e, am) {
