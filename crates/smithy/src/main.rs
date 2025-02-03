@@ -1,7 +1,6 @@
 use crate::data::build::process_build;
 use crate::data::card::process_card;
 use crate::data::detail::process_detail;
-use crate::data::mission::process_mission;
 use crate::save_load::hall::*;
 use crate::save_load::vagabond::*;
 use clap::Parser;
@@ -24,8 +23,6 @@ struct Args {
     card: bool,
     #[arg(long)]
     detail: bool,
-    #[arg(long)]
-    mission: bool,
     #[arg(short = 'H', long)]
     hall: bool,
     #[arg(short = 'V', long)]
@@ -82,17 +79,6 @@ async fn main() -> Result<(), sqlx::Error> {
             output_cards_for_vagabond(&cards)?;
         }
         println!("[Smithy] END card");
-    }
-
-    if args.mission {
-        println!("[Smithy] BEGIN mission");
-        let missions = process_mission(&pool).await?;
-
-        if args.hall {
-            output_missions_for_hall(&missions)?;
-        }
-
-        println!("[Smithy] END mission");
     }
 
     Ok(())

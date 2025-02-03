@@ -3,8 +3,8 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::iter::zip;
 
-use hall::core::{ActorIdType, AttributeArray, Attributes, ErgArray, ErgType, GeneralType, Host, Phase, RemoteIdType, SpecificType, Stage, TickType};
-use hall::hall::{HallCard, HallMission};
+use hall::core::{ActorIdType, AttributeArray, Attributes, ErgArray, ErgType, Host, Phase, RemoteIdType, Stage, TickType};
+use hall::hall::HallCard;
 use hall::message::GameUpdateStateResponse;
 use hall::player::PlayerCard;
 use hall::util;
@@ -52,11 +52,9 @@ where
 }
 
 impl GameState {
-    pub(crate) fn new(hall_mission: &HallMission, institution: (GeneralType, SpecificType), rng: &mut impl Rng) -> Self {
+    pub(crate) fn new(mut mission: GameMission, rng: &mut impl Rng) -> Self {
         let mut remotes = HashMap::new();
         let mut actors = HashMap::new();
-
-        let mut mission = GameMission::new(hall_mission, institution);
 
         for node in mission.node.iter_mut() {
             let attributes = Attributes::from_arrays([util::pick_values(rng), util::pick_values(rng), util::pick_values(rng), util::pick_values(rng)]);

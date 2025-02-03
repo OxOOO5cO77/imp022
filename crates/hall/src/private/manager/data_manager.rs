@@ -2,7 +2,7 @@ use std::io::{Error, ErrorKind};
 use std::path::Path;
 
 use hall::core::{Build, CardSlot, Detail, GeneralType, SpecificType};
-use hall::hall::{HallBuild, HallCard, HallDetail, HallMission};
+use hall::hall::{HallBuild, HallCard, HallDetail};
 use hall::player::PlayerCard;
 use rand::prelude::*;
 
@@ -10,7 +10,6 @@ pub(crate) struct DataManager {
     build: Vec<HallBuild>,
     detail: Vec<HallDetail>,
     card: Vec<HallCard>,
-    mission: Vec<HallMission>,
 }
 
 impl DataManager {
@@ -19,7 +18,6 @@ impl DataManager {
             build: load_data_single("assets/data/hall_builds.ron")?,
             detail: load_data_single("assets/data/hall_details.ron")?,
             card: load_data_single("assets/data/hall_cards.ron")?,
-            mission: load_data_single("assets/data/hall_missions.ron")?,
         })
     }
 
@@ -58,10 +56,6 @@ impl DataManager {
         self.card.iter().find(|o| o.set == player_card.set && o.rarity == player_card.rarity && o.number == player_card.number)
     }
 
-    pub(crate) fn pick_mission(&self, rng: &mut impl Rng) -> Option<&HallMission> {
-        self.mission.choose(rng)
-    }
-
     pub(crate) fn pick_institution(&self, rng: &mut impl Rng) -> Option<(GeneralType, SpecificType)> {
         self.detail.iter().filter(|detail| matches!(&detail.detail, Detail::Institution(_, _))).choose(rng).and_then(|detail| match detail.detail {
             Detail::Institution(general, specific) => Some((general, specific)),
@@ -89,7 +83,6 @@ mod data_manager_test {
         assert!(!dm.card.is_empty());
         assert!(!dm.build.is_empty());
         assert!(!dm.detail.is_empty());
-        assert!(!dm.mission.is_empty());
         Ok(())
     }
 }

@@ -1,8 +1,8 @@
 use crate::private::game::game_state::ActorMapType;
 use hall::core::{ActorIdType, MissionNodeContent, MissionNodeIdType, MissionNodeKind, MissionNodeLink, MissionNodeState, RemoteIdType};
-use hall::hall::HallMissionNode;
 use hall::view::GameMissionNodePlayerView;
 
+#[derive(Default)]
 pub struct GameMissionNode {
     pub id: MissionNodeIdType,
     pub kind: MissionNodeKind,
@@ -11,20 +11,6 @@ pub struct GameMissionNode {
     pub content: Vec<MissionNodeContent>,
     pub remote: RemoteIdType,
     pub actors: Vec<ActorIdType>,
-}
-
-impl GameMissionNode {
-    pub(crate) fn new(node: &HallMissionNode, remote: RemoteIdType) -> Self {
-        Self {
-            id: node.id,
-            kind: node.kind,
-            initial_state: node.state,
-            links: node.links.clone(),
-            content: node.content.clone(),
-            remote,
-            actors: Vec::new(),
-        }
-    }
 }
 
 impl GameMissionNode {

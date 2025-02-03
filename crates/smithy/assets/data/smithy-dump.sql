@@ -427,39 +427,6 @@ ALTER SEQUENCE public."detail/meta_3_id_seq" OWNED BY public."detail/specific".i
 
 
 --
--- Name: mission; Type: TABLE; Schema: public; Owner: smithy
---
-
-CREATE TABLE public.mission (
-    id integer NOT NULL,
-    mission_id integer NOT NULL,
-    node_id integer NOT NULL,
-    kind public.type_missionnode NOT NULL,
-    state public.type_missionnodestate NOT NULL,
-    north public.type_missionlink,
-    east public.type_missionlink,
-    south public.type_missionlink,
-    west public.type_missionlink
-);
-
-
-ALTER TABLE public.mission OWNER TO smithy;
-
---
--- Name: mission_id_seq; Type: SEQUENCE; Schema: public; Owner: smithy
---
-
-ALTER TABLE public.mission ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
-    SEQUENCE NAME public.mission_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1
-);
-
-
---
 -- Name: build/company id; Type: DEFAULT; Schema: public; Owner: smithy
 --
 
@@ -780,10 +747,10 @@ COPY public."build/company" (id, name, kind, glyph) FROM stdin;
 --
 
 COPY public."build/market" (id, name, glyph) FROM stdin;
-1	Consumer	\N
-2	Enthusiast	\N
-3	Professional	\N
-4	Prosumer	\N
+1	Consumer	⊖
+2	Enthusiast	⊕
+4	Prosumer	⊗
+3	Professional	⊛
 \.
 
 
@@ -1173,17 +1140,6 @@ COPY public."detail/specific" (id, name, general, glyph) FROM stdin;
 
 
 --
--- Data for Name: mission; Type: TABLE DATA; Schema: public; Owner: smithy
---
-
-COPY public.mission (id, mission_id, node_id, kind, state, north, east, south, west) FROM stdin;
-2	1	2	Gateway	Known	\N	\N	(1,Open)	(3,Closed)
-1	1	1	AccessPoint	Known	(2,Open)	(3,Closed)	\N	\N
-3	1	3	Engine	Unknown	\N	(2,Closed)	\N	(1,Closed)
-\.
-
-
---
 -- Name: build/meta_2_id_seq; Type: SEQUENCE SET; Schema: public; Owner: smithy
 --
 
@@ -1233,13 +1189,6 @@ SELECT pg_catalog.setval('public."detail/meta_3_id_seq"', 64, true);
 
 
 --
--- Name: mission_id_seq; Type: SEQUENCE SET; Schema: public; Owner: smithy
---
-
-SELECT pg_catalog.setval('public.mission_id_seq', 3, true);
-
-
---
 -- Name: build/company build/meta_2_pk; Type: CONSTRAINT; Schema: public; Owner: smithy
 --
 
@@ -1285,14 +1234,6 @@ ALTER TABLE ONLY public."detail/specific"
 
 ALTER TABLE ONLY public.detail
     ADD CONSTRAINT detail_pk PRIMARY KEY (id);
-
-
---
--- Name: mission id; Type: CONSTRAINT; Schema: public; Owner: smithy
---
-
-ALTER TABLE ONLY public.mission
-    ADD CONSTRAINT id PRIMARY KEY (id);
 
 
 --

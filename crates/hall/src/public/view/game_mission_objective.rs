@@ -1,16 +1,7 @@
-use crate::hall::HallMissionObjective;
 use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
 pub struct GameMissionObjective {
     complete: bool,
-}
-
-impl From<&HallMissionObjective> for GameMissionObjective {
-    fn from(_value: &HallMissionObjective) -> Self {
-        Self {
-            complete: false,
-        }
-    }
 }
 
 #[derive(Default, Clone, Bufferable)]

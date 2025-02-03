@@ -1,12 +1,13 @@
-use rand::Rng;
+use rand::prelude::StdRng;
+use rand::{Rng, SeedableRng};
 use tracing::info;
 
 use gate::message::gate_header::GateHeader;
 use hall::core::Stage;
 use hall::message::{GameActivateRequest, GameActivateResponse};
-use shared_net::{op, GameIdType, NodeType};
+use shared_net::{op, NodeType};
 
-use crate::private::game::{GameState, GameUser};
+use crate::private::game::{GameMission, GameState, GameUser};
 use crate::private::manager::player_builder::PlayerBuilder;
 use crate::HallContext;
 
@@ -18,13 +19,13 @@ pub(crate) fn recv_game_activate(context: &HallContext, request: GameActivateReq
     let temp_builder = PlayerBuilder::new(&user.parts, &dm);
     user.parts.clear();
 
-    let mut rng = rand::rng();
+    let mut game_id_rng = rand::rng();
     let mut game_id = request.game_id;
 
     {
         let games = context.games.read().ok()?;
         while game_id == 0 {
-            let new_id = rng.random::<GameIdType>();
+            let new_id = game_id_rng.random();
             if !games.contains_key(&new_id) {
                 game_id = new_id;
             }
@@ -34,9 +35,10 @@ pub(crate) fn recv_game_activate(context: &HallContext, request: GameActivateReq
     {
         let mut games = context.games.write().ok()?;
         let game = games.entry(game_id).or_insert_with(|| {
-            let mission = dm.pick_mission(&mut rng).unwrap();
+            let mut rng: StdRng = SeedableRng::seed_from_u64(game_id);
             let institution = dm.pick_institution(&mut rng).unwrap();
-            GameState::new(mission, institution, &mut rng)
+            let mission = GameMission::generate(institution, game_id);
+            GameState::new(mission, &mut rng)
         });
 
         user.mission_state = game.mission.to_player_state(game.mission.node.first()?.id);
