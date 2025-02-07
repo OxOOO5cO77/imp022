@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-use hall::core::{ActorIdType, ActorIndexType, AuthLevel, MissionNodeIntent, MissionNodeKind, MissionNodeLinkDir, MissionNodeLinkState, PickedCardTarget};
-use hall::view::{GameMissionPlayerView, MAX_ACTOR_COUNT, MAX_CONTENT_COUNT, MAX_LINK_COUNT, MAX_LINK_DAMAGE};
+use hall::core::{ActorIdType, ActorIndexType, AuthLevel, MissionNodeIntent, MissionNodeKind, MissionNodeLinkDir, PickedCardTarget};
+use hall::view::{GameMissionPlayerView, MAX_ACTOR_COUNT, MAX_CONTENT_COUNT, MAX_LINK_COUNT};
 
 use crate::manager::{ScreenLayout, WarehouseManager};
 use crate::screen::gameplay_main::components::{CardDropTarget, MissionNodeButton, MissionNodeContentButton};
@@ -17,7 +17,6 @@ struct BaseNodeLink {
     remote_id: Entity,
     lock: Entity,
     unlock: Entity,
-    damage: Entity,
 }
 
 impl BaseNodeLink {
@@ -27,7 +26,6 @@ impl BaseNodeLink {
         let remote_id = layout.entity(&format!("{name}/{link_name}/remote_id"));
         let lock = layout.entity(&format!("{name}/{link_name}/lock"));
         let unlock = layout.entity(&format!("{name}/{link_name}/unlock"));
-        let damage = layout.entity(&format!("{name}/{link_name}/damage"));
 
         Self {
             container,
@@ -35,7 +33,6 @@ impl BaseNodeLink {
             remote_id,
             lock,
             unlock,
-            damage,
         }
     }
 }
@@ -145,7 +142,7 @@ impl BaseNode {
     pub(crate) fn activate(&self, commands: &mut Commands, mission: &GameMissionPlayerView, text_q: &mut Query<&mut Text2d>, wm: &mut WarehouseManager) {
         let current_node = mission.current();
 
-        const DIRS: &[MissionNodeLinkDir; MAX_LINK_COUNT] = &[MissionNodeLinkDir::North, MissionNodeLinkDir::East, MissionNodeLinkDir::West, MissionNodeLinkDir::South];
+        const DIRS: &[MissionNodeLinkDir; MAX_LINK_COUNT] = &[MissionNodeLinkDir::North, MissionNodeLinkDir::East, MissionNodeLinkDir::South, MissionNodeLinkDir::West];
         for (idx, dir) in DIRS.iter().enumerate() {
             let visible = current_node.links.iter().any(|link| link.direction == *dir);
             commands.entity(self.links[idx].container).insert(Self::is_visible(visible)).observe_link_button();
@@ -156,17 +153,13 @@ impl BaseNode {
             let node_target = link_dir.map(|l| l.target).and_then(|target| mission.get_node(target));
             let kind = node_target.map_or(MissionNodeKind::Unknown, |n| n.kind);
             let remote_id = node_target.map_or("???:???:????:???:???".to_string(), |n| n.make_id());
-            let locked = link_dir.is_some_and(|l| l.state == MissionNodeLinkState::Closed);
-            let unlocked = link_dir.is_some_and(|l| l.state == MissionNodeLinkState::Open);
-            let damage = MAX_LINK_DAMAGE.saturating_sub(link_dir.map_or(0, |l| l.damage));
-            if let Ok([mut text_title, mut text_remote_id, mut text_damage]) = text_q.get_many_mut([link.title, link.remote_id, link.damage]) {
+            let locked = link_dir.is_some_and(|l| l.locked);
+            if let Ok([mut text_title, mut text_remote_id]) = text_q.get_many_mut([link.title, link.remote_id]) {
                 *text_title = kind.as_str().into();
                 *text_remote_id = remote_id.into();
-                *text_damage = damage.to_string().into();
             }
             commands.entity(link.lock).insert(Self::is_visible(locked));
-            commands.entity(link.unlock).insert(Self::is_visible(unlocked));
-            commands.entity(link.damage).insert(Self::is_visible(locked));
+            commands.entity(link.unlock).insert(Self::is_visible(!locked));
         }
 
         for (idx, e) in self.content.iter().enumerate() {

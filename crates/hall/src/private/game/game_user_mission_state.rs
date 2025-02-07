@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use hall::core::{MissionNodeIdType, TickType, Token, TokenKind};
+use hall::core::{AuthLevel, MissionNodeIdType, TickType, Token, TokenKind};
 use hall::message::UpdateTokenMessage;
 
 #[derive(Default)]
@@ -46,5 +46,9 @@ impl GameUserMissionState {
 
     pub fn any_auth(&self) -> bool {
         self.tokens.iter().any(|t| matches!(t.kind, TokenKind::Authorization(_)))
+    }
+
+    pub(crate) fn max_auth_level(&self) -> AuthLevel {
+        self.tokens.iter().filter(|t| matches!(t.kind, TokenKind::Authorization(_))).max().map_or(AuthLevel::Anonymous, |t| t.kind.level())
     }
 }

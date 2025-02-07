@@ -3,10 +3,11 @@ use serde::{Deserialize, Serialize};
 
 use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
-use crate::core::{MissionNodeIdType, MissionNodeLinkDamageType};
+use crate::core::{AuthLevel, MissionNodeIdType};
 
 #[repr(u8)]
-#[derive(Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Debug, FromPrimitive, IntoPrimitive)]
+#[derive(Default, Clone, Copy, Hash, PartialEq, Eq, Serialize, Deserialize, FromPrimitive, IntoPrimitive)]
+#[cfg_attr(test, derive(Debug))]
 pub enum MissionNodeKind {
     #[default]
     Unknown,
@@ -21,7 +22,8 @@ pub enum MissionNodeKind {
 }
 
 #[repr(u8)]
-#[derive(Default, Clone, Copy, PartialEq, Serialize, Deserialize, Debug, FromPrimitive, IntoPrimitive)]
+#[derive(Default, Clone, Copy, Serialize, Deserialize, FromPrimitive, IntoPrimitive)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 pub enum MissionNodeState {
     #[default]
     Unknown,
@@ -29,7 +31,8 @@ pub enum MissionNodeState {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug, FromPrimitive, IntoPrimitive)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, FromPrimitive, IntoPrimitive)]
+#[cfg_attr(test, derive(Debug))]
 pub enum MissionNodeLinkDir {
     #[num_enum(default)]
     North,
@@ -38,23 +41,16 @@ pub enum MissionNodeLinkDir {
     West,
 }
 
-#[repr(u8)]
-#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug, FromPrimitive, IntoPrimitive)]
-pub enum MissionNodeLinkState {
-    #[num_enum(default)]
-    Closed,
-    Open,
-}
-
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct MissionNodeLink {
     pub direction: MissionNodeLinkDir,
     pub target: MissionNodeIdType,
-    pub state: MissionNodeLinkState,
-    pub damage: MissionNodeLinkDamageType,
+    pub min_level: AuthLevel,
 }
 
-#[derive(Bufferable, Default, Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Bufferable, Default, Clone, Serialize, Deserialize)]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct MissionNodeContent {
     pub log: bool,
 }

@@ -1,6 +1,6 @@
 use crate::private::game::game_state::ActorMapType;
-use hall::core::{ActorIdType, MissionNodeContent, MissionNodeIdType, MissionNodeKind, MissionNodeLink, MissionNodeState, RemoteIdType};
-use hall::view::GameMissionNodePlayerView;
+use hall::core::{ActorIdType, AuthLevel, MissionNodeContent, MissionNodeIdType, MissionNodeKind, MissionNodeLink, MissionNodeState, RemoteIdType};
+use hall::view::{GameMissionNodePlayerView, MissionNodeLinkView};
 
 #[derive(Default)]
 pub struct GameMissionNode {
@@ -14,11 +14,20 @@ pub struct GameMissionNode {
 }
 
 impl GameMissionNode {
-    pub(crate) fn to_player_view(&self, all_actors: &ActorMapType) -> GameMissionNodePlayerView {
+    fn link_to_player_view(link: &MissionNodeLink, auth_level: AuthLevel) -> MissionNodeLinkView {
+        MissionNodeLinkView {
+            direction: link.direction,
+            target: link.target,
+            min_level: link.min_level,
+            locked: auth_level < link.min_level,
+        }
+    }
+
+    pub(crate) fn to_player_view(&self, auth_level: AuthLevel, all_actors: &ActorMapType) -> GameMissionNodePlayerView {
         GameMissionNodePlayerView {
             id: self.id,
             kind: self.kind,
-            links: self.links.clone(),
+            links: self.links.iter().map(|node| Self::link_to_player_view(node, auth_level)).collect(),
             content: self.content.clone(),
             remote: self.remote,
             actors: self.actors.iter().filter_map(|id| all_actors.get(id).map(|a| a.to_player_view(*id))).collect(),

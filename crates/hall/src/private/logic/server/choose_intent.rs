@@ -26,7 +26,7 @@ pub(crate) fn handle_choose_intent(game: &mut GameState, bx: &mut Broadcaster) {
     let mut token_changes = HashMap::new();
     for (id, intent) in intents.drain(..) {
         if let Some(user) = game.users.get_mut(&id) {
-            if let Some(result) = intents::process_intent(intent, &mut game.mission, user, &mut game.remotes, tick) {
+            if let Some(result) = intents::process_intent(intent, &mut game.mission, user, tick) {
                 match result {
                     IntentResult::NodeChange => {
                         node_changes.insert(id);

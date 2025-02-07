@@ -3,7 +3,7 @@ use rand::{Rng, SeedableRng};
 
 use crate::private::game::game_state::ActorMapType;
 use crate::private::game::{GameMissionNode, GameMissionObjective, GameUserMissionState};
-use hall::core::{GeneralType, MissionIdType, MissionNodeIdType, MissionNodeKind, MissionNodeLink, MissionNodeLinkDir, MissionNodeLinkState, MissionNodeState, SpecificType};
+use hall::core::{AuthLevel, GeneralType, MissionIdType, MissionNodeIdType, MissionNodeKind, MissionNodeLink, MissionNodeLinkDir, MissionNodeState, SpecificType};
 use hall::view::{GameMissionObjectivePlayerView, GameMissionPlayerView};
 
 #[derive(Default)]
@@ -146,7 +146,7 @@ impl GameMission {
     fn make_exit(map: &mut MapType, coord: &MapCoord, dir: &MapDir, force: bool, set: u16, rng: &mut impl Rng) -> Option<MapCoord> {
         let idx = dir.value();
         let target = dir.target(coord);
-        let door = target.as_ref().map(|t| force || (map.at(t).distance != Some(set) && rng.random_bool(0.5))).is_some();
+        let door = target.as_ref().map(|t| force || (map.at(t).distance != Some(set) && rng.random_bool(0.5))).unwrap_or_default();
 
         map.at_mut(coord).exit[idx] = door || map.at(coord).exit[idx];
         if door {
@@ -276,8 +276,7 @@ impl GameMission {
                 let link = MissionNodeLink {
                     direction: dir.into(),
                     target: map.at(&dir.target(&coord).unwrap()).id,
-                    state: MissionNodeLinkState::Open,
-                    damage: 0,
+                    min_level: AuthLevel::Guest,
                 };
                 result.push(link);
             }
@@ -314,7 +313,7 @@ impl GameMission {
     pub(crate) fn to_player_state(&self, initial_node: MissionNodeIdType) -> GameUserMissionState {
         let mut state = GameUserMissionState {
             current_node: initial_node,
-            known_nodes: self.node.iter().filter(|n| n.initial_state == MissionNodeState::Known).map(|n| n.id).collect(),
+            known_nodes: self.node.iter().filter(|n| matches!(n.initial_state, MissionNodeState::Known)).map(|n| n.id).collect(),
             tokens: Vec::new(),
         };
         state.known_nodes.insert(initial_node);
@@ -325,7 +324,8 @@ impl GameMission {
         let id = self.id;
         let institution = self.institution;
         let current_node = mission_state.current();
-        let node_map = mission_state.known_nodes.iter().filter_map(|id| self.get_node(*id)).map(|node| node.to_player_view(actors)).collect();
+        let auth_level = mission_state.max_auth_level();
+        let node_map = mission_state.known_nodes.iter().filter_map(|id| self.get_node(*id)).map(|node| node.to_player_view(auth_level, actors)).collect();
         let tokens = mission_state.tokens.clone();
         let objective = self.objective.iter().map(GameMissionObjectivePlayerView::from).collect();
 

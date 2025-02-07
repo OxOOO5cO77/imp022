@@ -1,4 +1,4 @@
-use crate::private::game::{GameMission, GameUser, RemoteMapType};
+use crate::private::game::{GameMission, GameUser};
 use hall::core::{MissionNodeIntent, TickType};
 use hall::message::UpdateTokenMessage;
 
@@ -17,10 +17,10 @@ pub(crate) enum IntentResult {
     TokenChange(Vec<UpdateTokenMessage>),
 }
 
-pub(crate) fn process_intent(intent: MissionNodeIntent, mission: &mut GameMission, user: &mut GameUser, remotes: &mut RemoteMapType, tick: TickType) -> Option<IntentResult> {
+pub(crate) fn process_intent(intent: MissionNodeIntent, mission: &mut GameMission, user: &mut GameUser, tick: TickType) -> Option<IntentResult> {
     match intent {
         MissionNodeIntent::None => None,
-        MissionNodeIntent::Link(dir) => link::process_intent(dir, user, mission, remotes),
+        MissionNodeIntent::Link(dir) => link::process_intent(dir, user, mission),
         MissionNodeIntent::AccessPoint(intent) => node_a::process_intent(intent, mission, user, tick),
         MissionNodeIntent::Backend(intent) => node_b::process_intent(intent, mission, user),
         MissionNodeIntent::Control(intent) => node_c::process_intent(intent, mission, user),
