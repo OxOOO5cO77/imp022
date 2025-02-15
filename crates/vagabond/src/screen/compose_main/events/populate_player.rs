@@ -1,5 +1,5 @@
 use bevy::prelude::Event;
-use warehouse::data::player_bio::PlayerBio;
+use warehouse_lib::data::player_bio::PlayerBio;
 
 #[derive(Event)]
 pub(crate) enum PopulatePlayerUi {

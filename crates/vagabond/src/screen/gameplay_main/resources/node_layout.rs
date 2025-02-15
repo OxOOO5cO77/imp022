@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::Resource;
 
-use hall::core::MissionNodeKind;
+use hall_lib::core::MissionNodeKind;
 
 use crate::screen::gameplay_main::nodes::{BaseNode, MissionNodeLayouts};
 

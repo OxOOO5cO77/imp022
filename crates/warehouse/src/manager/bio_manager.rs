@@ -6,8 +6,8 @@ use chrono::NaiveDate;
 use rand::prelude::{IndexedRandom, StdRng};
 use rand::{Rng, SeedableRng};
 use serde::Deserialize;
-use warehouse::data::geo_location::GeoLocation;
-use warehouse::data::player_bio::PlayerBio;
+use warehouse_lib::data::geo_location::GeoLocation;
+use warehouse_lib::data::player_bio::PlayerBio;
 
 #[derive(Default, Deserialize)]
 pub struct City(String, String, usize);

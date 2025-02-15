@@ -1,7 +1,7 @@
 use sqlx::postgres::PgRow;
 use sqlx::{FromRow, Pool, Postgres, Row};
 
-use hall::core::{BuildNumberType, CardSlot, Detail, GeneralType, SpecificType};
+use hall_lib::core::{BuildNumberType, CardSlot, Detail, GeneralType, SpecificType};
 
 use crate::data::shared::extract_cards;
 

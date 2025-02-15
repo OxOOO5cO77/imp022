@@ -1,10 +1,12 @@
 #![allow(clippy::upper_case_acronyms)]
 
-use crate::data::shared::extract_cards;
-use hall::core::{Build, BuildNumberType, CardSlot, CompanyType, MarketType};
 use serde::Deserialize;
 use sqlx::postgres::PgRow;
 use sqlx::{Pool, Postgres, Row};
+
+use hall_lib::core::{Build, BuildNumberType, CardSlot, CompanyType, MarketType};
+
+use crate::data::shared::extract_cards;
 
 #[derive(Deserialize)]
 pub(crate) struct DbBuild {

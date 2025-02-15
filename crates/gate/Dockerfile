@@ -1,5 +1,9 @@
 FROM rust:1 AS builder
 COPY shared-net /shared-net
+COPY archive-lib /archive-lib
+COPY forum-lib /forum-lib
+COPY gate-lib /gate-lib
+COPY hall-lib /hall-lib
 COPY gate /gate
 WORKDIR /gate
 RUN cargo build --release --bin gate

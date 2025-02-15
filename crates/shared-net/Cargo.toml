@@ -12,5 +12,5 @@ tokio = { version = "1.43.0", features = ["io-util", "macros", "net", "rt", "sig
 tracing = { version = "0.1.41" }
 
 [dev-dependencies]
-strum_macros = { version = "0.26.4" }
-strum = { version = "0.26.3" }
+strum_macros = { version = "0.27.0" }
+strum = { version = "0.27.0" }

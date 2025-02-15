@@ -1,7 +1,7 @@
 use bevy::log::info;
 use bevy::prelude::Commands;
 
-use hall::view::GameMissionPlayerView;
+use hall_lib::view::GameMissionPlayerView;
 
 use crate::manager::ScreenLayout;
 

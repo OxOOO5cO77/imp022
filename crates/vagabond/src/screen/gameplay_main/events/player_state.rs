@@ -1,6 +1,6 @@
 use bevy::prelude::Event;
 
-use hall::view::GameUserStatePlayerView;
+use hall_lib::view::GameUserStatePlayerView;
 
 #[derive(Event)]
 pub(crate) struct PlayerStateTrigger {

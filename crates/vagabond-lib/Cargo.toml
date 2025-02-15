@@ -1,0 +1,11 @@
+[package]
+name = "vagabond-lib"
+description = "Vagabond is the Bevy-based game client."
+version = "0.1.0"
+edition = "2021"
+authors = ["Scott Barcik <oxooo5co77@impending.org>"]
+
+[dependencies]
+serde = { version = "1.0.217", features = ["derive"] }
+hall-lib = { path = "../hall-lib" }
+shared-net = { path = "../shared-net" }

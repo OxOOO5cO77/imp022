@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use vagabond::data::VagabondPart;
+use vagabond_lib::data::VagabondPart;
 
 use crate::manager::DataManager;
 use crate::network::client_gate::{GateCommand, GateIFace};

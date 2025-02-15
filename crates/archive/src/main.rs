@@ -6,7 +6,9 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, instrument};
 
-use gate::message::gate_header::GateHeader;
+use archive_lib::core::ArchiveSubCommand;
+use gate_lib::message::gate_header::GateHeader;
+use shared_net::op::SubCommandType;
 use shared_net::{op, Bufferable, NodeType, RoutedMessage, SizedBuffer, SizedBufferError, VClientMode};
 
 struct Archive {
@@ -53,11 +55,13 @@ async fn archive_main(courtyard: String, database: &str) -> Result<(), ArchiveEr
 }
 
 fn process_courtyard(context: Arc<Mutex<Archive>>, tx: UnboundedSender<RoutedMessage>, mut buf: SizedBuffer) -> VClientMode {
-    let _result = match buf.pull::<op::Command>() {
-        Ok(op::Command::InvGen) => c_invgen(context, tx, buf),
-        Ok(op::Command::InvList) => c_invlist(context, tx, buf),
-        _ => Ok(()),
-    };
+    if let Ok(op::Command::Message(subcommand)) = buf.pull::<op::Command>() {
+        let _result = match subcommand.into() {
+            ArchiveSubCommand::InvGen => c_invgen(context, tx, buf),
+            ArchiveSubCommand::InvList => c_invlist(context, tx, buf),
+        };
+    }
+
     VClientMode::Continue
 }
 
@@ -75,7 +79,7 @@ fn c_invgen(context: Arc<Mutex<Archive>>, tx: UnboundedSender<RoutedMessage>, mu
         if result {
             if let Ok(out) = move || -> Result<SizedBuffer, SizedBufferError> {
                 let route = op::Route::One(gate);
-                let command = op::Command::InvList;
+                let command = op::Command::Inventory(ArchiveSubCommand::InvList as SubCommandType);
                 let results = vec![object_uuid.as_u128()];
 
                 let mut out = SizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + header.vagabond.size_in_buffer() + results.size_in_buffer());
@@ -112,12 +116,12 @@ fn c_invlist(context: Arc<Mutex<Archive>>, tx: UnboundedSender<RoutedMessage>, m
         if let Ok(results) = query_result {
             if let Ok(out) = move || -> Result<SizedBuffer, SizedBufferError> {
                 let route = op::Route::One(gate);
-                let command = op::Command::InvList;
+                let command = op::Command::Inventory(ArchiveSubCommand::InvList as SubCommandType);
                 let mapped_results = results.iter().map(|r| r.ob_uuid.as_u128()).collect::<Vec<_>>();
 
                 let mut out = SizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + header.vagabond.size_in_buffer() + mapped_results.size_in_buffer());
                 out.push(&op::Route::One(gate))?;
-                out.push(&op::Command::InvList)?;
+                out.push(&op::Command::Inventory(ArchiveSubCommand::InvList as SubCommandType))?;
                 out.push(&header.vagabond)?;
                 out.push(&mapped_results)?;
                 Ok(out)

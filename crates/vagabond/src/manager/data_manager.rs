@@ -2,11 +2,10 @@ use std::io::{Error, ErrorKind};
 use std::path::Path;
 
 use bevy::prelude::Resource;
-use hall::core::{GeneralType, SpecificType};
-use hall::player::{PlayerBuild, PlayerCard, PlayerDetail, PlayerPart};
 
-use hall::core::Detail::Institution;
-use vagabond::data::{VagabondBuild, VagabondCard, VagabondDetail, VagabondPart};
+use hall_lib::core::{Detail, GeneralType, SpecificType};
+use hall_lib::player::{PlayerBuild, PlayerCard, PlayerDetail, PlayerPart};
+use vagabond_lib::data::{VagabondBuild, VagabondCard, VagabondDetail, VagabondPart};
 
 #[derive(Resource)]
 pub(crate) struct DataManager {
@@ -41,7 +40,7 @@ impl DataManager {
     }
 
     pub(crate) fn convert_institution(&self, (general, specific): (GeneralType, SpecificType)) -> Option<&VagabondDetail> {
-        self.detail.iter().find(|detail| detail.detail == Institution(general, specific))
+        self.detail.iter().find(|detail| detail.detail == Detail::Institution(general, specific))
     }
 
     pub(crate) fn convert_part(&self, in_part: &PlayerPart) -> Option<VagabondPart> {

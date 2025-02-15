@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-use hall::core::{ActorIdType, ActorIndexType, AuthLevel, MissionNodeIntent, MissionNodeKind, MissionNodeLinkDir, PickedCardTarget};
-use hall::view::{GameMissionPlayerView, MAX_ACTOR_COUNT, MAX_CONTENT_COUNT, MAX_LINK_COUNT};
+use hall_lib::core::{ActorIdType, ActorIndexType, AuthLevel, MissionNodeIntent, MissionNodeKind, MissionNodeLinkDir, PickedCardTarget};
+use hall_lib::view::{GameMissionPlayerView, MAX_ACTOR_COUNT, MAX_CONTENT_COUNT, MAX_LINK_COUNT};
 
 use crate::manager::{ScreenLayout, WarehouseManager};
 use crate::screen::gameplay_main::components::{CardDropTarget, MissionNodeButton, MissionNodeContentButton};
@@ -153,13 +153,12 @@ impl BaseNode {
             let node_target = link_dir.map(|l| l.target).and_then(|target| mission.get_node(target));
             let kind = node_target.map_or(MissionNodeKind::Unknown, |n| n.kind);
             let remote_id = node_target.map_or("???:???:????:???:???".to_string(), |n| n.make_id());
-            let locked = link_dir.is_some_and(|l| l.locked);
             if let Ok([mut text_title, mut text_remote_id]) = text_q.get_many_mut([link.title, link.remote_id]) {
                 *text_title = kind.as_str().into();
                 *text_remote_id = remote_id.into();
             }
-            commands.entity(link.lock).insert(Self::is_visible(locked));
-            commands.entity(link.unlock).insert(Self::is_visible(!locked));
+            commands.entity(link.lock).insert(Self::is_visible(link_dir.is_some_and(|l| l.locked)));
+            commands.entity(link.unlock).insert(Self::is_visible(link_dir.is_some_and(|l| !l.locked)));
         }
 
         for (idx, e) in self.content.iter().enumerate() {

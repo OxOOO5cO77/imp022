@@ -1,7 +1,7 @@
 use bevy::prelude::Resource;
 
-use hall::core::Attributes;
-use vagabond::data::VagabondCard;
+use hall_lib::core::Attributes;
+use vagabond_lib::data::VagabondCard;
 
 #[derive(Default, PartialEq)]
 pub(crate) enum ComposeState {

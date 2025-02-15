@@ -7,18 +7,21 @@ use tokio::sync::mpsc::error::SendError;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{error, info, instrument};
 
-use gate::message::gate_header::GateHeader;
-use hall::message::{GameRequestMessage, GameResponseMessage};
-use private::logic;
+use gate_lib::message::gate_header::GateHeader;
+use hall_lib::core::GameSubCommand;
+use hall_lib::message::{GameRequestMessage, GameResponseMessage};
 use shared_net::{op, GameIdType, NodeType, RoutedMessage, SizedBuffer, SizedBufferError, VClientMode};
 
-use crate::private::game::GameState;
-use private::logic::handle_phase_complete;
-use private::manager::data_manager::DataManager;
-use private::network::broadcaster::Broadcaster;
-use private::network::util::send_routed_message;
+use game::GameState;
+use logic::handle_phase_complete;
+use manager::data_manager::DataManager;
+use network::broadcaster::Broadcaster;
+use network::util::send_routed_message;
 
-mod private;
+pub(crate) mod game;
+pub(crate) mod logic;
+pub(crate) mod manager;
+pub(crate) mod network;
 
 pub(crate) type HallContext = Rc<Hall>;
 pub(crate) type HallGames = HashMap<GameIdType, GameState>;
@@ -72,16 +75,16 @@ async fn hall_main(courtyard: String) -> Result<(), HallError> {
 fn process_courtyard(context: HallContext, tx: UnboundedSender<RoutedMessage>, mut buf: SizedBuffer) -> VClientMode {
     let command = buf.pull::<op::Command>();
 
-    if let Ok(command) = command {
-        let result = match command {
-            op::Command::GameBuild => handle_recv(&context, tx, buf, logic::recv_game_build),
-            op::Command::GameActivate => handle_recv(&context, tx, buf, logic::recv_game_activate),
-            op::Command::GameChooseIntent => handle_recv(&context, tx, buf, logic::recv_game_choose_intent),
-            op::Command::GameChooseAttr => handle_recv(&context, tx, buf, logic::recv_game_choose_attr),
-            op::Command::GamePlayCard => handle_recv(&context, tx, buf, logic::recv_game_play_card),
-            op::Command::GameEndTurn => handle_recv(&context, tx, buf, logic::recv_game_end_turn),
-            op::Command::GameEndGame => handle_recv(&context, tx, buf, logic::recv_game_end_game),
-            op::Command::GameUpdateState => handle_recv(&context, tx, buf, logic::recv_game_update_state),
+    if let Ok(op::Command::Game(subcommand)) = command {
+        let result = match subcommand.into() {
+            GameSubCommand::Build => handle_recv(&context, tx, buf, logic::recv_game_build),
+            GameSubCommand::Activate => handle_recv(&context, tx, buf, logic::recv_game_activate),
+            GameSubCommand::ChooseIntent => handle_recv(&context, tx, buf, logic::recv_game_choose_intent),
+            GameSubCommand::ChooseAttr => handle_recv(&context, tx, buf, logic::recv_game_choose_attr),
+            GameSubCommand::PlayCard => handle_recv(&context, tx, buf, logic::recv_game_play_card),
+            GameSubCommand::EndTurn => handle_recv(&context, tx, buf, logic::recv_game_end_turn),
+            GameSubCommand::EndGame => handle_recv(&context, tx, buf, logic::recv_game_end_game),
+            GameSubCommand::UpdateState => handle_recv(&context, tx, buf, logic::recv_game_update_state),
             _ => return VClientMode::Continue,
         };
 

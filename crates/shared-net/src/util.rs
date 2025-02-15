@@ -26,11 +26,11 @@ mod test {
             let mut tester = Cursor::new(Vec::new());
             let mut buf = SizedBuffer::new(64);
             let test = [1, 2, 3, 4, 5, 6, 7, 8];
-            buf.push_bytes(&test);
+            if let Err(err) = buf.push_bytes(&test) {
+                std::panic::panic_any(err)
+            }
 
-            let result = write_buf(&mut tester, &buf).await;
-
-            match result {
+            match write_buf(&mut tester, &buf).await {
                 Ok(bytes) => {
                     assert_eq!(bytes, test.len() + SizedBuffer::sizesize());
 

@@ -1,8 +1,9 @@
+use forum_lib::core::ForumSubCommand;
+use shared_net::op::SubCommandType;
+use shared_net::{op, NodeType, RoutedMessage, SizedBuffer, SizedBufferError, VClientMode};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, instrument};
-
-use shared_net::{op, NodeType, RoutedMessage, SizedBuffer, SizedBufferError, VClientMode};
 
 #[derive(Clone)]
 struct NoContext;
@@ -39,10 +40,11 @@ async fn forum_main(courtyard: String) -> Result<(), ForumError> {
 }
 
 fn process_courtyard(_context: NoContext, tx: UnboundedSender<RoutedMessage>, mut buf: SizedBuffer) -> VClientMode {
-    match buf.pull::<op::Command>() {
-        Ok(op::Command::Chat) => c_chat(tx, buf),
-        Ok(op::Command::DM) => c_dm(tx, buf),
-        _ => {}
+    if let Ok(op::Command::Message(subcommand)) = buf.pull::<op::Command>() {
+        match subcommand.into() {
+            ForumSubCommand::Chat => c_chat(tx, buf),
+            ForumSubCommand::DM => c_dm(tx, buf),
+        }
     }
     VClientMode::Continue
 }
@@ -53,7 +55,7 @@ fn c_chat(tx: UnboundedSender<RoutedMessage>, mut buf: SizedBuffer) {
 
         let mut out = SizedBuffer::new(256);
         out.push(&op::Route::All(op::Flavor::Gate))?;
-        out.push(&op::Command::Chat)?;
+        out.push(&op::Command::Message(ForumSubCommand::Chat as SubCommandType))?;
         out.xfer_bytes(&mut buf)?;
         Ok(out)
     }() {
@@ -70,7 +72,7 @@ fn c_dm(tx: UnboundedSender<RoutedMessage>, mut buf: SizedBuffer) {
 
         let mut out = SizedBuffer::new(256);
         out.push(&op::Route::All(op::Flavor::Gate))?;
-        out.push(&op::Command::DM)?;
+        out.push(&op::Command::Message(ForumSubCommand::DM as SubCommandType))?;
         out.push(&sendee)?;
         out.push(&sender)?;
         out.xfer_bytes(&mut buf)?;

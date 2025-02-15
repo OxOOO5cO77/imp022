@@ -11,3 +11,7 @@ tokio = { version = "1.43.0", features = ["macros", "rt-multi-thread", "signal"]
 tracing = { version = "0.1.41" }
 tracing-subscriber = { version = "0.3.19" }
 shared-net = { path = "../shared-net" }
+archive-lib = { path = "../archive-lib" }
+forum-lib = { path = "../forum-lib" }
+gate-lib = { path = "../gate-lib" }
+hall-lib = { path = "../hall-lib" }

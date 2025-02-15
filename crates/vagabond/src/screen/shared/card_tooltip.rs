@@ -1,8 +1,8 @@
 use bevy::math::{Vec2, Vec3};
 use bevy::prelude::{Commands, Entity, Event, Query, Resource, Transform, Trigger, Window};
 
-use hall::core::Attributes;
-use vagabond::data::VagabondCard;
+use hall_lib::core::Attributes;
+use vagabond_lib::data::VagabondCard;
 
 use crate::screen::shared::card_layout::CardPopulateEvent;
 use crate::system::ui_effects::UiFxTrackedSize;

@@ -122,51 +122,73 @@ impl Bufferable for Flavor {
 }
 
 type CommandType = u8;
+pub type SubCommandType = u8;
 
-#[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, FromPrimitive, IntoPrimitive)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(test, derive(EnumIter))]
 pub enum Command {
-    #[num_enum(default)]
     NoOp,
     Register,
     Authorize,
     Hello,
     UserAttr,
-    Chat,
-    DM,
-    InvGen,
-    InvList,
-    GameActivate,
-    GameBuild,
-    GameStartGame,
-    GameChooseIntent,
-    GameRoll,
-    GameChooseAttr,
-    GameResources,
-    GamePlayCard,
-    GameResolveCards,
-    GameEndTurn,
-    GameTick,
-    GameUpdateMission,
-    GameUpdateTokens,
-    GameUpdateState,
-    GameEndGame,
+    Message(SubCommandType),
+    Inventory(SubCommandType),
+    Game(SubCommandType),
+}
+
+impl Command {
+    const REPR_NOOP: CommandType = 0;
+    const REPR_REGISTER: CommandType = 1;
+    const REPR_AUTHORIZE: CommandType = 2;
+    const REPR_HELLO: CommandType = 3;
+    const REPR_USERATTR: CommandType = 4;
+    const REPR_MESSAGE: CommandType = 5;
+    const REPR_INVENTORY: CommandType = 6;
+    const REPR_GAME: CommandType = 7;
 }
 
 impl Bufferable for Command {
     fn push_into(&self, buf: &mut SizedBuffer) -> Result<usize, SizedBufferError> {
-        let command: CommandType = (*self).into();
-        command.push_into(buf)
+        match *self {
+            Command::NoOp => Command::REPR_NOOP.push_into(buf),
+            Command::Register => Command::REPR_REGISTER.push_into(buf),
+            Command::Authorize => Command::REPR_AUTHORIZE.push_into(buf),
+            Command::Hello => Command::REPR_HELLO.push_into(buf),
+            Command::UserAttr => Command::REPR_USERATTR.push_into(buf),
+            Command::Message(sub) => (Command::REPR_MESSAGE, sub).push_into(buf),
+            Command::Inventory(sub) => (Command::REPR_INVENTORY, sub).push_into(buf),
+            Command::Game(sub) => (Command::REPR_GAME, sub).push_into(buf),
+        }
     }
 
     fn pull_from(buf: &mut SizedBuffer) -> Result<Self, SizedBufferError> {
         let command = CommandType::pull_from(buf)?;
-        Ok(command.into())
+        let result = match command {
+            Command::REPR_NOOP => Command::NoOp,
+            Command::REPR_REGISTER => Command::Register,
+            Command::REPR_AUTHORIZE => Command::Authorize,
+            Command::REPR_HELLO => Command::Hello,
+            Command::REPR_USERATTR => Command::UserAttr,
+            Command::REPR_MESSAGE => Command::Message(SubCommandType::pull_from(buf)?),
+            Command::REPR_INVENTORY => Command::Inventory(SubCommandType::pull_from(buf)?),
+            Command::REPR_GAME => Command::Game(SubCommandType::pull_from(buf)?),
+            _ => return Err(SizedBufferError::UnexpectedEnum(command)),
+        };
+        Ok(result)
     }
 
     fn size_in_buffer(&self) -> usize {
-        size_of::<CommandType>()
+        match self {
+            Command::NoOp => size_of::<CommandType>(),
+            Command::Register => size_of::<CommandType>(),
+            Command::Authorize => size_of::<CommandType>(),
+            Command::Hello => size_of::<CommandType>(),
+            Command::UserAttr => size_of::<CommandType>(),
+            Command::Message(sub) => size_of::<CommandType>() + sub.size_in_buffer(),
+            Command::Inventory(sub) => size_of::<CommandType>() + sub.size_in_buffer(),
+            Command::Game(sub) => size_of::<CommandType>() + sub.size_in_buffer(),
+        }
     }
 }
 

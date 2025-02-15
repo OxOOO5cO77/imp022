@@ -1,7 +1,7 @@
 use bevy::prelude::Event;
 
-use hall::core::{AttributeArray, AttributeKind, ErgArray};
-use hall::message::GameResourcesMessage;
+use hall_lib::core::{AttributeArray, AttributeKind, ErgArray};
+use hall_lib::message::GameResourcesMessage;
 
 #[derive(Event)]
 pub(crate) struct ResourcesTrigger {

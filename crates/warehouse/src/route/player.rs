@@ -5,10 +5,11 @@ use axum::response::IntoResponse;
 use axum::Json;
 use tracing::{info, warn};
 
-use crate::AppState;
 use shared_net::SeedType;
-use warehouse::data::player_bio::PlayerBio;
-use warehouse::rest::player::PlayerBioResponse;
+use warehouse_lib::data::player_bio::PlayerBio;
+use warehouse_lib::rest::player::PlayerBioResponse;
+
+use crate::AppState;
 
 fn process_player_bio(state: &AppState, params: &HashMap<String, String>) -> Option<PlayerBio> {
     let seed_string = params.get("seed")?;

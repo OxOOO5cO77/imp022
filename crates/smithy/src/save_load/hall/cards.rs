@@ -1,6 +1,6 @@
 use std::io::Error;
 
-use hall::hall::HallCard;
+use hall_lib::hall::HallCard;
 
 use crate::data::rules;
 use crate::data::DbCard;

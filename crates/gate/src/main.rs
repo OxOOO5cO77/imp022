@@ -2,14 +2,17 @@ use std::collections::HashMap;
 use std::net::{IpAddr, Ipv6Addr, SocketAddr};
 use std::sync::{Arc, Mutex};
 
+use archive_lib::core::ArchiveSubCommand;
 use chrono::Utc;
-use gate::message::gate_header::GateHeader;
+use forum_lib::core::ForumSubCommand;
+use gate_lib::message::gate_header::GateHeader;
+use hall_lib::core::GameSubCommand;
+use shared_net::op::SubCommandType;
+use shared_net::{op, AuthType, Bufferable, IdMessage, NodeType, RoutedMessage, SizedBuffer, SizedBufferError, TimestampType, UserIdType, VClientMode};
 use tokio::signal;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
-use tracing::{info, instrument};
-
-use shared_net::{op, AuthType, IdMessage, NodeType, RoutedMessage, SizedBuffer, SizedBufferError, TimestampType, UserIdType, VClientMode};
+use tracing::{error, info, instrument};
 
 struct GateUser {
     name: String,
@@ -72,38 +75,41 @@ async fn gate_main(interface: String, courtyard: String) -> Result<(), GateError
 }
 
 #[rustfmt::skip]
+fn should_marshal_game_to_vagabond(subcommand: SubCommandType) -> bool {
+    match subcommand.into() {
+        GameSubCommand::Activate
+        | GameSubCommand::Build
+        | GameSubCommand::ChooseIntent
+        | GameSubCommand::ChooseAttr
+        | GameSubCommand::PlayCard
+        | GameSubCommand::UpdateState
+        | GameSubCommand::EndTurn => true,
+        GameSubCommand::StartGame
+        | GameSubCommand::Roll
+        | GameSubCommand::Resources
+        | GameSubCommand::ResolveCards
+        | GameSubCommand::Tick
+        | GameSubCommand::UpdateMission
+        | GameSubCommand::UpdateTokens
+        | GameSubCommand::EndGame => false,
+    }
+}
+
+#[rustfmt::skip]
 fn process_vagabond(context: Arc<Mutex<Gate>>, tx: UnboundedSender<RoutedMessage>, msg: IdMessage) -> bool {
     let id = msg.id;
     let mut buf = msg.buf;
     if let Ok(command) = buf.pull::<op::Command>() {
         match command {
             op::Command::Hello => v_hello(context, id, &mut buf).is_ok(),
-            op::Command::Chat
-            | op::Command::DM
-            => v_marshal_username(context, op::Flavor::Forum, command, &tx, &mut buf).is_ok(),
-            op::Command::InvGen
-            | op::Command::InvList
-            => v_marshal(context, op::Flavor::Archive, command, &tx, id, &mut buf).is_ok(),
-            op::Command::GameActivate
-            | op::Command::GameBuild
-            | op::Command::GameChooseIntent
-            | op::Command::GameChooseAttr
-            | op::Command::GamePlayCard
-            | op::Command::GameUpdateState
-            | op::Command::GameEndTurn
-            => v_marshal(context, op::Flavor::Hall, command, &tx, id, &mut buf).is_ok(),
+            op::Command::Message(_) => v_marshal_username(context, op::Flavor::Forum, command, &tx, &mut buf).is_ok(),
+            op::Command::Inventory(_) => v_marshal(context, op::Flavor::Archive, command, &tx, id, &mut buf).is_ok(),
+            op::Command::Game(subcommand) if should_marshal_game_to_vagabond(subcommand) => v_marshal(context, op::Flavor::Hall, command, &tx, id, &mut buf).is_ok(),
             op::Command::NoOp
             | op::Command::Register
             | op::Command::Authorize
-            | op::Command::GameStartGame
-            | op::Command::GameRoll
-            | op::Command::GameResources
-            | op::Command::GameResolveCards
-            | op::Command::GameEndGame
-            | op::Command::GameTick
-            | op::Command::GameUpdateMission
-            | op::Command::GameUpdateTokens
             | op::Command::UserAttr
+            | op::Command::Game(_)
             => false,
         }
     } else {
@@ -153,34 +159,18 @@ fn v_marshal(context: Arc<Mutex<Gate>>, flavor: op::Flavor, command: op::Command
 #[rustfmt::skip]
 fn process_courtyard(context: Arc<Mutex<Gate>>, tx: UnboundedSender<RoutedMessage>, mut buf: SizedBuffer) -> VClientMode {
     if let Ok(command) = buf.pull::<op::Command>() {
-        match command {
-            op::Command::Authorize => c_authorize(context, &mut buf).unwrap_or(VClientMode::Continue),
-            op::Command::DM => c_marshal_name(command, context, &tx, &mut buf).unwrap_or(VClientMode::Continue),
-            op::Command::Chat => c_marshal_all(command, &tx, &mut buf).unwrap_or(VClientMode::Continue),
-            op::Command::InvList
-            | op::Command::GameActivate
-            | op::Command::GameBuild
-            | op::Command::GameStartGame
-            | op::Command::GameChooseIntent
-            | op::Command::GameRoll
-            | op::Command::GameChooseAttr
-            | op::Command::GameResources
-            | op::Command::GamePlayCard
-            | op::Command::GameResolveCards
-            | op::Command::GameEndTurn
-            | op::Command::GameTick
-            | op::Command::GameUpdateMission
-            | op::Command::GameUpdateState
-            | op::Command::GameUpdateTokens
-            | op::Command::GameEndGame
-            => c_marshal_one(command, &tx, &mut buf).unwrap_or(VClientMode::Continue),
+        let result = match command {
+            op::Command::Authorize => c_authorize(context, &mut buf),
+            op::Command::Message(_) => c_marshal_message(command, context, &tx, &mut buf),
+            op::Command::Inventory(_) => c_marshal_inventory(command, &tx, &mut buf),
+            op::Command::Game(_) => c_marshal_one(command, &tx, &mut buf),
             op::Command::NoOp
             | op::Command::Register
             | op::Command::Hello
             | op::Command::UserAttr
-            | op::Command::InvGen
-            => VClientMode::Continue,
-        }
+            => Ok(VClientMode::Continue),
+        };
+        result.unwrap_or_else(|err| { error!(?err); VClientMode::Continue })
     } else {
         VClientMode::Continue
     }
@@ -244,6 +234,28 @@ fn c_authorize(context: Arc<Mutex<Gate>>, buf: &mut SizedBuffer) -> Result<VClie
     }
 }
 
+fn c_marshal_inventory(command: op::Command, tx: &UnboundedSender<RoutedMessage>, buf: &mut SizedBuffer) -> Result<VClientMode, GateError> {
+    if let op::Command::Inventory(sub) = command {
+        match sub.into() {
+            ArchiveSubCommand::InvGen => Ok(VClientMode::Continue),
+            ArchiveSubCommand::InvList => c_marshal_one(command, tx, buf),
+        }
+    } else {
+        Ok(VClientMode::Continue)
+    }
+}
+
+fn c_marshal_message(command: op::Command, context: Arc<Mutex<Gate>>, tx: &UnboundedSender<RoutedMessage>, buf: &mut SizedBuffer) -> Result<VClientMode, GateError> {
+    if let op::Command::Message(sub) = command {
+        match sub.into() {
+            ForumSubCommand::Chat => c_marshal_name(command, context, tx, buf),
+            ForumSubCommand::DM => c_marshal_all(command, tx, buf),
+        }
+    } else {
+        Ok(VClientMode::Continue)
+    }
+}
+
 fn c_marshal_name(command: op::Command, context: Arc<Mutex<Gate>>, tx: &UnboundedSender<RoutedMessage>, buf: &mut SizedBuffer) -> Result<VClientMode, GateError> {
     let _ = buf.pull::<NodeType>().map_err(GateError::SizedBuffer)?; // forum (discard)
 
@@ -272,11 +284,13 @@ fn c_marshal_all(command: op::Command, tx: &UnboundedSender<RoutedMessage>, buf:
 }
 
 fn send_to_client(route: op::Route, command: op::Command, tx: &UnboundedSender<RoutedMessage>, buf: &mut SizedBuffer) -> Result<VClientMode, GateError> {
-    let mut out = SizedBuffer::new(buf.read_remain() + 1);
+    let mut out = SizedBuffer::new(command.size_in_buffer() + buf.read_remain());
     out.push(&command).map_err(GateError::SizedBuffer)?;
     out.xfer_bytes(buf).map_err(GateError::SizedBuffer)?;
 
+    info!(?route, ?command, "bytes: {}", buf.size());
     if tx.send(RoutedMessage::new(route, out)).is_err() {
+        error!(?command);
         Ok(VClientMode::Disconnect)
     } else {
         Ok(VClientMode::Continue)

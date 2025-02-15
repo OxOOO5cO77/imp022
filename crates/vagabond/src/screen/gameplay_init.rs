@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use hall::message::GameUpdateStateResponse;
+use hall_lib::message::GameUpdateStateResponse;
 
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::compose_main::ComposeHandoff;

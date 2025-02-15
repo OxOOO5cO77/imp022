@@ -1,8 +1,10 @@
+use std::io::Error;
+
+use vagabond_lib::data::VagabondCard;
+
 use crate::data::rules;
 use crate::data::DbCard;
 use crate::save_load::save_data_single;
-use std::io::Error;
-use vagabond::data::VagabondCard;
 
 fn make_vagabond_card(card: &DbCard) -> VagabondCard {
     VagabondCard {

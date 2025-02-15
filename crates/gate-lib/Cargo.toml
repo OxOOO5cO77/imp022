@@ -1,0 +1,9 @@
+[package]
+name = "gate-lib"
+description = "Gate is the main client interface service."
+version = "0.1.0"
+edition = "2021"
+authors = ["Scott Barcik <oxooo5co77@impending.org>"]
+
+[dependencies]
+shared-net = { path = "../shared-net" }

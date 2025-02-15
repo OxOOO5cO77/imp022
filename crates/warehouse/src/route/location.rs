@@ -7,8 +7,8 @@ use tracing::{info, warn};
 
 use crate::AppState;
 use shared_net::SeedType;
-use warehouse::data::geo_location::GeoLocation;
-use warehouse::rest::location::GeoLocationResponse;
+use warehouse_lib::data::geo_location::GeoLocation;
+use warehouse_lib::rest::location::GeoLocationResponse;
 
 fn process_geo_location(state: &AppState, params: &HashMap<String, String>) -> Option<GeoLocation> {
     let seed_string = params.get("seed")?;

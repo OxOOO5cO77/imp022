@@ -1,7 +1,9 @@
-use crate::data::shared::{DbHost, DbRarity};
-use hall::core::{AttributeKind, CardNumberType, DelayType, ErgType, Host, PriorityType, Rarity, SetType};
 use sqlx::postgres::PgRow;
 use sqlx::{Pool, Postgres, Row};
+
+use hall_lib::core::{AttributeKind, CardNumberType, DelayType, ErgType, Host, PriorityType, Rarity, SetType};
+
+use crate::data::shared::{DbHost, DbRarity};
 
 pub(crate) struct DbCard {
     pub title: String,

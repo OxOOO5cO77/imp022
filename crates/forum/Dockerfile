@@ -1,5 +1,6 @@
 FROM rust:1 AS builder
 COPY shared-net /shared-net
+COPY forum-lib /forum-lib
 COPY forum /forum
 WORKDIR /forum
 RUN cargo build --release --bin forum

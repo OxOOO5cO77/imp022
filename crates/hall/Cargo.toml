@@ -6,16 +6,12 @@ edition = "2021"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 
 [dependencies]
-num_enum = { version = "0.7.3" }
 rand = { version = "0.9.0" }
 ron = { version = "0.9.0-alpha.1" }
 serde = { version = "1.0.217", features = ["derive"] }
 tokio = { version = "1.43.0", features = ["macros", "rt-multi-thread"] }
 tracing = { version = "0.1.41" }
 tracing-subscriber = { version = "0.3.19" }
-gate = { path = "../gate" }
+gate-lib = { path = "../gate-lib" }
+hall-lib = { path = "../hall-lib" }
 shared-net = { path = "../shared-net" }
-
-[dev-dependencies]
-strum = { version = "0.26.3" }
-strum_macros = { version = "0.26.4" }

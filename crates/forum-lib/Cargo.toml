@@ -1,0 +1,9 @@
+[package]
+name = "forum-lib"
+description = "Forum is the chat/messaging service."
+version = "0.1.0"
+edition = "2021"
+authors = ["Scott Barcik <oxooo5co77@impending.org>"]
+
+[dependencies]
+num_enum = "0.7.3"

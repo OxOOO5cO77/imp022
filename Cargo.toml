@@ -1,17 +1,17 @@
 [workspace]
 members = [
-    "crates/archive",
+    "crates/archive", "crates/archive-lib",
     "crates/bazaar",
     "crates/courtyard",
     "crates/drawbridge",
-    "crates/forum",
-    "crates/gate",
-    "crates/hall",
+    "crates/forum", "crates/forum-lib",
+    "crates/gate", "crates/gate-lib",
+    "crates/hall", "crates/hall-lib",
     "crates/jail",
     "crates/lookout",
     "crates/smithy",
     "crates/undertaker",
-    "crates/vagabond",
-    "crates/warehouse"
+    "crates/vagabond", "crates/vagabond-lib",
+    "crates/warehouse", "crates/warehouse-lib"
 ]
 resolver = "2"

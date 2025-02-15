@@ -1,6 +1,7 @@
 FROM rust:1 AS builder
 COPY shared-net /shared-net
-COPY gate /gate
+COPY gate-lib /gate-lib
+COPY archive-lib /archive-lib
 COPY archive /archive
 WORKDIR /archive
 RUN cargo build --release --bin archive

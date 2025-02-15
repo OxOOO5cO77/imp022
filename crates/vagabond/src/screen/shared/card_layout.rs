@@ -1,7 +1,7 @@
 use bevy::prelude::{Commands, Component, Entity, Event, Query, Srgba, Text2d, Trigger, Visibility, With};
 
-use hall::core::{AttributeKind, Attributes, CardTargetValue, Host, LaunchInstruction, RunInstruction, ValueTarget};
-use vagabond::data::VagabondCard;
+use hall_lib::core::{AttributeKind, Attributes, CardTargetValue, Host, LaunchInstruction, RunInstruction, ValueTarget};
+use vagabond_lib::data::VagabondCard;
 
 use crate::manager::ScreenLayout;
 use crate::screen::shared::util;
@@ -136,7 +136,9 @@ impl CardLayout {
             RunInstruction::NoOp => None,
             RunInstruction::IncV(target, value) => Some(format!("Increase {} by {}", Self::explain_target(target), value.resolve(attr))),
             RunInstruction::DecV(target, value) => Some(format!("Decrease {} by {}", Self::explain_target(target), value.resolve(attr))),
-            RunInstruction::Cred => Some("Copy Credentials".to_string()),
+            RunInstruction::CpCr => Some("Copy Credentials".to_string()),
+            RunInstruction::ReAu => Some("Authorize".to_string()),
+            RunInstruction::ShIn(value) => Some(format!("Reshuffled into top {}", value.resolve(attr))),
         }
     }
 

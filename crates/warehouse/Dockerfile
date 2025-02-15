@@ -1,5 +1,6 @@
 FROM rust:1 AS builder
 COPY shared-net /shared-net
+COPY warehouse-lib /warehouse-lib
 COPY warehouse /warehouse
 WORKDIR /warehouse
 RUN cargo build --release --bin warehouse

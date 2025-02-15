@@ -1,6 +1,6 @@
 use std::str::Chars;
 
-use hall::core::{Amount, AttributeKind, AttributeValueKind, CardTargetValue, LaunchInstruction, RunInstruction, RuntimeAmount, ValueTarget};
+use hall_lib::core::{Amount, AttributeKind, AttributeValueKind, CardTargetValue, LaunchInstruction, RunInstruction, RuntimeAmount, ValueTarget};
 
 pub fn process_code_launch(instruction_str: &str) -> Option<LaunchInstruction> {
     use LaunchInstruction::*;
@@ -22,7 +22,9 @@ pub fn process_code_run(instruction_str: &str) -> Option<RunInstruction> {
     match code {
         "INCV" => remain.split_once(':').map(|(target, value)| IncV(parse_value_target(target), parse_runtime_expr(value))),
         "DECV" => remain.split_once(':').map(|(target, value)| DecV(parse_value_target(target), parse_runtime_expr(value))),
-        "CRED" => Some(Cred),
+        "CPCR" => Some(CpCr),
+        "REAU" => Some(ReAu),
+        "SHIN" => Some(ShIn(parse_runtime_expr(remain))),
         _ => None,
     }
 }
@@ -103,7 +105,7 @@ pub(crate) fn parse_rules_run(rules: &str) -> Vec<RunInstruction> {
 #[cfg(test)]
 mod tests {
     use crate::data::rules::{process_code_launch, process_code_run};
-    use hall::core::{Amount::*, AttributeKind::*, AttributeValueKind::*, LaunchInstruction::*, RunInstruction::*, RuntimeAmount::*, ValueTarget::*};
+    use hall_lib::core::{Amount::*, AttributeKind::*, AttributeValueKind::*, LaunchInstruction::*, RunInstruction::*, RuntimeAmount::*, ValueTarget::*};
 
     #[test]
     fn test_loop_one_digit() {

@@ -1,12 +1,16 @@
-use bevy::prelude::Resource;
 use std::collections::HashMap;
+
+use bevy::prelude::Resource;
 use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
-use hall::core::{AttributeKind, MissionNodeIntent, PickedCardTarget};
-use hall::message::*;
+use archive_lib::core::ArchiveSubCommand;
+use forum_lib::core::ForumSubCommand;
+use hall_lib::core::{AttributeKind, GameSubCommand, MissionNodeIntent, PickedCardTarget};
+use hall_lib::message::*;
+use shared_net::op::SubCommandType;
 use shared_net::{op, RoutedMessage, SizedBuffer, SizedBufferError, VClientMode};
 use shared_net::{AuthType, Bufferable, GameIdType, PartType};
 
@@ -52,29 +56,48 @@ impl GateClient {
     }
 }
 
+fn subprocess_message(subcommand: SubCommandType, mut buf: SizedBuffer) -> Result<VClientMode, SizedBufferError> {
+    match subcommand.into() {
+        ForumSubCommand::Chat => recv_chat(&mut buf),
+        ForumSubCommand::DM => recv_dm(&mut buf),
+    }
+}
+
+fn subprocess_inventory(subcommand: SubCommandType, mut buf: SizedBuffer) -> Result<VClientMode, SizedBufferError> {
+    match subcommand.into() {
+        ArchiveSubCommand::InvList => recv_inv_list(&mut buf),
+        ArchiveSubCommand::InvGen => Ok(VClientMode::Continue),
+    }
+}
+
+fn subprocess_game(subcommand: SubCommandType, context: GateClient, mut buf: SizedBuffer) -> Result<VClientMode, SizedBufferError> {
+    match subcommand.into() {
+        GameSubCommand::Activate => recv_response(context, &mut buf, GateCommand::GameActivate),
+        GameSubCommand::Build => recv_response(context, &mut buf, GateCommand::GameBuild),
+        GameSubCommand::StartGame => recv_response(context, &mut buf, GateCommand::GameStartGame),
+        GameSubCommand::ChooseIntent => recv_response(context, &mut buf, GateCommand::GameChooseIntent),
+        GameSubCommand::Roll => recv_response(context, &mut buf, GateCommand::GameRoll),
+        GameSubCommand::ChooseAttr => recv_response(context, &mut buf, GateCommand::GameChooseAttr),
+        GameSubCommand::Resources => recv_response(context, &mut buf, GateCommand::GameResources),
+        GameSubCommand::PlayCard => recv_response(context, &mut buf, GateCommand::GamePlayCard),
+        GameSubCommand::ResolveCards => recv_response(context, &mut buf, GateCommand::GameResolveCards),
+        GameSubCommand::EndTurn => recv_response(context, &mut buf, GateCommand::GameEndTurn),
+        GameSubCommand::Tick => recv_response(context, &mut buf, GateCommand::GameTick),
+        GameSubCommand::EndGame => recv_response(context, &mut buf, GateCommand::GameEndGame),
+        GameSubCommand::UpdateMission => recv_response(context, &mut buf, GateCommand::GameUpdateMission),
+        GameSubCommand::UpdateTokens => recv_response(context, &mut buf, GateCommand::GameUpdateTokens),
+        GameSubCommand::UpdateState => recv_response(context, &mut buf, GateCommand::GameUpdateState),
+    }
+}
+
 fn process_gate(context: GateClient, _tx: UnboundedSender<RoutedMessage>, mut buf: SizedBuffer) -> VClientMode {
     if let Ok(command) = buf.pull::<op::Command>() {
         match command {
             op::Command::Hello => recv_hello(context),
-            op::Command::Chat => recv_chat(&mut buf),
-            op::Command::DM => recv_dm(&mut buf),
-            op::Command::InvList => recv_inv_list(&mut buf),
-            op::Command::GameActivate => recv_response(context, &mut buf, GateCommand::GameActivate),
-            op::Command::GameBuild => recv_response(context, &mut buf, GateCommand::GameBuild),
-            op::Command::GameStartGame => recv_response(context, &mut buf, GateCommand::GameStartGame),
-            op::Command::GameChooseIntent => recv_response(context, &mut buf, GateCommand::GameChooseIntent),
-            op::Command::GameRoll => recv_response(context, &mut buf, GateCommand::GameRoll),
-            op::Command::GameChooseAttr => recv_response(context, &mut buf, GateCommand::GameChooseAttr),
-            op::Command::GameResources => recv_response(context, &mut buf, GateCommand::GameResources),
-            op::Command::GamePlayCard => recv_response(context, &mut buf, GateCommand::GamePlayCard),
-            op::Command::GameResolveCards => recv_response(context, &mut buf, GateCommand::GameResolveCards),
-            op::Command::GameEndTurn => recv_response(context, &mut buf, GateCommand::GameEndTurn),
-            op::Command::GameTick => recv_response(context, &mut buf, GateCommand::GameTick),
-            op::Command::GameEndGame => recv_response(context, &mut buf, GateCommand::GameEndGame),
-            op::Command::GameUpdateMission => recv_response(context, &mut buf, GateCommand::GameUpdateMission),
-            op::Command::GameUpdateTokens => recv_response(context, &mut buf, GateCommand::GameUpdateTokens),
-            op::Command::GameUpdateState => recv_response(context, &mut buf, GateCommand::GameUpdateState),
-            op::Command::NoOp | op::Command::Register | op::Command::Authorize | op::Command::UserAttr | op::Command::InvGen => Ok(VClientMode::Continue),
+            op::Command::Message(sub) => subprocess_message(sub, buf),
+            op::Command::Inventory(sub) => subprocess_inventory(sub, buf),
+            op::Command::Game(sub) => subprocess_game(sub, context, buf),
+            op::Command::NoOp | op::Command::Register | op::Command::Authorize | op::Command::UserAttr => Ok(VClientMode::Continue),
         }
         .unwrap_or(VClientMode::Continue)
     } else {
@@ -203,7 +226,7 @@ impl GateIFace {
     #[allow(dead_code)]
     pub fn g_send_hack(&self) {
         let mut out = SizedBuffer::new(32);
-        let _ = out.push(&op::Command::InvGen);
+        let _ = out.push(&op::Command::Inventory(ArchiveSubCommand::InvGen as SubCommandType));
         let _ = out.push(&self.auth);
         let _ = out.push(&123_u8);
 
@@ -216,7 +239,7 @@ impl GateIFace {
     #[allow(dead_code)]
     pub fn g_send_inv(&self) {
         let mut out = SizedBuffer::new(32);
-        let _ = out.push(&op::Command::InvList);
+        let _ = out.push(&op::Command::Inventory(ArchiveSubCommand::InvList as SubCommandType));
         let _ = out.push(&self.auth);
         let _ = out.push(&123_u8);
 
@@ -229,7 +252,7 @@ impl GateIFace {
     #[allow(dead_code)]
     pub fn g_send_chat(&self, msg: &str) {
         let mut out = SizedBuffer::new(256);
-        let _ = out.push(&op::Command::Chat);
+        let _ = out.push(&op::Command::Message(ForumSubCommand::Chat as SubCommandType));
         let _ = out.push(&self.auth);
         let _ = out.push(&msg.to_string());
 
@@ -242,7 +265,7 @@ impl GateIFace {
     #[allow(dead_code)]
     pub fn g_send_dm(&self, who: &str, msg: &str) {
         let mut out = SizedBuffer::new(256);
-        let _ = out.push(&op::Command::DM);
+        let _ = out.push(&op::Command::Message(ForumSubCommand::DM as SubCommandType));
         let _ = out.push(&self.auth);
         let _ = out.push(&who.to_string());
         let _ = out.push(&msg.to_string());

@@ -1,5 +1,5 @@
 use bevy::prelude::Component;
-use vagabond::data::VagabondPart;
+use vagabond_lib::data::VagabondPart;
 
 #[derive(Component, Default)]
 pub(crate) struct PartHolder {

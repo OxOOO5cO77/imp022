@@ -3,9 +3,9 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
-use hall::core::{AttributeKind, Attributes, CardTargetValue, DelayType, LaunchInstruction, MissionNodeKind, PickedCardTarget};
-use hall::message::*;
-use vagabond::data::VagabondCard;
+use hall_lib::core::{AttributeKind, Attributes, CardTargetValue, DelayType, LaunchInstruction, MissionNodeKind, PickedCardTarget};
+use hall_lib::message::*;
+use vagabond_lib::data::VagabondCard;
 
 use crate::manager::{AtlasManager, ScreenLayoutManager, ScreenLayoutManagerParams};
 use crate::network::client_gate::{GateCommand, GateIFace};
@@ -625,7 +625,8 @@ fn recv_update_tokens(commands: &mut Commands, response: GameUpdateTokensMessage
     for message in &response.messages {
         let (local, remote) = match message {
             UpdateTokenMessage::Add(token) => (Some(format!("Add: {} (exp={})", token.kind, token.expiry)), None),
-            UpdateTokenMessage::Expire(token) => (Some(format!("Exp: {}", token.kind)), None),
+            UpdateTokenMessage::Expire(token) => (Some(format!("Expire: {}", token.kind)), None),
+            UpdateTokenMessage::Extend(token) => (Some(format!("Extend: {}", token.kind)), None),
             UpdateTokenMessage::Convert(from, to) => (Some(format!("Authorize: {} (exp={})", from.kind, to.expiry)), Some("Processed Authorization")),
         };
         if let Some(msg) = remote {

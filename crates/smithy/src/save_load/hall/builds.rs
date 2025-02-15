@@ -1,6 +1,6 @@
 use std::io::Error;
 
-use hall::hall::HallBuild;
+use hall_lib::hall::HallBuild;
 
 use crate::data::DbBuild;
 use crate::save_load::save_data_single;

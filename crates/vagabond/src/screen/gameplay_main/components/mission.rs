@@ -1,6 +1,6 @@
 use bevy::prelude::Component;
 
-use hall::core::MissionNodeKind;
+use hall_lib::core::MissionNodeKind;
 
 #[derive(Component)]
 pub(crate) struct MissionNodeLocalObserver;

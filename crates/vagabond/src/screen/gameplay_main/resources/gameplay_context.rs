@@ -1,10 +1,11 @@
 use std::collections::{HashMap, VecDeque};
 
 use bevy::prelude::Resource;
-use hall::core::{AttributeKind, PickedCardTarget, TickType};
-use hall::message::CardIdxType;
-use hall::view::{GameMissionPlayerView, GameUserStatePlayerView};
-use vagabond::data::{VagabondCard, VagabondMachine};
+
+use hall_lib::core::{AttributeKind, PickedCardTarget, TickType};
+use hall_lib::message::CardIdxType;
+use hall_lib::view::{GameMissionPlayerView, GameUserStatePlayerView};
+use vagabond_lib::data::{VagabondCard, VagabondMachine};
 
 use crate::screen::gameplay_main::nodes::MissionNodeAction;
 use crate::screen::gameplay_main::{MachineKind, VagabondGamePhase};

@@ -17,7 +17,7 @@ mod shared;
 pub(crate) use base_node::BaseNode;
 pub(crate) use shared::deselect_node_action;
 
-use hall::core::*;
+use hall_lib::core::*;
 
 #[derive(Default)]
 pub(crate) struct MissionNodeAction {

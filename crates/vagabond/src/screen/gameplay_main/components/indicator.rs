@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use hall::core::PickedCardTarget;
+use hall_lib::core::PickedCardTarget;
 
 #[derive(Component)]
 pub(crate) struct Indicator {

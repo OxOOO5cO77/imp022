@@ -1,7 +1,7 @@
 use std::io::Error;
 
-use hall::core::{GeneralType, SpecificType};
-use vagabond::data::VagabondDetail;
+use hall_lib::core::{GeneralType, SpecificType};
+use vagabond_lib::data::VagabondDetail;
 
 use crate::data::DbDetail;
 use crate::save_load::save_data_single;

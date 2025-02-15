@@ -1,7 +1,7 @@
 use std::io::Error;
 
-use hall::core::{CompanyType, MarketType};
-use vagabond::data::VagabondBuild;
+use hall_lib::core::{CompanyType, MarketType};
+use vagabond_lib::data::VagabondBuild;
 
 use crate::data::DbBuild;
 use crate::save_load::save_data_single;

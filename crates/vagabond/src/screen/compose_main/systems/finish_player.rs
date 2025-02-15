@@ -1,6 +1,6 @@
 use bevy::prelude::{Commands, Query, Res, ResMut, Trigger};
 
-use hall::core::AttributeValues;
+use hall_lib::core::AttributeValues;
 
 use crate::network::client_gate::GateIFace;
 use crate::screen::compose_main::resources::ComposeContext;

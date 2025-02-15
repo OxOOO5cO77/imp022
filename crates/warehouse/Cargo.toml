@@ -1,6 +1,6 @@
 [package]
 name = "warehouse"
-description = "warehouse is the REST API for string data objects."
+description = "Warehouse is the REST API for string data objects."
 version = "0.1.0"
 edition = "2021"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]
@@ -15,6 +15,7 @@ tokio = { version = "1.43.0", features = ["full"] }
 tracing = { version = "0.1.41" }
 tracing-subscriber = { version = "0.3.19" }
 shared-net = { path = "../shared-net" }
+warehouse-lib = { path = "../warehouse-lib" }
 
 [dev-dependencies]
 httpc-test = "0.1.10"

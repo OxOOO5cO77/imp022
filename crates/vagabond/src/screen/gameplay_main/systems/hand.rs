@@ -1,6 +1,6 @@
 use bevy::prelude::{Commands, Entity, Query, Res, Trigger};
 
-use hall::core::Attributes;
+use hall_lib::core::Attributes;
 
 use crate::manager::DataManager;
 use crate::screen::gameplay_main::components::HandCard;

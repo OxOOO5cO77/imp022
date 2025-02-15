@@ -1,8 +1,8 @@
 use bevy::prelude::Resource;
 use cached::{Cached, SizedCache};
 
-use warehouse::rest::location::GeoLocationResponse;
-use warehouse::rest::player::PlayerBioResponse;
+use warehouse_lib::rest::location::GeoLocationResponse;
+use warehouse_lib::rest::player::PlayerBioResponse;
 
 #[derive(Resource)]
 pub(crate) struct WarehouseManager {

@@ -8,7 +8,7 @@ default-run = "vagabond"
 
 [dependencies]
 anyhow = { version = "1.0.95" }
-bevy = { version = "0.15.1" }
+bevy = { version = "0.15.2" }
 bevy_simple_text_input = { version = "0.10.2" }
 cached = { version = "0.54.0" }
 fasthash = { version = "0.4.0" }
@@ -17,5 +17,8 @@ ron = { version = "0.9.0-alpha.1" }
 serde = { version = "1.0.217", features = ["derive"] }
 tokio = { version = "1.43.0", features = ["macros", "rt-multi-thread"] }
 shared-net = { path = "../shared-net" }
-hall = { path = "../hall" }
-warehouse = { path = "../warehouse" }
+archive-lib = { path = "../archive-lib" }
+forum-lib = { path = "../forum-lib" }
+hall-lib = { path = "../hall-lib" }
+vagabond-lib = { path = "../vagabond-lib" }
+warehouse-lib = { path = "../warehouse-lib" }

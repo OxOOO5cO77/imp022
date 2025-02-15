@@ -1,8 +1,8 @@
 use bevy::picking::PickingBehavior;
 use bevy::prelude::{Click, Commands, Entity, EntityCommands, Pointer, Query, ResMut, Text2d, Trigger};
 
-use hall::core::{AccessPointIntent, MissionNodeIntent};
-use hall::view::GameMissionPlayerView;
+use hall_lib::core::{AccessPointIntent, MissionNodeIntent};
+use hall_lib::view::GameMissionPlayerView;
 
 use crate::manager::{DataManager, ScreenLayout, WarehouseManager};
 use crate::screen::gameplay_main::components::MissionNodeButton;
@@ -16,16 +16,18 @@ pub(crate) struct AccessPoint {
     access_point: Entity,
     location: Entity,
     auth_button: Entity,
+    next_button: Entity,
+    prev_button: Entity,
 }
 
 trait NodeLinkEntityCommandsExt {
-    fn observe_auth_button(self) -> Self;
+    fn observe_access_point_button(self) -> Self;
 }
 
 impl NodeLinkEntityCommandsExt for &mut EntityCommands<'_> {
-    fn observe_auth_button(self) -> Self {
+    fn observe_access_point_button(self) -> Self {
         self //
-            .queue(shared::local_observe(AccessPoint::on_click_auth))
+            .queue(shared::local_observe(AccessPoint::on_click_access_point_button))
             .queue(shared::local_observe(shared::on_over_node_action))
             .queue(shared::local_observe(on_out_reset_color))
     }
@@ -38,12 +40,16 @@ impl AccessPoint {
         let location = layout.entity(&format!("{name}/location"));
 
         let auth_button = commands.entity(layout.entity(&format!("{name}/authorize_bg"))).insert((MissionNodeButton::new(AccessPointIntent::Authenticate), PickingBehavior::default())).id();
+        let next_button = commands.entity(layout.entity(&format!("{name}/next_bg"))).insert((MissionNodeButton::new(AccessPointIntent::TransferNext), PickingBehavior::default())).id();
+        let prev_button = commands.entity(layout.entity(&format!("{name}/prev_bg"))).insert((MissionNodeButton::new(AccessPointIntent::TransferPrev), PickingBehavior::default())).id();
 
         Self {
             institution,
             access_point,
             location,
             auth_button,
+            next_button,
+            prev_button,
         }
     }
 
@@ -56,7 +62,9 @@ impl AccessPoint {
             Err(_) => "<Unknown>".to_string(),
         };
 
-        commands.entity(self.auth_button).observe_auth_button();
+        commands.entity(self.auth_button).observe_access_point_button();
+        commands.entity(self.next_button).observe_access_point_button();
+        commands.entity(self.prev_button).observe_access_point_button();
 
         if let Ok([mut ins_text, mut ap_text, mut loc_text]) = text_q.get_many_mut([self.institution, self.access_point, self.location]) {
             *ins_text = institution?.title.as_str().into();
@@ -67,7 +75,7 @@ impl AccessPoint {
         Some(())
     }
 
-    fn on_click_auth(
+    fn on_click_access_point_button(
         //
         event: Trigger<Pointer<Click>>,
         mut commands: Commands,

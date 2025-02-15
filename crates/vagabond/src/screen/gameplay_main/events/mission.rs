@@ -1,6 +1,6 @@
 use bevy::prelude::Event;
 
-use hall::view::GameMissionPlayerView;
+use hall_lib::view::GameMissionPlayerView;
 
 #[derive(Event)]
 pub(crate) struct MissionTrigger {
