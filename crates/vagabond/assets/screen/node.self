@@ -17,8 +17,8 @@
 /h:node_h%700,284@32,90,2
 /link_n:node_link%160,120@26,390,1
 /link_e:node_link%160,120@210,390,1
-/link_w:node_link%160,120@394,390,1
-/link_s:node_link%160,120@578,390,1
+/link_s:node_link%160,120@394,390,1
+/link_w:node_link%160,120@578,390,1
 #content1:frame%218,120@766,16,0!blue
 #content2:frame%218,120@766,145,0!blue
 #content3:frame%218,120@766,274,0!blue

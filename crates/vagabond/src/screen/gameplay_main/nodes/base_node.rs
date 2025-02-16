@@ -106,8 +106,8 @@ impl BaseNode {
             //
             ("link_n", MissionNodeLinkDir::North),
             ("link_e", MissionNodeLinkDir::East),
-            ("link_w", MissionNodeLinkDir::West),
             ("link_s", MissionNodeLinkDir::South),
+            ("link_w", MissionNodeLinkDir::West),
         ];
         for (link, dir) in LINKS {
             commands.entity(layout.entity(&format!("{name}/{link}/frame"))).insert((MissionNodeButton::new(*dir), PickingBehavior::default()));
