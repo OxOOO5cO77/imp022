@@ -65,7 +65,7 @@ fn gate_update(
         }
         match gate_command {
             GateCommand::Hello => app_state.set(AppState::ComposeInit),
-            _ => println!("[Login] Unexpected command received {:?}", discriminant(&gate_command)),
+            _ => error!("[Login] Unexpected command received {:?}", discriminant(&gate_command)),
         }
     }
 }

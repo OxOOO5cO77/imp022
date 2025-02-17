@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
-use hall_lib::core::{AttributeKind, Attributes, CardTargetValue, DelayType, LaunchInstruction, MissionNodeKind, PickedCardTarget};
+use hall_lib::core::{AttributeKind, Attributes, CardTargetValue, DelayType, LaunchInstruction, MissionNodeIdType, MissionNodeKind, PickedCardTarget};
 use hall_lib::message::*;
 use vagabond_lib::data::VagabondCard;
 
@@ -71,6 +71,7 @@ trait PickableEntityCommandsExtension {
     fn observe_hand_card(self, hand_index: usize) -> Self;
     fn observe_process(self, kind: MachineKind, queue_index: DelayType) -> Self;
     fn observe_running(self, kind: MachineKind, running_index: usize) -> Self;
+    fn observe_map_button(self) -> Self;
 }
 
 impl PickableEntityCommandsExtension for &mut EntityCommands<'_> {
@@ -106,6 +107,13 @@ impl PickableEntityCommandsExtension for &mut EntityCommands<'_> {
             .insert((kind, MachineRunning::new(running_index), PickingBehavior::default()))
             .observe(on_over_running)
             .observe(on_out_hide_card_tooltip)
+    }
+    fn observe_map_button(self) -> Self {
+        self //
+            .insert(PickingBehavior::default())
+            .observe(on_click_map_button)
+            .observe(on_over_map_button)
+            .observe(on_out_reset_color)
     }
 }
 
@@ -229,6 +237,40 @@ fn gameplay_enter(
     let tooltip_id = commands.entity(tooltip).insert(Visibility::Hidden).observe(on_update_card_tooltip).id();
     commands.insert_resource(CardTooltip::new(tooltip_id));
 
+    let main = commands.entity(layout.entity("map")).insert((Visibility::Hidden, PickingBehavior::default())).observe(on_click_map).id();
+    let mut node = HashMap::new();
+    for id in 0..(MAP_SIZE * MAP_SIZE) {
+        let id_string = format!("{id:02}");
+        let entity = layout.entity(&format!("map/{id_string}"));
+        let frame = layout.entity(&format!("map/{id_string}/frame"));
+        let text_id = layout.entity(&format!("map/{id_string}/id"));
+        let text_kind = layout.entity(&format!("map/{id_string}/kind"));
+        node.insert(id as MissionNodeIdType, GameplayMapNode::new(entity, frame, text_id, text_kind));
+    }
+    let mut links = HashMap::new();
+    for row in 0..MAP_SIZE {
+        let col = row * MAP_SIZE;
+        for id in col..(col + MAP_SIZE - 1) {
+            let left = id as MissionNodeIdType;
+            let right = (id + 1) as MissionNodeIdType;
+            let rl_string = format!("map/{left:02}-{right:02}");
+            let entity = layout.entity(&rl_string);
+            commands.entity(entity).insert(Visibility::Hidden);
+            links.insert((left, right), entity);
+        }
+    }
+    for id in 0..(MAP_SIZE * (MAP_SIZE - 1)) {
+        let up = id as MissionNodeIdType;
+        let down = (id + MAP_SIZE) as MissionNodeIdType;
+        let ud_string = format!("map/{up:02}-{down:02}");
+        let entity = layout.entity(&ud_string);
+        commands.entity(entity).insert(Visibility::Hidden);
+        links.insert((up, down), entity);
+    }
+    commands.insert_resource(GameplayMap::new(main, node, links));
+
+    commands.entity(layout.entity("map_button")).observe_map_button();
+
     let context = GameplayContext {
         player_id: handoff.id.clone(),
         ..default()
@@ -289,6 +331,30 @@ fn on_over_next(
         };
         commands.entity(event.target).trigger(SetColorEvent::new(event.target, color));
     }
+}
+
+fn on_click_map(
+    //
+    event: Trigger<Pointer<Click>>,
+    mut commands: Commands,
+) {
+    commands.entity(event.target).insert(Visibility::Hidden);
+}
+
+fn on_click_map_button(
+    //
+    _event: Trigger<Pointer<Click>>,
+    mut commands: Commands,
+) {
+    commands.trigger(ShowMapTrigger)
+}
+
+fn on_over_map_button(
+    //
+    event: Trigger<Pointer<Over>>,
+    mut commands: Commands,
+) {
+    commands.entity(event.target).trigger(SetColorEvent::new(event.target, bevy::color::palettes::basic::GREEN));
 }
 
 fn on_click_attr(
@@ -659,5 +725,6 @@ fn gameplay_exit(
 ) {
     commands.remove_resource::<CardTooltip>();
     commands.remove_resource::<GameplayContext>();
+    commands.remove_resource::<GameplayMap>();
     slm.destroy(commands, SCREEN_LAYOUT);
 }

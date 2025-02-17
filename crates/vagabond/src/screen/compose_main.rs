@@ -450,7 +450,7 @@ fn compose_update(
                     commands.trigger(PopulatePlayerUi::Hide);
                 }
             }
-            Err(err) => println!("Error: {err}"),
+            Err(err) => error!("{err}"),
         },
         Ok(GateCommand::GameStartGame(gate_response)) => {
             if gate_response.success {

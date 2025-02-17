@@ -7,6 +7,7 @@ mod player_erg;
 mod player_state;
 mod resources;
 mod roll;
+mod show_map;
 mod tty_message;
 
 pub(super) use choose_attr::ChooseAttrTrigger;
@@ -18,4 +19,5 @@ pub(super) use player_erg::PlayerErgTrigger;
 pub(super) use player_state::PlayerStateTrigger;
 pub(super) use resources::ResourcesTrigger;
 pub(super) use roll::RollTrigger;
+pub(super) use show_map::ShowMapTrigger;
 pub(super) use tty_message::TTYMessageTrigger;

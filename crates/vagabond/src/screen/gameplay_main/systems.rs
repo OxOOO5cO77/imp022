@@ -3,6 +3,7 @@ mod hand;
 mod indicator;
 mod local;
 mod machine;
+mod map;
 mod mission;
 mod phase;
 mod remote;
@@ -31,5 +32,6 @@ impl GameplaySystems {
         parent.spawn(Observer::new(remote::on_remote_ui_update_resources));
         parent.spawn(Observer::new(machine::on_machine_ui_update_info));
         parent.spawn(Observer::new(machine::on_machine_ui_update_state));
+        parent.spawn(Observer::new(map::on_show_map));
     }
 }

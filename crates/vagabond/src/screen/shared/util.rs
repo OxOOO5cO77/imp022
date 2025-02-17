@@ -7,6 +7,7 @@ use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor};
 
 pub(crate) trait MissionNodeKindExt {
     fn as_str(&self) -> &'static str;
+    fn as_single_letter(&self) -> &'static str;
 }
 
 impl MissionNodeKindExt for MissionNodeKind {
@@ -21,6 +22,19 @@ impl MissionNodeKindExt for MissionNodeKind {
             MissionNodeKind::Frontend => "Frontend",
             MissionNodeKind::Gateway => "Gateway",
             MissionNodeKind::Hardware => "Hardware",
+        }
+    }
+    fn as_single_letter(&self) -> &'static str {
+        match self {
+            MissionNodeKind::Unknown => "?",
+            MissionNodeKind::AccessPoint => "A",
+            MissionNodeKind::Backend => "B",
+            MissionNodeKind::Control => "C",
+            MissionNodeKind::Database => "D",
+            MissionNodeKind::Engine => "E",
+            MissionNodeKind::Frontend => "F",
+            MissionNodeKind::Gateway => "G",
+            MissionNodeKind::Hardware => "H",
         }
     }
 }

@@ -12,7 +12,7 @@ $color:phase_dim=grey2
 &r_tty2:code.10.left%368,20@26,150,1!tty_old|-
 &r_tty1:code.10.left%368,20@26,170,1!tty_old|-
 &r_tty0:code.10.left%368,20@26,190,1!tty_new|-
-#map:dash_frame%1000,540@460,20,0!red
+#middle_frame:dash_frame%1000,540@460,20,0!red
 /node:node%1000,540@460,20,1
 #l_tty_bg:dash_frame%372,200@1528,20,0!grey6
 &l_tty8:code.10.left%368,20@1534,30,1!tty_old|-
@@ -73,6 +73,8 @@ $color:phase_dim=grey2
 /card3:card%236,312@878,742,1
 #card4_bg:dash_frame%236,312@1124,742,0!grey6
 /card4:card%236,312@1124,742,1
+#map_button:dash_frame%74,74@1410,600,0!grey6
+&map_button_text:main.64.center%74,74@1410,600,0!grey6|M
 #deck_bg:dash_frame%74,128@1410,758,0!grey6
 *deck_icon:gameplay.deck%48,48@1423,774,1!white
 &deck:main.48.center%74,54@1410,824,1!green|00
@@ -85,5 +87,6 @@ $color:phase_dim=grey2
 *phase_play:gameplay.play%48,48@1660,992,1!phase_dim
 *phase_draw:gameplay.draw%48,48@1720,992,1!phase_dim
 #next:dash_frame%100,64@1800,984,0!grey6
+/map:map%1000,1000@460,20,8
 /tooltip:card%236,312@0,0,10
 /text_tip:text_tip%128,32@0,0,10

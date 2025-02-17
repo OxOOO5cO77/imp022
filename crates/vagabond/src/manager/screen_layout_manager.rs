@@ -245,7 +245,10 @@ impl ScreenLayout {
         self.entity_map.get(name)
     }
     pub(crate) fn entity(&self, name: &str) -> Entity {
-        *self.entity_map.get(name).unwrap_or(&Entity::PLACEHOLDER)
+        *self.entity_map.get(name).unwrap_or_else(|| {
+            error!("Trying to access unknown entity: {name}");
+            &Entity::PLACEHOLDER
+        })
     }
 }
 
@@ -305,7 +308,7 @@ impl ScreenLayoutManager {
                 });
             match result {
                 Ok(_) => continue,
-                Err(err) => println!("[_.self] Parse error on line {}: {err}", line_number + 1),
+                Err(err) => error!("[_.self] Parse error on line {}: {err}", line_number + 1),
             }
         }
 
@@ -334,11 +337,11 @@ impl ScreenLayoutManager {
             match result {
                 Ok(Some((name, element))) => {
                     if screen_layout.element_map.insert(name.to_string(), element).is_some() {
-                        println!("[{layout_name}.self] Duplicate element on line {}: {name}", line_number + 1);
+                        warn!("[{layout_name}.self] Duplicate element on line {}: {name}", line_number + 1);
                     }
                 }
                 Ok(None) => continue,
-                Err(err) => println!("[{layout_name}.self] Parse error on line {}: {err}", line_number + 1),
+                Err(err) => error!("[{layout_name}.self] Parse error on line {}: {err}", line_number + 1),
             }
         }
 
