@@ -30,7 +30,6 @@ pub type TickType = u16;
 pub type RuntimeAmountType = u16;
 
 pub type MissionIdType = u64;
-pub type MissionNodeLinkDamageType = u8;
 pub type MissionNodeIdType = u8;
 
 pub type ActorIdType = u64;

@@ -24,12 +24,7 @@ pub(super) fn on_show_map(
                 *text_kind = node.kind.as_single_letter().into();
             }
             for link in &node.links {
-                let pair = if *id > link.target {
-                    (link.target, *id)
-                } else {
-                    (*id, link.target)
-                };
-                if let Some(entity) = map.links.get(&pair) {
+                if let Some(entity) = map.links.get(&(*id, link.target)) {
                     commands.entity(*entity).insert(Visibility::Inherited);
                 }
             }

@@ -1,10 +1,11 @@
 use rand::prelude::StdRng;
 use rand::{Rng, SeedableRng};
 
-use crate::game::game_state::ActorMapType;
-use crate::game::{GameMissionNode, GameMissionObjective, GameUserMissionState};
 use hall_lib::core::{AuthLevel, GeneralType, MissionIdType, MissionNodeIdType, MissionNodeKind, MissionNodeLink, MissionNodeLinkDir, MissionNodeState, SpecificType};
 use hall_lib::view::{GameMissionObjectivePlayerView, GameMissionPlayerView};
+
+use crate::game::game_state::ActorMapType;
+use crate::game::{GameMissionNode, GameMissionObjective, GameUserMissionState};
 
 #[derive(Default)]
 pub(crate) struct GameMission {
@@ -25,10 +26,10 @@ trait MapTypeExt {
 
 impl MapTypeExt for MapType {
     fn at(&self, coord: &MapCoord) -> &MapNode {
-        &self[coord.x * MAP_SIZE + coord.y]
+        &self[coord.as_ordinal() as usize]
     }
     fn at_mut(&mut self, coord: &MapCoord) -> &mut MapNode {
-        &mut self[coord.x * MAP_SIZE + coord.y]
+        &mut self[coord.as_ordinal() as usize]
     }
 }
 
@@ -68,13 +69,13 @@ impl MapCoord {
     }
 
     fn as_ordinal(&self) -> MissionNodeIdType {
-        (self.x * MAP_SIZE + self.y) as MissionNodeIdType
+        (self.y * MAP_SIZE + self.x) as MissionNodeIdType
     }
 
     fn from_ordinal(ordinal: usize) -> Self {
         Self {
-            x: ordinal / MAP_SIZE,
-            y: ordinal % MAP_SIZE,
+            x: ordinal % MAP_SIZE,
+            y: ordinal / MAP_SIZE,
         }
     }
 }
@@ -85,8 +86,6 @@ enum MapDir {
     South,
     West,
 }
-
-const DIRS: [MapDir; 4] = [MapDir::North, MapDir::East, MapDir::South, MapDir::West];
 
 impl From<&MapDir> for MissionNodeLinkDir {
     fn from(value: &MapDir) -> Self {
@@ -99,6 +98,7 @@ impl From<&MapDir> for MissionNodeLinkDir {
     }
 }
 
+const DIRS: [MapDir; 4] = [MapDir::North, MapDir::East, MapDir::South, MapDir::West];
 impl MapDir {
     fn value(&self) -> usize {
         match self {
@@ -132,7 +132,7 @@ impl MapDir {
         }
     }
 
-    fn oppo(&self) -> Self {
+    fn opposite(&self) -> Self {
         match self {
             MapDir::North => MapDir::South,
             MapDir::East => MapDir::West,
@@ -164,7 +164,7 @@ impl GameMission {
 
         for dir in DIRS.iter() {
             if let Some(target) = Self::make_exit(map, coord, dir, force, set, rng) {
-                Self::make_exit(map, &target, &dir.oppo(), true, set, rng);
+                Self::make_exit(map, &target, &dir.opposite(), true, set, rng);
 
                 ret.push((target, set, false));
             }

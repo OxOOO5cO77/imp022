@@ -253,19 +253,27 @@ fn gameplay_enter(
         for id in col..(col + MAP_SIZE - 1) {
             let left = id as MissionNodeIdType;
             let right = (id + 1) as MissionNodeIdType;
-            let rl_string = format!("map/{left:02}-{right:02}");
-            let entity = layout.entity(&rl_string);
-            commands.entity(entity).insert(Visibility::Hidden);
-            links.insert((left, right), entity);
+            let r_string = format!("map/{left:02}-{right:02}");
+            let l_string = format!("map/{right:02}-{left:02}");
+            let r_entity = layout.entity(&r_string);
+            commands.entity(r_entity).insert(Visibility::Hidden);
+            links.insert((left, right), r_entity);
+            let l_entity = layout.entity(&l_string);
+            commands.entity(l_entity).insert(Visibility::Hidden);
+            links.insert((right, left), l_entity);
         }
     }
     for id in 0..(MAP_SIZE * (MAP_SIZE - 1)) {
         let up = id as MissionNodeIdType;
         let down = (id + MAP_SIZE) as MissionNodeIdType;
-        let ud_string = format!("map/{up:02}-{down:02}");
-        let entity = layout.entity(&ud_string);
-        commands.entity(entity).insert(Visibility::Hidden);
-        links.insert((up, down), entity);
+        let d_string = format!("map/{up:02}-{down:02}");
+        let u_string = format!("map/{down:02}-{up:02}");
+        let d_entity = layout.entity(&d_string);
+        commands.entity(d_entity).insert(Visibility::Hidden);
+        links.insert((up, down), d_entity);
+        let u_entity = layout.entity(&u_string);
+        commands.entity(u_entity).insert(Visibility::Hidden);
+        links.insert((down, up), u_entity);
     }
     commands.insert_resource(GameplayMap::new(main, node, links));
 

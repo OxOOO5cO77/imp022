@@ -1,6 +1,7 @@
-use crate::core::{AuthLevel, MissionNodeContent, MissionNodeIdType, MissionNodeKind, MissionNodeLinkDamageType, MissionNodeLinkDir, RemoteIdType};
-use crate::view::game_actor::GameActorPlayerView;
 use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
+
+use crate::core::{AuthLevel, MissionNodeContent, MissionNodeIdType, MissionNodeKind, MissionNodeLinkDir, RemoteIdType};
+use crate::view::game_actor::GameActorPlayerView;
 
 #[derive(Clone)]
 #[cfg_attr(test, derive(Debug, PartialEq))]
@@ -35,25 +36,28 @@ const MASK_FOR_KIND: PackedMissionNodeType = (1 << BITS_FOR_KIND) - 1;
 
 type PackedMissionNodeLinkType = u64;
 
-pub const MAX_LINK_DAMAGE: MissionNodeLinkDamageType = 10;
 pub const MAX_LINK_COUNT: usize = 4;
 
 const BITS_FOR_LINK_DIR: PackedMissionNodeLinkType = 2;
 const BITS_FOR_LINK_MIN_LEVEL: PackedMissionNodeLinkType = 3;
 const BITS_FOR_LINK_TARGET: PackedMissionNodeLinkType = 8;
 const BITS_FOR_LINK_LOCKED: PackedMissionNodeLinkType = 1;
-const BITS_FOR_LINK: PackedMissionNodeLinkType = BITS_FOR_LINK_DIR + BITS_FOR_LINK_MIN_LEVEL + BITS_FOR_LINK_TARGET + BITS_FOR_LINK_LOCKED;
+const BITS_FOR_LINK_VALID: PackedMissionNodeLinkType = 1;
+
+const BITS_FOR_LINK: PackedMissionNodeLinkType = BITS_FOR_LINK_DIR + BITS_FOR_LINK_MIN_LEVEL + BITS_FOR_LINK_TARGET + BITS_FOR_LINK_LOCKED + BITS_FOR_LINK_VALID;
 
 const SHIFT_FOR_LINK_DIR: PackedMissionNodeLinkType = 0;
 const SHIFT_FOR_LINK_MIN_LEVEL: PackedMissionNodeLinkType = SHIFT_FOR_LINK_DIR + BITS_FOR_LINK_DIR;
 const SHIFT_FOR_LINK_TARGET: PackedMissionNodeLinkType = SHIFT_FOR_LINK_MIN_LEVEL + BITS_FOR_LINK_MIN_LEVEL;
 const SHIFT_FOR_LINK_LOCKED: PackedMissionNodeLinkType = SHIFT_FOR_LINK_TARGET + BITS_FOR_LINK_TARGET;
+const SHIFT_FOR_LINK_VALID: PackedMissionNodeLinkType = SHIFT_FOR_LINK_LOCKED + BITS_FOR_LINK_LOCKED;
 
 const MASK_FOR_LINK_DIR: PackedMissionNodeLinkType = (1 << BITS_FOR_LINK_DIR) - 1;
 const MASK_FOR_LINK_MIN_LEVEL: PackedMissionNodeLinkType = (1 << BITS_FOR_LINK_MIN_LEVEL) - 1;
 const MASK_FOR_LINK_TARGET: PackedMissionNodeLinkType = (1 << BITS_FOR_LINK_TARGET) - 1;
 const MASK_FOR_LINK_LOCKED: PackedMissionNodeLinkType = (1 << BITS_FOR_LINK_LOCKED) - 1;
 const MASK_FOR_LINK: PackedMissionNodeLinkType = (1 << BITS_FOR_LINK) - 1;
+const MASK_FOR_LINK_VALID: PackedMissionNodeLinkType = (1 << BITS_FOR_LINK_VALID) - 1;
 
 pub const MAX_CONTENT_COUNT: usize = 4;
 pub const MAX_ACTOR_COUNT: usize = 8;
@@ -91,15 +95,18 @@ impl GameMissionNodePlayerView {
         if link.locked {
             packed |= 1 << SHIFT_FOR_LINK_LOCKED;
         }
+        packed |= 1 << SHIFT_FOR_LINK_VALID;
         packed
     }
-    fn unpack_link(packed: PackedMissionNodeLinkType) -> MissionNodeLinkView {
-        MissionNodeLinkView {
+    fn unpack_link(packed: PackedMissionNodeLinkType) -> (MissionNodeLinkView, bool) {
+        let result = MissionNodeLinkView {
             direction: Self::unpack_link_dir((packed >> SHIFT_FOR_LINK_DIR) & MASK_FOR_LINK_DIR),
             target: ((packed >> SHIFT_FOR_LINK_TARGET) & MASK_FOR_LINK_TARGET) as MissionNodeIdType,
             min_level: Self::unpack_link_min_level((packed >> SHIFT_FOR_LINK_MIN_LEVEL) & MASK_FOR_LINK_MIN_LEVEL),
             locked: ((packed >> SHIFT_FOR_LINK_LOCKED) & MASK_FOR_LINK_LOCKED) != 0,
-        }
+        };
+        let valid = ((packed >> SHIFT_FOR_LINK_VALID) & MASK_FOR_LINK_VALID) != 0;
+        (result, valid)
     }
 
     fn pack_links(&self) -> PackedMissionNodeLinkType {
@@ -112,8 +119,8 @@ impl GameMissionNodePlayerView {
     fn unpack_links(packed: PackedMissionNodeLinkType) -> Vec<MissionNodeLinkView> {
         let mut links = Vec::new();
         for i in 0..MAX_LINK_COUNT as PackedMissionNodeLinkType {
-            let link = Self::unpack_link((packed >> (BITS_FOR_LINK * i)) & MASK_FOR_LINK);
-            if link.target != 0 {
+            let (link, valid) = Self::unpack_link((packed >> (BITS_FOR_LINK * i)) & MASK_FOR_LINK);
+            if valid {
                 links.push(link);
             }
         }
@@ -176,7 +183,7 @@ impl GameMissionNodePlayerView {
             links: vec![
                 MissionNodeLinkView {
                     direction: MissionNodeLinkDir::North,
-                    target: 124,
+                    target: 0,
                     min_level: AuthLevel::Admin,
                     locked: true,
                 },
@@ -191,12 +198,6 @@ impl GameMissionNodePlayerView {
                     target: 234,
                     min_level: AuthLevel::User,
                     locked: true,
-                },
-                MissionNodeLinkView {
-                    direction: MissionNodeLinkDir::West,
-                    target: 1,
-                    min_level: AuthLevel::Root,
-                    locked: false,
                 },
             ],
             content: Vec::new(),
