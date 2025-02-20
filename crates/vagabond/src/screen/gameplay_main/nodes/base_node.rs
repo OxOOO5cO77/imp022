@@ -14,6 +14,7 @@ use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor, UiFxTrackedSize
 struct BaseNodeLink {
     container: Entity,
     title: Entity,
+    arrow: Entity,
     remote_id: Entity,
     lock: Entity,
     unlock: Entity,
@@ -23,6 +24,7 @@ impl BaseNodeLink {
     fn new(layout: &ScreenLayout, name: &str, link_name: &str) -> Self {
         let container = layout.entity(&format!("{name}/{link_name}"));
         let title = layout.entity(&format!("{name}/{link_name}/title"));
+        let arrow = layout.entity(&format!("{name}/{link_name}/arrow"));
         let remote_id = layout.entity(&format!("{name}/{link_name}/remote_id"));
         let lock = layout.entity(&format!("{name}/{link_name}/lock"));
         let unlock = layout.entity(&format!("{name}/{link_name}/unlock"));
@@ -30,6 +32,7 @@ impl BaseNodeLink {
         Self {
             container,
             title,
+            arrow,
             remote_id,
             lock,
             unlock,
@@ -139,6 +142,15 @@ impl BaseNode {
         }
     }
 
+    fn arrow(dir: MissionNodeLinkDir) -> &'static str {
+        match dir {
+            MissionNodeLinkDir::North => "🠝",
+            MissionNodeLinkDir::East => "🠞",
+            MissionNodeLinkDir::South => "🠟",
+            MissionNodeLinkDir::West => "🠜",
+        }
+    }
+
     pub(crate) fn activate(&self, commands: &mut Commands, mission: &GameMissionPlayerView, text_q: &mut Query<&mut Text2d>, wm: &mut WarehouseManager) {
         let current_node = mission.current();
 
@@ -153,9 +165,10 @@ impl BaseNode {
             let node_target = link_dir.map(|l| l.target).and_then(|target| mission.get_node(target));
             let kind = node_target.map_or(MissionNodeKind::Unknown, |n| n.kind);
             let remote_id = node_target.map_or("???:???:????:???:???".to_string(), |n| n.make_id());
-            if let Ok([mut text_title, mut text_remote_id]) = text_q.get_many_mut([link.title, link.remote_id]) {
+            if let Ok([mut text_title, mut text_arrow, mut text_remote_id]) = text_q.get_many_mut([link.title, link.arrow, link.remote_id]) {
                 *text_title = kind.as_str().into();
                 *text_remote_id = remote_id.into();
+                *text_arrow = Self::arrow(DIRS[idx]).into();
             }
             commands.entity(link.lock).insert(Self::is_visible(link_dir.is_some_and(|l| l.locked)));
             commands.entity(link.unlock).insert(Self::is_visible(link_dir.is_some_and(|l| !l.locked)));
