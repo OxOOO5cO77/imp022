@@ -2,7 +2,7 @@
 name = "archive"
 description = "Archive is the game object inventory service."
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 
 [dependencies]

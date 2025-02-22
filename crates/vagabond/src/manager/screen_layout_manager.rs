@@ -472,7 +472,7 @@ impl ScreenLayoutManager {
         parent.spawn(bundle).id()
     }
 
-    fn make_container_bundle(element: &LayoutElement) -> impl Bundle {
+    fn make_container_bundle(element: &LayoutElement) -> impl Bundle + use<> {
         (
             Sprite {
                 color: Color::NONE,

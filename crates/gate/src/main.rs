@@ -8,7 +8,7 @@ use forum_lib::core::ForumSubCommand;
 use gate_lib::message::gate_header::GateHeader;
 use hall_lib::core::GameSubCommand;
 use shared_net::op::SubCommandType;
-use shared_net::{op, AuthType, Bufferable, IdMessage, NodeType, RoutedMessage, SizedBuffer, SizedBufferError, TimestampType, UserIdType, VClientMode};
+use shared_net::{AuthType, Bufferable, IdMessage, NodeType, RoutedMessage, SizedBuffer, SizedBufferError, TimestampType, UserIdType, VClientMode, op};
 use tokio::signal;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;

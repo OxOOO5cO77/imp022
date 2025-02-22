@@ -11,10 +11,7 @@ pub(crate) struct NetworkManager {
 impl NetworkManager {
     pub(crate) fn new() -> Self {
         Self {
-            runtime: tokio::runtime::Builder::new_multi_thread()
-                .enable_all()
-                .build()
-                .expect("Could not build tokio runtime"),
+            runtime: tokio::runtime::Builder::new_multi_thread().enable_all().build().expect("Could not build tokio runtime"),
             current_task: None,
         }
     }

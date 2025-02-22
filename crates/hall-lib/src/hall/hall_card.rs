@@ -19,7 +19,7 @@ pub struct HallCard {
 
 impl HallCard {
     pub fn matches(&self, slot: &CardSlot) -> bool {
-        let set_match = self.set == slot.0 .0;
+        let set_match = self.set == slot.0.0;
         let rarity_match = self.rarity == slot.1;
         let slot_match = match slot.2 {
             Slot::Any => true,

@@ -2,7 +2,7 @@
 name = "courtyard"
 description = "Courtyard is the central message router."
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 
 [dependencies]

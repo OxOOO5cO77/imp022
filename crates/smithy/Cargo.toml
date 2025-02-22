@@ -2,13 +2,13 @@
 name = "smithy"
 description = "Smithy is the data manipulation utility."
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 
 [dependencies]
-clap = { version = "4.5.29", features = ["derive"] }
+clap = { version = "4.5.30", features = ["derive"] }
 ron = { version = "0.9.0-alpha.1" }
-serde = { version = "1.0.217", features = ["derive"] }
+serde = { version = "1.0.218", features = ["derive"] }
 sqlx = { version = "0.8.3", features = ["postgres", "runtime-tokio"] }
 tokio = { version = "1.43.0", features = ["macros"] }
 hall-lib = { path = "../hall-lib" }

@@ -4,7 +4,7 @@ use crate::manager::DataManager;
 use crate::screen::gameplay_main::components::{AttributeRow, PlayerStateText};
 use crate::screen::gameplay_main::events::{ChooseAttrTrigger, PlayerStateTrigger};
 use crate::screen::gameplay_main::resources::GameplayContext;
-use crate::screen::gameplay_main::{map_kind_to_index, VagabondGamePhase, GLOWER_SPEED};
+use crate::screen::gameplay_main::{GLOWER_SPEED, VagabondGamePhase, map_kind_to_index};
 use crate::system::ui_effects::{Glower, UiFxTrackedColor};
 
 pub(super) fn on_local_state_update_player(
@@ -59,15 +59,16 @@ pub(super) fn on_local_ui_update_attr(
 
     for (mut color, state_text) in text_q.iter_mut() {
         if let PlayerStateText::Attribute(row, _) = state_text {
-            *color = if let Some(kind) = event.kind {
-                if *row == map_kind_to_index(kind) {
-                    context.attr_pick = Some(kind);
-                    bevy::color::palettes::basic::GREEN
-                } else {
-                    bevy::color::palettes::basic::GRAY
+            *color = match event.kind {
+                Some(kind) => {
+                    if *row == map_kind_to_index(kind) {
+                        context.attr_pick = Some(kind);
+                        bevy::color::palettes::basic::GREEN
+                    } else {
+                        bevy::color::palettes::basic::GRAY
+                    }
                 }
-            } else {
-                bevy::color::palettes::basic::GRAY
+                _ => bevy::color::palettes::basic::GRAY,
             }
             .into()
         }

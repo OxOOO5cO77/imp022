@@ -5,9 +5,9 @@ use hall_lib::player::PlayerCard;
 use hall_lib::view::{GameMachinePlayerView, GameProcessPlayerView};
 use shared_net::UserIdType;
 
+use crate::game::GameProcess;
 use crate::game::game_process::{GameProcessExecutor, ProcessForPlayer};
 use crate::game::game_state::CardResolve;
-use crate::game::GameProcess;
 
 const QUEUE_SIZE: usize = 10;
 

@@ -2,7 +2,7 @@
 name = "jail"
 description = "Jail is the user attribute service."
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 
 [dependencies]

@@ -29,7 +29,7 @@ impl CardDropTarget {
 }
 
 impl Indicator {
-    pub(crate) fn make_bundle(parent: Entity, translation: Vec3, offset: Vec2, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<ColorMaterial>>) -> impl Bundle {
+    pub(crate) fn make_bundle(parent: Entity, translation: Vec3, offset: Vec2, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<ColorMaterial>>) -> impl Bundle + use<> {
         (
             Indicator {
                 translation,
