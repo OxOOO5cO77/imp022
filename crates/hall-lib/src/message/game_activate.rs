@@ -2,7 +2,7 @@ use crate::core::GameSubCommand;
 use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
 use crate::player::PlayerPart;
 use shared_net::op::SubCommandType;
-use shared_net::{op, Bufferable, GameIdType, SizedBuffer, SizedBufferError};
+use shared_net::{Bufferable, GameIdType, SizedBuffer, SizedBufferError, op};
 
 #[derive(Bufferable)]
 #[cfg_attr(test, derive(Debug, PartialEq))]

@@ -1,7 +1,7 @@
 use tokio::sync::mpsc::UnboundedSender;
 
 use hall_lib::message::CommandMessage;
-use shared_net::{op, Bufferable, NodeType, RoutedMessage, SizedBuffer};
+use shared_net::{Bufferable, NodeType, RoutedMessage, SizedBuffer, op};
 
 use crate::HallError;
 

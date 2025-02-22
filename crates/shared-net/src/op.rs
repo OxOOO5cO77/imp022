@@ -4,9 +4,9 @@ use std::mem::size_of;
 #[cfg(test)]
 use strum_macros::EnumIter;
 
+use crate::SizedBuffer;
 use crate::sizedbuffers::{Bufferable, SizedBufferError};
 use crate::types::NodeType;
-use crate::SizedBuffer;
 
 type RouteType = u8;
 
@@ -197,10 +197,10 @@ mod test {
     mod test_vsizedbuffer {
         use strum::IntoEnumIterator;
 
+        use crate::SizedBuffer;
         use crate::op::Flavor;
         use crate::op::{Command, Route};
         use crate::sizedbuffers::SizedBufferError;
-        use crate::SizedBuffer;
 
         #[test]
         fn test_route() -> Result<(), SizedBufferError> {

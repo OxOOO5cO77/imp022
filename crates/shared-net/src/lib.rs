@@ -7,7 +7,7 @@ mod util;
 pub mod op;
 
 pub use bufferable_derive::Bufferable;
-pub use client::{async_client, VClientMode};
+pub use client::{VClientMode, async_client};
 pub use server::async_server;
 pub use sizedbuffers::{Bufferable, SizedBuffer, SizedBufferError};
 pub use types::*;

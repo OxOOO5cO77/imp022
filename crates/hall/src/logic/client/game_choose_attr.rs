@@ -3,8 +3,8 @@ use hall_lib::core::GameSubCommand;
 use hall_lib::message::{GameChooseAttrRequest, GameChooseAttrResponse};
 use shared_net::NodeType;
 
-use crate::logic::shared::update_user;
 use crate::HallContext;
+use crate::logic::shared::update_user;
 
 pub(crate) fn recv_game_choose_attr(context: &HallContext, request: GameChooseAttrRequest, _: NodeType, header: GateHeader) -> Option<GameChooseAttrResponse> {
     let mut games = context.games.write().unwrap();

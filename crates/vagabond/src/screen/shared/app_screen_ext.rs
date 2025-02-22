@@ -1,6 +1,6 @@
 use crate::system::AppState;
 use bevy::app::{App, PostUpdate, Update};
-use bevy::prelude::{in_state, IntoSystemConfigs, OnEnter, OnExit};
+use bevy::prelude::{IntoSystemConfigs, OnEnter, OnExit, in_state};
 
 pub(crate) trait AppScreenExt {
     fn add_screen(&mut self, app_state: AppState) -> ScreenBuilder;

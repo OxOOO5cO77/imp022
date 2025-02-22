@@ -287,8 +287,8 @@ impl<T: Bufferable, U: Bufferable> Bufferable for (T, U) {
 #[cfg(test)]
 mod test {
     mod test_sized_buffer {
-        use crate::sizedbuffers::{Bufferable, SizedBufferError};
         use crate::SizedBuffer;
+        use crate::sizedbuffers::{Bufferable, SizedBufferError};
 
         #[test]
         fn test_u8() -> Result<(), SizedBufferError> {

@@ -1,5 +1,5 @@
-use rand::prelude::IndexedRandom;
 use rand::Rng;
+use rand::prelude::IndexedRandom;
 
 use crate::game::GameMachine;
 use hall_lib::core::{AttributeArray, AttributeKind, Attributes};

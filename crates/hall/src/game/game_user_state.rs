@@ -1,6 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 
-use rand::{seq::SliceRandom, Rng};
+use rand::{Rng, seq::SliceRandom};
 
 use hall_lib::core::{AttributeKind, Attributes, DeckCountType, ErgArray, ErgType, GameSubCommand, MissionNodeIntent, PickedCardTarget};
 use hall_lib::hall::HallCard;

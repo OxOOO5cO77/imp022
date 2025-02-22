@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use crate::manager::bio_manager::BioManager;
-use axum::routing::get;
 use axum::Router;
+use axum::routing::get;
 use tokio::net::TcpListener;
 use tracing::{info, instrument};
 

@@ -11,8 +11,8 @@ use forum_lib::core::ForumSubCommand;
 use hall_lib::core::{AttributeKind, GameSubCommand, MissionNodeIntent, PickedCardTarget};
 use hall_lib::message::*;
 use shared_net::op::SubCommandType;
-use shared_net::{op, RoutedMessage, SizedBuffer, SizedBufferError, VClientMode};
 use shared_net::{AuthType, Bufferable, GameIdType, PartType};
+use shared_net::{RoutedMessage, SizedBuffer, SizedBufferError, VClientMode, op};
 
 pub(crate) enum GateCommand {
     Hello,

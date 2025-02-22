@@ -7,8 +7,8 @@ use crate::manager::{NetworkManager, ScreenLayoutManager};
 use crate::network::client_gate::{GateClient, GateCommand, GateIFace};
 use crate::screen::login_drawbridge::DrawbridgeHandoff;
 use crate::screen::shared::AppScreenExt;
-use crate::system::ui_effects::SetColorEvent;
 use crate::system::AppState;
+use crate::system::ui_effects::SetColorEvent;
 
 const SCREEN_LAYOUT: &str = "login";
 

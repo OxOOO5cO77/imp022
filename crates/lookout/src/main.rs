@@ -6,7 +6,7 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, instrument};
 
-use shared_net::{op, NodeType, PasswordType, RoutedMessage, SizedBuffer, SizedBufferError, UserIdType, VClientMode};
+use shared_net::{NodeType, PasswordType, RoutedMessage, SizedBuffer, SizedBufferError, UserIdType, VClientMode, op};
 
 struct Lookout {
     pool: PgPool,

@@ -1,4 +1,4 @@
-use rand::{distr::Uniform, rngs::ThreadRng, Rng};
+use rand::{Rng, distr::Uniform, rngs::ThreadRng};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::iter::zip;

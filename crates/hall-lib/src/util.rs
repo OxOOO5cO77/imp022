@@ -16,8 +16,8 @@ pub fn pick_values(rng: &mut impl Rng) -> AttributeArray {
 #[cfg(test)]
 mod player_builder_test {
     use crate::util;
-    use rand::prelude::StdRng;
     use rand::SeedableRng;
+    use rand::prelude::StdRng;
 
     #[test]
     fn test_pick_values() -> Result<(), String> {

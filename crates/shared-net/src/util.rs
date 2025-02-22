@@ -18,8 +18,8 @@ mod test {
     mod write_buf {
         use std::io::Cursor;
 
-        use crate::util::write_buf;
         use crate::SizedBuffer;
+        use crate::util::write_buf;
 
         #[tokio::test]
         async fn write_normal() {

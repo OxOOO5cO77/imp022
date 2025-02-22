@@ -2,7 +2,7 @@ use crate::core::GameSubCommand;
 use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
 use crate::player::PlayerCard;
 use shared_net::op::SubCommandType;
-use shared_net::{op, Bufferable, GameIdType, PartType, SeedType, SizedBuffer, SizedBufferError};
+use shared_net::{Bufferable, GameIdType, PartType, SeedType, SizedBuffer, SizedBufferError, op};
 
 type PartsArray = [PartType; 8];
 

@@ -2,8 +2,8 @@ use gate_lib::message::gate_header::GateHeader;
 use hall_lib::message::{GameUpdateStateRequest, GameUpdateStateResponse};
 use shared_net::NodeType;
 
-use crate::game::GameState;
 use crate::HallContext;
+use crate::game::GameState;
 
 pub(crate) fn recv_game_update_state(context: &HallContext, request: GameUpdateStateRequest, _: NodeType, header: GateHeader) -> Option<GameUpdateStateResponse> {
     let games = context.games.read().unwrap();

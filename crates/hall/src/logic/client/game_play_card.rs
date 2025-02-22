@@ -3,8 +3,8 @@ use hall_lib::core::GameSubCommand;
 use hall_lib::message::{GamePlayCardRequest, GamePlayCardResponse};
 use shared_net::NodeType;
 
-use crate::logic::shared::update_user;
 use crate::HallContext;
+use crate::logic::shared::update_user;
 
 pub(crate) fn recv_game_play_card(context: &HallContext, request: GamePlayCardRequest, _: NodeType, header: GateHeader) -> Option<GamePlayCardResponse> {
     let mut games = context.games.write().unwrap();

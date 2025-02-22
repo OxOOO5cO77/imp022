@@ -8,7 +8,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::signal;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 use tracing::error;
 
 #[derive(PartialEq)]

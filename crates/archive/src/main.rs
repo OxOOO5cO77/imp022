@@ -9,7 +9,7 @@ use tracing::{info, instrument};
 use archive_lib::core::ArchiveSubCommand;
 use gate_lib::message::gate_header::GateHeader;
 use shared_net::op::SubCommandType;
-use shared_net::{op, Bufferable, NodeType, RoutedMessage, SizedBuffer, SizedBufferError, VClientMode};
+use shared_net::{Bufferable, NodeType, RoutedMessage, SizedBuffer, SizedBufferError, VClientMode, op};
 
 struct Archive {
     pool: PgPool,

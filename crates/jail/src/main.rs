@@ -2,7 +2,7 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, instrument};
 
-use shared_net::{op, NodeType, RoutedMessage, SizedBuffer, SizedBufferError, TimestampType, UserIdType, VClientMode};
+use shared_net::{NodeType, RoutedMessage, SizedBuffer, SizedBufferError, TimestampType, UserIdType, VClientMode, op};
 
 #[derive(Clone)]
 struct NoContext;

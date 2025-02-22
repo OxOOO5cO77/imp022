@@ -1,9 +1,9 @@
 use bevy::prelude::{Query, ResMut, Text2d, Trigger};
 
+use crate::screen::gameplay_main::TTY_MESSAGE_COUNT;
 use crate::screen::gameplay_main::components::TTYMessageText;
 use crate::screen::gameplay_main::events::TTYMessageTrigger;
 use crate::screen::gameplay_main::resources::GameplayContext;
-use crate::screen::gameplay_main::TTY_MESSAGE_COUNT;
 
 pub(super) fn on_tty_update(
     // bevy system

@@ -1,7 +1,7 @@
 use crate::core::{GameSubCommand, Token};
 use crate::message::CommandMessage;
 use shared_net::op::SubCommandType;
-use shared_net::{op, Bufferable, SizedBuffer, SizedBufferError};
+use shared_net::{Bufferable, SizedBuffer, SizedBufferError, op};
 
 #[derive(Clone)]
 #[cfg_attr(test, derive(Debug, PartialEq))]

@@ -1,5 +1,5 @@
-use sqlx::postgres::PgRow;
 use sqlx::Row;
+use sqlx::postgres::PgRow;
 
 use hall_lib::core::{BuildNumberType, CardSlot, Host, Rarity, Set, SetType, Slot};
 

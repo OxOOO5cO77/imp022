@@ -3,8 +3,8 @@ use hall_lib::core::GameSubCommand;
 use hall_lib::message::{GameChooseIntentRequest, GameChooseIntentResponse};
 use shared_net::NodeType;
 
-use crate::logic::shared::update_user;
 use crate::HallContext;
+use crate::logic::shared::update_user;
 
 pub(crate) fn recv_game_choose_intent(context: &HallContext, request: GameChooseIntentRequest, _: NodeType, header: GateHeader) -> Option<GameChooseIntentResponse> {
     let mut games = context.games.write().unwrap();

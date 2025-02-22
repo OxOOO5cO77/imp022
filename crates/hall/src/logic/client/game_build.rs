@@ -5,10 +5,10 @@ use hall_lib::core::GameSubCommand;
 use hall_lib::message::{GameBuildRequest, GameBuildResponse};
 use shared_net::NodeType;
 
+use crate::HallContext;
 use crate::game::GameState;
 use crate::logic::shared::update_user;
 use crate::manager::player_builder::PlayerBuilder;
-use crate::HallContext;
 
 pub(crate) fn recv_game_build(context: &HallContext, request: GameBuildRequest, gate: NodeType, header: GateHeader) -> Option<GameBuildResponse> {
     let mut games = context.games.write().unwrap();

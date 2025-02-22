@@ -4,10 +4,10 @@ use bevy::prelude::{Bundle, Commands, Entity, EntityCommand, Event, Observer, Ov
 
 use hall_lib::core::MissionNodeIntent;
 
+use crate::screen::gameplay_main::VagabondGamePhase;
 use crate::screen::gameplay_main::components::{MissionNodeButton, MissionNodeLocalObserver};
 use crate::screen::gameplay_main::nodes::MissionNodeAction;
 use crate::screen::gameplay_main::resources::GameplayContext;
-use crate::screen::gameplay_main::VagabondGamePhase;
 use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor};
 
 pub(crate) fn on_over_node_action(

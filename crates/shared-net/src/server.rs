@@ -6,11 +6,11 @@ use tokio::io::{AsyncReadExt, WriteHalf};
 use tokio::net::TcpListener;
 use tokio::signal;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{Mutex, mpsc};
 use tracing::{error, info};
 
 use crate::util::write_buf;
-use crate::{op, IdMessage, RoutedMessage, SizedBuffer};
+use crate::{IdMessage, RoutedMessage, SizedBuffer, op};
 
 struct VConnection<T> {
     write: WriteHalf<T>,

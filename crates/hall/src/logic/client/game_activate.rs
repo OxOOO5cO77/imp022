@@ -8,9 +8,9 @@ use hall_lib::core::{GameSubCommand, MissionNodeState, Stage};
 use hall_lib::message::{GameActivateRequest, GameActivateResponse};
 use shared_net::NodeType;
 
+use crate::HallContext;
 use crate::game::{GameMission, GameState, GameUser, GameUserMissionState};
 use crate::manager::player_builder::PlayerBuilder;
-use crate::HallContext;
 
 pub(crate) fn recv_game_activate(context: &HallContext, request: GameActivateRequest, gate: NodeType, header: GateHeader) -> Option<GameActivateResponse> {
     // todo: check for existing user

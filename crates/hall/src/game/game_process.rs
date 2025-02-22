@@ -1,7 +1,7 @@
 use rand::Rng;
 use std::cmp::Ordering;
 
-use hall_lib::core::{Attributes, CardTargetValue, LaunchInstruction, PriorityType, RunInstruction, RuntimeAmountType, TickType, Token, TokenKind, ValueTarget, DEFAULT_TOKEN_EXPIRY};
+use hall_lib::core::{Attributes, CardTargetValue, DEFAULT_TOKEN_EXPIRY, LaunchInstruction, PriorityType, RunInstruction, RuntimeAmountType, TickType, Token, TokenKind, ValueTarget};
 use hall_lib::message::UpdateTokenMessage;
 use hall_lib::player::PlayerCard;
 use hall_lib::view::GameProcessPlayerView;

@@ -8,7 +8,7 @@ use crate::screen::gameplay_main::components::{CardDropTarget, MissionNodeButton
 use crate::screen::gameplay_main::nodes::shared;
 use crate::screen::gameplay_main::on_card_drop;
 use crate::screen::gameplay_main::resources::GameplayContext;
-use crate::screen::shared::{on_out_reset_color, GameMissionNodePlayerViewExt, MissionNodeKindExt};
+use crate::screen::shared::{GameMissionNodePlayerViewExt, MissionNodeKindExt, on_out_reset_color};
 use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor, UiFxTrackedSize};
 
 struct BaseNodeLink {

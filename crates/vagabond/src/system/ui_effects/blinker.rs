@@ -1,7 +1,7 @@
 use crate::system::ui_effects::SetColorEvent;
 use bevy::app::{App, Plugin, Update};
 use bevy::color::Srgba;
-use bevy::prelude::{ops, Commands, Component, Entity, Mix, Query, Res, Time};
+use bevy::prelude::{Commands, Component, Entity, Mix, Query, Res, Time, ops};
 use std::f32::consts::PI;
 
 pub(crate) struct BlinkerPlugin;

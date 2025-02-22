@@ -12,9 +12,9 @@ use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::gameplay_init::GameplayInitHandoff;
 use crate::screen::gameplay_main::nodes::*;
 use crate::screen::gameplay_main::{components::*, events::*, resources::*, systems::*};
-use crate::screen::shared::{on_out_reset_color, on_update_card_tooltip, AppScreenExt, CardLayout, CardTooltip, GameMissionNodePlayerViewExt, MissionNodeKindExt, UpdateCardTooltipEvent};
-use crate::system::ui_effects::{Blinker, SetColorEvent, TextTip, UiFxTrackedColor};
+use crate::screen::shared::{AppScreenExt, CardLayout, CardTooltip, GameMissionNodePlayerViewExt, MissionNodeKindExt, UpdateCardTooltipEvent, on_out_reset_color, on_update_card_tooltip};
 use crate::system::AppState;
+use crate::system::ui_effects::{Blinker, SetColorEvent, TextTip, UiFxTrackedColor};
 
 mod components;
 mod events;

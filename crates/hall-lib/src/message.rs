@@ -31,7 +31,7 @@ pub use game_tick::GameTickMessage;
 pub use game_update_mission::GameUpdateMissionMessage;
 pub use game_update_tokens::{GameUpdateTokensMessage, UpdateTokenMessage};
 
-use shared_net::{op, Bufferable, GameIdType};
+use shared_net::{Bufferable, GameIdType, op};
 
 pub trait CommandMessage: Bufferable {
     const COMMAND: op::Command;

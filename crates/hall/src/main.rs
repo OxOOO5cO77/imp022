@@ -3,14 +3,14 @@ use std::rc::Rc;
 use std::sync::RwLock;
 
 use tokio::sync::mpsc;
-use tokio::sync::mpsc::error::SendError;
 use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::mpsc::error::SendError;
 use tracing::{error, info, instrument};
 
 use gate_lib::message::gate_header::GateHeader;
 use hall_lib::core::GameSubCommand;
 use hall_lib::message::{GameRequestMessage, GameResponseMessage};
-use shared_net::{op, GameIdType, NodeType, RoutedMessage, SizedBuffer, SizedBufferError, VClientMode};
+use shared_net::{GameIdType, NodeType, RoutedMessage, SizedBuffer, SizedBufferError, VClientMode, op};
 
 use game::GameState;
 use logic::handle_phase_complete;

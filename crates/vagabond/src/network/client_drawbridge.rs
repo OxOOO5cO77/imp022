@@ -7,7 +7,7 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
-use shared_net::{op, AuthType, RoutedMessage, SizedBuffer, SizedBufferError, VClientMode};
+use shared_net::{AuthType, RoutedMessage, SizedBuffer, SizedBufferError, VClientMode, op};
 
 pub(crate) struct AuthInfo {
     pub(crate) ip: IpAddr,

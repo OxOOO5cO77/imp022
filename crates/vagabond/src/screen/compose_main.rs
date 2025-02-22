@@ -6,9 +6,9 @@ use crate::manager::{AtlasManager, DataManager, ScreenLayoutManager, ScreenLayou
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::compose_init::ComposeInitHandoff;
 use crate::screen::compose_main::{components::*, events::*, resources::*, systems::*};
-use crate::screen::shared::{on_out_reset_color, on_update_card_tooltip, AppScreenExt, CardLayout, CardTooltip, UpdateCardTooltipEvent};
-use crate::system::ui_effects::{Glower, Hider, SetColorEvent, TextTip, UiFxTrackedColor, UiFxTrackedSize};
+use crate::screen::shared::{AppScreenExt, CardLayout, CardTooltip, UpdateCardTooltipEvent, on_out_reset_color, on_update_card_tooltip};
 use crate::system::AppState;
+use crate::system::ui_effects::{Glower, Hider, SetColorEvent, TextTip, UiFxTrackedColor, UiFxTrackedSize};
 
 pub(crate) use resources::ComposeHandoff;
 

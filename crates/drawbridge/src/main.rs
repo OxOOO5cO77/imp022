@@ -4,7 +4,7 @@ use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, instrument};
 
 use crate::DrawbridgeError::{Client, Server};
-use shared_net::{op, IdMessage, NodeType, RoutedMessage, SizedBuffer, VClientMode};
+use shared_net::{IdMessage, NodeType, RoutedMessage, SizedBuffer, VClientMode, op};
 
 #[derive(Clone)]
 struct NoContext;

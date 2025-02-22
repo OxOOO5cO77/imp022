@@ -3,8 +3,8 @@ use tracing::error;
 use hall_lib::core::GameSubCommand;
 use shared_net::{AuthType, GameIdType, UserIdType};
 
-use crate::game::{GameState, GameUser};
 use crate::HallGames;
+use crate::game::{GameState, GameUser};
 
 pub(crate) fn update_user<T: Default>(games: &mut HallGames, game_id: GameIdType, user: UserIdType, auth: AuthType, command: GameSubCommand, update: impl Fn(&mut GameUser) -> T) -> T {
     if let Some(game) = games.get_mut(&game_id) {

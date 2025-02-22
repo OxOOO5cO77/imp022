@@ -1,11 +1,11 @@
 use bevy::prelude::{Commands, Entity, Query, Res, ResMut, Text2d, Trigger, Visibility, With};
 
 use crate::manager::{DataManager, WarehouseManager};
+use crate::screen::gameplay_main::VagabondGamePhase;
 use crate::screen::gameplay_main::components::{MissionNodeDisplay, MissionNodeLocalObserver};
 use crate::screen::gameplay_main::events::{GamePhaseTrigger, MissionTrigger};
-use crate::screen::gameplay_main::nodes::{deselect_node_action, MissionNodeAction, MissionNodeLayouts};
+use crate::screen::gameplay_main::nodes::{MissionNodeAction, MissionNodeLayouts, deselect_node_action};
 use crate::screen::gameplay_main::resources::{GameplayContext, NodeLayouts};
-use crate::screen::gameplay_main::VagabondGamePhase;
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn on_mission_ui_update(
