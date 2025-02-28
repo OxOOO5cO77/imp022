@@ -14,4 +14,4 @@ members = [
     "crates/vagabond", "crates/vagabond-lib",
     "crates/warehouse", "crates/warehouse-lib"
 ]
-resolver = "2"
+resolver = "3"
