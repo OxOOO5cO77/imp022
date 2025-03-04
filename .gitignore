@@ -1,4 +1,4 @@
+.env
 .idea
 target
 Cargo.lock
-scripts/env.sh

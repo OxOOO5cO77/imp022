@@ -14,7 +14,10 @@ services:
       timeout: 5s
       retries: 10
   archive:
-    image: registry.impending.org:5050/archive:latest
+    build:
+      context: ./crates
+      dockerfile: archive/Dockerfile
+    image: ${REGISTRY}/archive:latest
     command: courtyard:12345
     environment:
       - DB_CONNECT=${DB_ARCHIVE}
@@ -24,7 +27,10 @@ services:
       courtyard:
         condition: service_started
   bazaar:
-    image: registry.impending.org:5050/bazaar:latest
+    build:
+      context: ./crates
+      dockerfile: bazaar/Dockerfile
+    image: ${REGISTRY}/bazaar:latest
     command: courtyard:12345
     environment:
       - DB_CONNECT=${DB_BAZAAR}
@@ -34,11 +40,17 @@ services:
       courtyard:
         condition: service_started
   courtyard:
-    image: registry.impending.org:5050/courtyard:latest
+    build:
+      context: ./crates
+      dockerfile: courtyard/Dockerfile
+    image: ${REGISTRY}/courtyard:latest
     ports:
       - "12345:12345"
   drawbridge:
-    image: registry.impending.org:5050/drawbridge:latest
+    build:
+      context: ./crates
+      dockerfile: drawbridge/Dockerfile
+    image: ${REGISTRY}/drawbridge:latest
     command: courtyard:12345
     ports:
       - "23450:23450"
@@ -46,13 +58,19 @@ services:
       courtyard:
         condition: service_started
   forum:
-    image: registry.impending.org:5050/forum:latest
+    build:
+      context: ./crates
+      dockerfile: forum/Dockerfile
+    image: ${REGISTRY}/forum:latest
     command: courtyard:12345
     depends_on:
       courtyard:
         condition: service_started
   gate:
-    image: registry.impending.org:5050/gate:latest
+    build:
+      context: ./crates
+      dockerfile: gate/Dockerfile
+    image: ${REGISTRY}/gate:latest
     command: courtyard:12345
     ports:
       - "23451:23451"
@@ -60,19 +78,28 @@ services:
       courtyard:
         condition: service_started
   hall:
-    image: registry.impending.org:5050/hall:latest
+    build:
+      context: ./crates
+      dockerfile: hall/Dockerfile
+    image: ${REGISTRY}/hall:latest
     command: courtyard:12345
     depends_on:
       courtyard:
         condition: service_started
   jail:
-    image: registry.impending.org:5050/jail:latest
+    build:
+      context: ./crates
+      dockerfile: jail/Dockerfile
+    image: ${REGISTRY}/jail:latest
     command: courtyard:12345
     depends_on:
       courtyard:
         condition: service_started
   lookout:
-    image: registry.impending.org:5050/lookout:latest
+    build:
+      context: ./crates
+      dockerfile: lookout/Dockerfile
+    image: ${REGISTRY}/lookout:latest
     command: courtyard:12345
     environment:
       - DB_CONNECT=${DB_LOOKOUT}
@@ -82,7 +109,10 @@ services:
       courtyard:
         condition: service_started
   warehouse:
-    image: registry.impending.org:5050/warehouse:latest
+    build:
+      context: ./crates
+      dockerfile: warehouse/Dockerfile
+    image: ${REGISTRY}/warehouse:latest
     ports:
       - "23235:23235"
 volumes:
