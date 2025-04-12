@@ -7,7 +7,7 @@ authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 
 [dependencies]
 chrono = { version = "0.4.40" }
-tokio = { version = "1.43.0", features = ["macros", "rt-multi-thread", "signal"] }
+tokio = { version = "1.44.2", features = ["macros", "rt-multi-thread", "signal"] }
 tracing = { version = "0.1.41" }
 tracing-subscriber = { version = "0.3.19" }
 shared-net = { path = "../shared-net" }
