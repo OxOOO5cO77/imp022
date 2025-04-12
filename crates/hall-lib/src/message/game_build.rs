@@ -2,7 +2,7 @@ use crate::core::GameSubCommand;
 use crate::message::{CommandMessage, GameRequestMessage, GameResponseMessage};
 use crate::player::PlayerCard;
 use shared_net::op::SubCommandType;
-use shared_net::{Bufferable, GameIdType, PartType, SeedType, SizedBuffer, SizedBufferError, op};
+use shared_net::{op, Bufferable, GameIdType, PartType, SeedType, SizedBuffer, SizedBufferError};
 
 type PartsArray = [PartType; 8];
 
@@ -38,9 +38,9 @@ impl GameResponseMessage for GameBuildResponse {}
 
 #[cfg(test)]
 mod test {
+    use super::{GameBuildRequest, GameBuildResponse};
     use crate::core::CardNumberType;
     use crate::core::Rarity::Legendary;
-    use crate::message::game_build::{GameBuildRequest, GameBuildResponse};
     use crate::player::PlayerCard;
     use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 

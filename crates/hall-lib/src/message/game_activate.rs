@@ -37,8 +37,8 @@ impl GameResponseMessage for GameActivateResponse {}
 
 #[cfg(test)]
 mod test {
+    use super::{GameActivateRequest, GameActivateResponse};
     use crate::core::{Build, Detail};
-    use crate::message::game_activate::{GameActivateRequest, GameActivateResponse};
     use crate::player::{PlayerBuild, PlayerDetail, PlayerPart};
     use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 

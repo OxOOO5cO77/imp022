@@ -15,7 +15,7 @@ impl CommandMessage for GameTickMessage {
 
 #[cfg(test)]
 mod test {
-    use crate::message::game_tick::GameTickMessage;
+    use super::GameTickMessage;
     use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]

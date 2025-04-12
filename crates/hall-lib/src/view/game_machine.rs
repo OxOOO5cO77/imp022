@@ -24,7 +24,7 @@ impl GameMachinePlayerView {
 
 #[cfg(test)]
 mod test {
-    use crate::view::GameMachinePlayerView;
+    use super::GameMachinePlayerView;
     use shared_net::{SizedBuffer, SizedBufferError};
 
     #[test]

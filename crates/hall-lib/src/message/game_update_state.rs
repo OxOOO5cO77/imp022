@@ -37,7 +37,7 @@ impl GameResponseMessage for GameUpdateStateResponse {}
 
 #[cfg(test)]
 mod test {
-    use crate::message::{GameUpdateStateRequest, GameUpdateStateResponse};
+    use super::{GameUpdateStateRequest, GameUpdateStateResponse};
     use crate::view::{GameMachinePlayerView, GameMissionPlayerView, GameUserStatePlayerView};
     use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 

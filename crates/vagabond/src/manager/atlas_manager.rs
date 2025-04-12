@@ -175,7 +175,7 @@ impl Atlas {
 
 #[cfg(test)]
 mod test {
-    use crate::manager::atlas_manager::{AtlasManagerError, parse_file};
+    use super::{AtlasManagerError, parse_file};
 
     #[test]
     fn test_atlas_manager() -> Result<(), AtlasManagerError> {

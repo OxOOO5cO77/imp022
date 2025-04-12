@@ -36,7 +36,7 @@ impl GameUserStatePlayerView {
 
 #[cfg(test)]
 mod test {
-    use crate::view::game_user_state::GameUserStatePlayerView;
+    use super::GameUserStatePlayerView;
     use shared_net::{SizedBuffer, SizedBufferError};
 
     #[test]

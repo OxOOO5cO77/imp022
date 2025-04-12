@@ -96,8 +96,8 @@ impl Bufferable for PlayerDetail {
 
 #[cfg(test)]
 mod test {
+    use super::PlayerDetail;
     use crate::core::Detail;
-    use crate::player::PlayerDetail;
     use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]

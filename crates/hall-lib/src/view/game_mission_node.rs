@@ -209,7 +209,7 @@ impl GameMissionNodePlayerView {
 
 #[cfg(test)]
 mod test {
-    use crate::view::GameMissionNodePlayerView;
+    use super::GameMissionNodePlayerView;
     use shared_net::{SizedBuffer, SizedBufferError};
 
     #[test]

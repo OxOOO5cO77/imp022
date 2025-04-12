@@ -103,8 +103,8 @@ pub(crate) fn parse_rules_run(rules: &str) -> Vec<RunInstruction> {
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::data::rules::{process_code_launch, process_code_run};
+mod test {
+    use super::{process_code_launch, process_code_run};
     use hall_lib::core::{Amount::*, AttributeKind::*, AttributeValueKind::*, LaunchInstruction::*, RunInstruction::*, RuntimeAmount::*, ValueTarget::*};
 
     #[test]

@@ -38,8 +38,8 @@ impl GameResponseMessage for GamePlayCardResponse {}
 
 #[cfg(test)]
 mod test {
+    use super::{GamePlayCardRequest, GamePlayCardResponse};
     use crate::core::PickedCardTarget;
-    use crate::message::game_play_card::{GamePlayCardRequest, GamePlayCardResponse};
     use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]

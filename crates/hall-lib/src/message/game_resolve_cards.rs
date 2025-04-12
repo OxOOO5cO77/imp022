@@ -15,7 +15,7 @@ impl CommandMessage for GameResolveCardsMessage {
 
 #[cfg(test)]
 mod test {
-    use crate::message::game_resolve_cards::GameResolveCardsMessage;
+    use super::GameResolveCardsMessage;
     use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]

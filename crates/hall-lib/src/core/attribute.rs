@@ -121,7 +121,7 @@ impl Bufferable for AttributeKind {
 
 #[cfg(test)]
 mod test {
-    use crate::core::AttributeKind;
+    use super::AttributeKind;
     use shared_net::{SizedBuffer, SizedBufferError};
 
     #[test]

@@ -44,7 +44,7 @@ impl GameActorPlayerView {
 
 #[cfg(test)]
 mod test {
-    use crate::view::game_actor::GameActorPlayerView;
+    use super::GameActorPlayerView;
     use shared_net::{SizedBuffer, SizedBufferError};
 
     #[test]

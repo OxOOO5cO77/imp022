@@ -29,7 +29,7 @@ impl GameMissionObjectivePlayerView {
 
 #[cfg(test)]
 mod test {
-    use crate::view::GameMissionObjectivePlayerView;
+    use super::GameMissionObjectivePlayerView;
     use shared_net::{SizedBuffer, SizedBufferError};
 
     #[test]

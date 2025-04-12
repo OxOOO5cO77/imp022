@@ -286,208 +286,205 @@ impl<T: Bufferable, U: Bufferable> Bufferable for (T, U) {
 
 #[cfg(test)]
 mod test {
-    mod test_sized_buffer {
-        use crate::SizedBuffer;
-        use crate::sizedbuffers::{Bufferable, SizedBufferError};
+    use super::{SizedBuffer, Bufferable, SizedBufferError};
 
-        #[test]
-        fn test_u8() -> Result<(), SizedBufferError> {
-            let orig = 123_u8;
-            let mut buf = SizedBuffer::from(&orig)?;
-            let result = buf.pull::<u8>()?;
+    #[test]
+    fn test_u8() -> Result<(), SizedBufferError> {
+        let orig = 123_u8;
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<u8>()?;
 
-            assert_eq!(buf.size(), orig.size_in_buffer());
-            assert_eq!(orig, result);
-            Ok(())
-        }
+        assert_eq!(buf.size(), orig.size_in_buffer());
+        assert_eq!(orig, result);
+        Ok(())
+    }
 
-        #[test]
-        fn test_u16() -> Result<(), SizedBufferError> {
-            let orig = 1_234_u16;
-            let mut buf = SizedBuffer::from(&orig)?;
-            let result = buf.pull::<u16>()?;
+    #[test]
+    fn test_u16() -> Result<(), SizedBufferError> {
+        let orig = 1_234_u16;
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<u16>()?;
 
-            assert_eq!(buf.size(), orig.size_in_buffer());
-            assert_eq!(orig, result);
-            Ok(())
-        }
+        assert_eq!(buf.size(), orig.size_in_buffer());
+        assert_eq!(orig, result);
+        Ok(())
+    }
 
-        #[test]
-        fn test_u64() -> Result<(), SizedBufferError> {
-            let orig = 1_234_567_u64;
-            let mut buf = SizedBuffer::from(&orig)?;
-            let result = buf.pull::<u64>()?;
+    #[test]
+    fn test_u64() -> Result<(), SizedBufferError> {
+        let orig = 1_234_567_u64;
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<u64>()?;
 
-            assert_eq!(buf.size(), orig.size_in_buffer());
-            assert_eq!(orig, result);
-            Ok(())
-        }
+        assert_eq!(buf.size(), orig.size_in_buffer());
+        assert_eq!(orig, result);
+        Ok(())
+    }
 
-        #[test]
-        fn test_u128() -> Result<(), SizedBufferError> {
-            let orig = 1_234_567_890_u128;
-            let mut buf = SizedBuffer::from(&orig)?;
-            let result = buf.pull::<u128>()?;
+    #[test]
+    fn test_u128() -> Result<(), SizedBufferError> {
+        let orig = 1_234_567_890_u128;
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = buf.pull::<u128>()?;
 
-            assert_eq!(buf.size(), orig.size_in_buffer());
-            assert_eq!(orig, result);
-            Ok(())
-        }
+        assert_eq!(buf.size(), orig.size_in_buffer());
+        assert_eq!(orig, result);
+        Ok(())
+    }
 
-        #[test]
-        fn test_bytes() -> Result<(), SizedBufferError> {
-            let orig = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-            let mut target = SizedBuffer::new(64);
-            target.push_bytes(&orig)?;
-            let result = target.pull_remaining()?;
+    #[test]
+    fn test_bytes() -> Result<(), SizedBufferError> {
+        let orig = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let mut target = SizedBuffer::new(64);
+        target.push_bytes(&orig)?;
+        let result = target.pull_remaining()?;
 
-            assert_eq!(target.size(), 9);
-            assert_eq!(result, orig);
-            Ok(())
-        }
+        assert_eq!(target.size(), 9);
+        assert_eq!(result, orig);
+        Ok(())
+    }
 
-        #[test]
-        fn test_buffer() -> Result<(), SizedBufferError> {
-            let mut target = SizedBuffer::new(64);
-            let mut source = SizedBuffer::new(64);
-            target.push_bytes(&[1, 2, 3, 4])?;
-            assert_eq!(target.size(), 4);
+    #[test]
+    fn test_buffer() -> Result<(), SizedBufferError> {
+        let mut target = SizedBuffer::new(64);
+        let mut source = SizedBuffer::new(64);
+        target.push_bytes(&[1, 2, 3, 4])?;
+        assert_eq!(target.size(), 4);
 
-            source.push_bytes(&[5, 6, 7, 8, 9])?;
-            assert_eq!(source.size(), 5);
+        source.push_bytes(&[5, 6, 7, 8, 9])?;
+        assert_eq!(source.size(), 5);
 
-            target.xfer_bytes(&mut source)?;
-            assert_eq!(target.size(), 9);
+        target.xfer_bytes(&mut source)?;
+        assert_eq!(target.size(), 9);
 
-            let result = target.pull_remaining()?;
+        let result = target.pull_remaining()?;
 
-            assert_eq!(result.len(), 9);
-            assert_eq!(result, &[1, 2, 3, 4, 5, 6, 7, 8, 9]);
-            Ok(())
-        }
+        assert_eq!(result.len(), 9);
+        assert_eq!(result, &[1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        Ok(())
+    }
 
-        #[test]
-        fn test_bytes_n() -> Result<(), SizedBufferError> {
-            let mut target = SizedBuffer::new(64);
-            let mut source = SizedBuffer::new(64);
-            target.push_bytes(&[1, 2, 3, 4])?;
-            assert_eq!(target.size(), 4);
+    #[test]
+    fn test_bytes_n() -> Result<(), SizedBufferError> {
+        let mut target = SizedBuffer::new(64);
+        let mut source = SizedBuffer::new(64);
+        target.push_bytes(&[1, 2, 3, 4])?;
+        assert_eq!(target.size(), 4);
 
-            source.push_bytes(&[5, 6, 7, 8, 9])?;
-            assert_eq!(source.size(), 5);
+        source.push_bytes(&[5, 6, 7, 8, 9])?;
+        assert_eq!(source.size(), 5);
 
-            target.push_bytes(&source.pull_bytes_n(3)?)?;
-            assert_eq!(source.read_remain(), 2);
-            assert_eq!(target.size(), 7);
+        target.push_bytes(&source.pull_bytes_n(3)?)?;
+        assert_eq!(source.read_remain(), 2);
+        assert_eq!(target.size(), 7);
 
-            let result = target.pull_remaining()?;
+        let result = target.pull_remaining()?;
 
-            assert_eq!(result.len(), 7);
-            assert_eq!(result, &[1, 2, 3, 4, 5, 6, 7]);
-            Ok(())
-        }
+        assert_eq!(result.len(), 7);
+        assert_eq!(result, &[1, 2, 3, 4, 5, 6, 7]);
+        Ok(())
+    }
 
-        #[test]
-        fn test_string() -> Result<(), SizedBufferError> {
-            let mut source = SizedBuffer::new(64);
-            let mut target = SizedBuffer::new(64);
+    #[test]
+    fn test_string() -> Result<(), SizedBufferError> {
+        let mut source = SizedBuffer::new(64);
+        let mut target = SizedBuffer::new(64);
 
-            source.push(&"This is a test".to_string())?;
-            let mut total_len = "This is a test".len() + 1;
-            assert_eq!(source.size(), total_len);
+        source.push(&"This is a test".to_string())?;
+        let mut total_len = "This is a test".len() + 1;
+        assert_eq!(source.size(), total_len);
 
-            source.push(&String::from("So is this"))?;
-            total_len += "So is this".len() + 1;
-            assert_eq!(source.size(), total_len);
+        source.push(&String::from("So is this"))?;
+        total_len += "So is this".len() + 1;
+        assert_eq!(source.size(), total_len);
 
-            let test1 = source.pull::<String>()?;
-            assert_eq!("This is a test", test1);
+        let test1 = source.pull::<String>()?;
+        assert_eq!("This is a test", test1);
 
-            target.xfer::<String>(&mut source)?;
+        target.xfer::<String>(&mut source)?;
 
-            let test2 = target.pull::<String>()?;
-            assert_eq!("So is this", test2);
-            Ok(())
-        }
+        let test2 = target.pull::<String>()?;
+        assert_eq!("So is this", test2);
+        Ok(())
+    }
 
-        #[test]
-        fn test_vec() -> Result<(), SizedBufferError> {
-            let orig = vec![0u32, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    #[test]
+    fn test_vec() -> Result<(), SizedBufferError> {
+        let orig = vec![0u32, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-            let mut buf = SizedBuffer::from(&orig)?;
-            let result = Vec::<u32>::pull_from(&mut buf)?;
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = Vec::<u32>::pull_from(&mut buf)?;
 
-            assert_eq!(orig.len(), result.len());
-            assert_eq!(orig, result);
-            Ok(())
-        }
+        assert_eq!(orig.len(), result.len());
+        assert_eq!(orig, result);
+        Ok(())
+    }
 
-        #[test]
-        fn test_array() -> Result<(), SizedBufferError> {
-            type TestArray = [u32; 10];
-            let orig: TestArray = [0u32, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    #[test]
+    fn test_array() -> Result<(), SizedBufferError> {
+        type TestArray = [u32; 10];
+        let orig: TestArray = [0u32, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-            let mut buf = SizedBuffer::from(&orig)?;
-            let result = TestArray::pull_from(&mut buf)?;
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = TestArray::pull_from(&mut buf)?;
 
-            assert_eq!(orig.len(), result.len());
-            assert_eq!(orig, result);
-            Ok(())
-        }
+        assert_eq!(orig.len(), result.len());
+        assert_eq!(orig, result);
+        Ok(())
+    }
 
-        #[test]
-        fn test_empty_array() -> Result<(), SizedBufferError> {
-            type TestArray = [u32; 0];
-            let orig: TestArray = [];
+    #[test]
+    fn test_empty_array() -> Result<(), SizedBufferError> {
+        type TestArray = [u32; 0];
+        let orig: TestArray = [];
 
-            let mut buf = SizedBuffer::from(&orig)?;
-            let result = TestArray::pull_from(&mut buf)?;
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = TestArray::pull_from(&mut buf)?;
 
-            assert_eq!(orig.len(), result.len());
-            assert_eq!(orig, result);
-            Ok(())
-        }
+        assert_eq!(orig.len(), result.len());
+        assert_eq!(orig, result);
+        Ok(())
+    }
 
-        #[test]
-        fn test_array_array() -> Result<(), SizedBufferError> {
-            type TestArray = [u32; 10];
-            type TestArrayArray = [TestArray; 3];
-            let orig_item: TestArray = [0u32, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-            let orig: TestArrayArray = [orig_item, orig_item, orig_item];
+    #[test]
+    fn test_array_array() -> Result<(), SizedBufferError> {
+        type TestArray = [u32; 10];
+        type TestArrayArray = [TestArray; 3];
+        let orig_item: TestArray = [0u32, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let orig: TestArrayArray = [orig_item, orig_item, orig_item];
 
-            let mut buf = SizedBuffer::from(&orig)?;
-            let result = TestArrayArray::pull_from(&mut buf)?;
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = TestArrayArray::pull_from(&mut buf)?;
 
-            assert_eq!(orig.len(), result.len());
-            assert_eq!(orig, result);
+        assert_eq!(orig.len(), result.len());
+        assert_eq!(orig, result);
 
-            Ok(())
-        }
+        Ok(())
+    }
 
-        #[test]
-        fn test_tuple() -> Result<(), SizedBufferError> {
-            type TestTuple = (u128, u8);
-            let orig: TestTuple = (128, 8);
+    #[test]
+    fn test_tuple() -> Result<(), SizedBufferError> {
+        type TestTuple = (u128, u8);
+        let orig: TestTuple = (128, 8);
 
-            let mut buf = SizedBuffer::from(&orig)?;
-            let result = TestTuple::pull_from(&mut buf)?;
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = TestTuple::pull_from(&mut buf)?;
 
-            assert_eq!(orig, result);
-            Ok(())
-        }
+        assert_eq!(orig, result);
+        Ok(())
+    }
 
-        #[test]
-        fn test_tuple_arrays() -> Result<(), SizedBufferError> {
-            type TestTuple = ([u128; 4], Vec<bool>);
-            let orig: TestTuple = ([128, 8, 0, 8172637813], vec![true, false, true, true, false, true]);
+    #[test]
+    fn test_tuple_arrays() -> Result<(), SizedBufferError> {
+        type TestTuple = ([u128; 4], Vec<bool>);
+        let orig: TestTuple = ([128, 8, 0, 8172637813], vec![true, false, true, true, false, true]);
 
-            let mut buf = SizedBuffer::from(&orig)?;
-            let result = TestTuple::pull_from(&mut buf)?;
+        let mut buf = SizedBuffer::from(&orig)?;
+        let result = TestTuple::pull_from(&mut buf)?;
 
-            assert_eq!(orig.0.len(), result.0.len());
-            assert_eq!(orig.1.len(), result.1.len());
-            assert_eq!(orig, result);
-            Ok(())
-        }
+        assert_eq!(orig.0.len(), result.0.len());
+        assert_eq!(orig.1.len(), result.1.len());
+        assert_eq!(orig, result);
+        Ok(())
     }
 }

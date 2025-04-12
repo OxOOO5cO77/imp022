@@ -20,7 +20,7 @@ impl GateHeader {
 
 #[cfg(test)]
 mod test {
-    use crate::message::gate_header::GateHeader;
+    use super::GateHeader;
     use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]

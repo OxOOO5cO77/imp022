@@ -20,8 +20,8 @@ impl CommandMessage for GameResourcesMessage {
 
 #[cfg(test)]
 mod test {
+    use super::GameResourcesMessage;
     use crate::core::AttributeKind;
-    use crate::message::game_resources::GameResourcesMessage;
     use crate::view::GameUserStatePlayerView;
     use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 

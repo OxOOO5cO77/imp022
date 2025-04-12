@@ -284,7 +284,7 @@ impl CardResolve {
 
 #[cfg(test)]
 mod test {
-    use crate::game::game_state::GameState;
+    use super::GameState;
     use hall_lib::core::ErgType;
 
     #[test]

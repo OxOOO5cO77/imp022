@@ -98,7 +98,7 @@ impl GameProcessPlayerView {
 
 #[cfg(test)]
 mod test {
-    use crate::view::GameProcessPlayerView;
+    use super::GameProcessPlayerView;
     use shared_net::{SizedBuffer, SizedBufferError};
 
     #[test]

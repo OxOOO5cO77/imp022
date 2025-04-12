@@ -176,7 +176,7 @@ impl Token {
 
 #[cfg(test)]
 mod test {
-    use crate::core::Token;
+    use super::Token;
     use shared_net::{SizedBuffer, SizedBufferError};
 
     #[test]

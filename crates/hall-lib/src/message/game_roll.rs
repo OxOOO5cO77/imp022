@@ -15,7 +15,7 @@ impl CommandMessage for GameRollMessage {
 
 #[cfg(test)]
 mod test {
-    use crate::message::game_roll::GameRollMessage;
+    use super::GameRollMessage;
     use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]

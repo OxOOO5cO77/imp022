@@ -34,7 +34,7 @@ impl GameResponseMessage for GameChooseAttrResponse {}
 
 #[cfg(test)]
 mod test {
-    use crate::message::game_choose_attr::{AttributeKind, GameChooseAttrRequest, GameChooseAttrResponse};
+    use super::{AttributeKind, GameChooseAttrRequest, GameChooseAttrResponse};
     use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]

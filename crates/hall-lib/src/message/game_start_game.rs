@@ -15,7 +15,7 @@ impl CommandMessage for GameStartGameMessage {
 
 #[cfg(test)]
 mod test {
-    use crate::message::game_start_game::GameStartGameMessage;
+    use super::GameStartGameMessage;
     use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]

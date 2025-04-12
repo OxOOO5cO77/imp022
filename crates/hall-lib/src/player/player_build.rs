@@ -96,8 +96,8 @@ impl Bufferable for PlayerBuild {
 
 #[cfg(test)]
 mod test {
+    use super::PlayerBuild;
     use crate::core::Build;
-    use crate::player::PlayerBuild;
     use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]

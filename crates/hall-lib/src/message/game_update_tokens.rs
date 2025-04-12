@@ -88,8 +88,8 @@ impl GameUpdateTokensMessage {
 
 #[cfg(test)]
 mod test {
+    use super::{GameUpdateTokensMessage, UpdateTokenMessage};
     use crate::core::Token;
-    use crate::message::game_update_tokens::{GameUpdateTokensMessage, UpdateTokenMessage};
     use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]

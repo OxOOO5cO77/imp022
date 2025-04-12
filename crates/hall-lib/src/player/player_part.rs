@@ -19,8 +19,8 @@ pub struct PlayerPart {
 
 #[cfg(test)]
 mod test {
+    use super::{PlayerBuild, PlayerDetail, PlayerPart};
     use crate::core::{Build, Detail};
-    use crate::player::{PlayerBuild, PlayerDetail, PlayerPart};
     use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]

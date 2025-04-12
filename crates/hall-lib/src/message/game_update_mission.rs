@@ -23,7 +23,7 @@ impl GameUpdateMissionMessage {
 
 #[cfg(test)]
 mod test {
-    use crate::message::game_update_mission::GameUpdateMissionMessage;
+    use super::GameUpdateMissionMessage;
     use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]

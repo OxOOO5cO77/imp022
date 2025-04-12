@@ -4,9 +4,9 @@ use std::mem::size_of;
 #[cfg(test)]
 use strum_macros::EnumIter;
 
-use crate::SizedBuffer;
 use crate::sizedbuffers::{Bufferable, SizedBufferError};
 use crate::types::NodeType;
+use crate::SizedBuffer;
 
 type RouteType = u8;
 
@@ -194,65 +194,61 @@ impl Bufferable for Command {
 
 #[cfg(test)]
 mod test {
-    mod test_vsizedbuffer {
-        use strum::IntoEnumIterator;
+    use strum::IntoEnumIterator;
 
-        use crate::SizedBuffer;
-        use crate::op::Flavor;
-        use crate::op::{Command, Route};
-        use crate::sizedbuffers::SizedBufferError;
+    use super::{Command, Flavor, Route};
+    use crate::sizedbuffers::{SizedBuffer, SizedBufferError};
 
-        #[test]
-        fn test_route() -> Result<(), SizedBufferError> {
+    #[test]
+    fn test_route() -> Result<(), SizedBufferError> {
+        let mut buf1 = SizedBuffer::new(32);
+
+        let route = Route::Any(Flavor::Courtyard);
+
+        buf1.push(&route)?;
+        buf1.push(&route)?;
+
+        assert_eq!(route, buf1.pull::<Route>()?);
+
+        let mut buf2 = SizedBuffer::new(32);
+        buf2.xfer::<Route>(&mut buf1)?;
+
+        assert_eq!(route, buf2.pull::<Route>()?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_flavor() -> Result<(), SizedBufferError> {
+        for flavor in Flavor::iter() {
             let mut buf1 = SizedBuffer::new(32);
 
-            let route = Route::Any(Flavor::Courtyard);
+            buf1.push(&flavor)?;
+            buf1.push(&flavor)?;
 
-            buf1.push(&route)?;
-            buf1.push(&route)?;
-
-            assert_eq!(route, buf1.pull::<Route>()?);
+            assert_eq!(flavor, buf1.pull::<Flavor>()?);
 
             let mut buf2 = SizedBuffer::new(32);
-            buf2.xfer::<Route>(&mut buf1)?;
+            buf2.xfer::<Flavor>(&mut buf1)?;
 
-            assert_eq!(route, buf2.pull::<Route>()?);
-            Ok(())
+            assert_eq!(flavor, buf2.pull::<Flavor>()?);
         }
+        Ok(())
+    }
 
-        #[test]
-        fn test_flavor() -> Result<(), SizedBufferError> {
-            for flavor in Flavor::iter() {
-                let mut buf1 = SizedBuffer::new(32);
+    #[test]
+    fn test_command() -> Result<(), SizedBufferError> {
+        for command in Command::iter() {
+            let mut buf1 = SizedBuffer::new(32);
+            buf1.push(&command)?;
+            buf1.push(&command)?;
 
-                buf1.push(&flavor)?;
-                buf1.push(&flavor)?;
+            assert_eq!(command, buf1.pull::<Command>()?);
 
-                assert_eq!(flavor, buf1.pull::<Flavor>()?);
+            let mut buf2 = SizedBuffer::new(32);
+            buf2.xfer::<Command>(&mut buf1)?;
 
-                let mut buf2 = SizedBuffer::new(32);
-                buf2.xfer::<Flavor>(&mut buf1)?;
-
-                assert_eq!(flavor, buf2.pull::<Flavor>()?);
-            }
-            Ok(())
+            assert_eq!(command, buf2.pull::<Command>()?);
         }
-
-        #[test]
-        fn test_command() -> Result<(), SizedBufferError> {
-            for command in Command::iter() {
-                let mut buf1 = SizedBuffer::new(32);
-                buf1.push(&command)?;
-                buf1.push(&command)?;
-
-                assert_eq!(command, buf1.pull::<Command>()?);
-
-                let mut buf2 = SizedBuffer::new(32);
-                buf2.xfer::<Command>(&mut buf1)?;
-
-                assert_eq!(command, buf2.pull::<Command>()?);
-            }
-            Ok(())
-        }
+        Ok(())
     }
 }

@@ -33,7 +33,7 @@ impl GameResponseMessage for GameEndGameResponse {}
 
 #[cfg(test)]
 mod test {
-    use crate::message::game_end_game::{GameEndGameRequest, GameEndGameResponse};
+    use super::{GameEndGameRequest, GameEndGameResponse};
     use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]

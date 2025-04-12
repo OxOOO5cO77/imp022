@@ -34,8 +34,8 @@ impl GameResponseMessage for GameChooseIntentResponse {}
 
 #[cfg(test)]
 mod test {
+    use super::{GameChooseIntentRequest, GameChooseIntentResponse};
     use crate::core::{MissionNodeIntent, MissionNodeLinkDir};
-    use crate::message::game_choose_intent::{GameChooseIntentRequest, GameChooseIntentResponse};
     use shared_net::{Bufferable, SizedBuffer, SizedBufferError};
 
     #[test]

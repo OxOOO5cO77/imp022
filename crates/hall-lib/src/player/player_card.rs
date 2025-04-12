@@ -89,8 +89,8 @@ impl Bufferable for PlayerCard {
 
 #[cfg(test)]
 mod test {
+    use super::PlayerCard;
     use crate::core::Rarity;
-    use crate::player::PlayerCard;
     use shared_net::{SizedBuffer, SizedBufferError};
 
     #[test]
