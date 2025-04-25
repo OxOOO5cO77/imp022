@@ -24,7 +24,7 @@ pub(super) fn on_local_ui_update_player(
 ) {
     for (mut text, state_text) in text_q.iter_mut() {
         match state_text {
-            PlayerStateText::Attribute(row, col) => *text = format!("{}", event.state.attr[*row][*col]).into(),
+            PlayerStateText::Attribute(row, col) => *text = event.state.attr[*row][*col].to_string().into(),
             PlayerStateText::Deck => *text = event.state.deck.to_string().into(),
             PlayerStateText::Heap => *text = event.state.heap.len().to_string().into(),
             _ => {}

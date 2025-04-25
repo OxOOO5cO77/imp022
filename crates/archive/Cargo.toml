@@ -6,11 +6,11 @@ edition = "2024"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 
 [dependencies]
-sqlx = { version = "0.8.3", features = ["postgres", "macros", "uuid", "runtime-tokio-rustls"] }
+sqlx = { version = "0.8.5", features = ["postgres", "macros", "uuid", "runtime-tokio-rustls"] }
 tokio = { version = "1.44.2", features = ["macros", "rt-multi-thread"] }
 tracing = { version = "0.1.41" }
 tracing-subscriber = { version = "0.3.19" }
-uuid = { version = "=1.12", features = ["v4"] }
+uuid = { version = "1.16", features = ["v4"] }
 shared-net = { path = "../shared-net" }
 archive-lib = { path = "../archive-lib" }
 gate-lib = { path = "../gate-lib" }

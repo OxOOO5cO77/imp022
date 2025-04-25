@@ -26,7 +26,7 @@ pub(super) fn on_populate_deck_ui(
             Visibility::Visible
         }
     };
-    if let Ok(gutter) = gutter_q.get_single() {
+    if let Ok(gutter) = gutter_q.single() {
         commands.entity(gutter).insert(visibility);
     }
 }

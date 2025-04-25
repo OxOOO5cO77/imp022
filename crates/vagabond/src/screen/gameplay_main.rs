@@ -77,40 +77,40 @@ trait PickableEntityCommandsExtension {
 impl PickableEntityCommandsExtension for &mut EntityCommands<'_> {
     fn observe_pickable_row(self, kind: AttributeKind) -> Self {
         self //
-            .insert((AttributeRow::new(kind), PickingBehavior::default()))
+            .insert((AttributeRow::new(kind), Pickable::default()))
             .observe(on_click_attr)
             .observe(on_over_attr)
             .observe(on_out_reset_color)
     }
     fn observe_next_button(self) -> Self {
         self //
-            .insert(PickingBehavior::default())
+            .insert(Pickable::default())
             .observe(on_click_next)
             .observe(on_over_next)
             .observe(on_out_reset_color)
     }
     fn observe_hand_card(self, hand_index: usize) -> Self {
         self //
-            .insert((HandCard::new(hand_index), PickingBehavior::default()))
+            .insert((HandCard::new(hand_index), Pickable::default()))
             .observe(on_card_drag_start)
             .observe(on_card_drag)
             .observe(on_card_drag_end)
     }
     fn observe_process(self, kind: MachineKind, queue_index: DelayType) -> Self {
         self //
-            .insert((kind, MachineQueueItem::new(queue_index), PickingBehavior::default()))
+            .insert((kind, MachineQueueItem::new(queue_index), Pickable::default()))
             .observe(on_over_process)
             .observe(on_out_hide_card_tooltip)
     }
     fn observe_running(self, kind: MachineKind, running_index: usize) -> Self {
         self //
-            .insert((kind, MachineRunning::new(running_index), PickingBehavior::default()))
+            .insert((kind, MachineRunning::new(running_index), Pickable::default()))
             .observe(on_over_running)
             .observe(on_out_hide_card_tooltip)
     }
     fn observe_map_button(self) -> Self {
         self //
-            .insert(PickingBehavior::default())
+            .insert(Pickable::default())
             .observe(on_click_map_button)
             .observe(on_over_map_button)
             .observe(on_out_reset_color)
@@ -184,7 +184,7 @@ fn gameplay_enter(
     const MACHINES: &[(&str, MachineKind, PickedCardTarget)] = &[("local", MachineKind::Local, PickedCardTarget::MachineLocal), ("remote", MachineKind::Remote, PickedCardTarget::MachineRemote)];
 
     for (machine_name, machine_kind, target) in MACHINES {
-        commands.entity(layout.entity(machine_name)).insert((*machine_kind, CardDropTarget::new(*target), PickingBehavior::default())).observe(on_card_drop);
+        commands.entity(layout.entity(machine_name)).insert((*machine_kind, CardDropTarget::new(*target), Pickable::default())).observe(on_card_drop);
 
         commands.entity(layout.entity(&format!("{machine_name}/title"))).insert((*machine_kind, MachineText::new(MachineTextKind::Title)));
         commands.entity(layout.entity(&format!("{machine_name}/id"))).insert((*machine_kind, MachineText::new(MachineTextKind::Id)));
@@ -237,7 +237,7 @@ fn gameplay_enter(
     let tooltip_id = commands.entity(tooltip).insert(Visibility::Hidden).observe(on_update_card_tooltip).id();
     commands.insert_resource(CardTooltip::new(tooltip_id));
 
-    let main = commands.entity(layout.entity("map")).insert((Visibility::Hidden, PickingBehavior::default())).observe(on_click_map).id();
+    let main = commands.entity(layout.entity("map")).insert((Visibility::Hidden, Pickable::default())).observe(on_click_map).id();
     let mut node = HashMap::new();
     for id in 0..(MAP_SIZE * MAP_SIZE) {
         let id_string = format!("{id:02}");
@@ -403,7 +403,7 @@ fn on_card_drag_start(
     // bevy system
     event: Trigger<Pointer<DragStart>>,
     mut commands: Commands,
-    sprite_q: Query<(&CardLayout, &mut Sprite, &mut Transform, &HandCard, Option<&IndicatorTracker>), With<PickingBehavior>>,
+    sprite_q: Query<(&CardLayout, &mut Sprite, &mut Transform, &HandCard, Option<&IndicatorTracker>), With<Pickable>>,
     bg_q: Query<(&UiFxTrackedColor, Option<&Blinker>), Without<CardLayout>>,
     mut indicator_q: Query<(Entity, &mut Indicator)>,
     mut context: ResMut<GameplayContext>,
@@ -430,7 +430,7 @@ fn on_card_drag_start(
             return;
         }
 
-        commands.entity(target).insert(PickingBehavior::IGNORE);
+        commands.entity(target).insert(Pickable::IGNORE);
 
         if let Some(size) = sprite.custom_size {
             let translation = Vec3::new(transform.translation.x + (size.x / 2.0), transform.translation.y - (size.y / 2.0), INDICATOR_Z);
@@ -457,7 +457,7 @@ fn on_card_drag(
     event: Trigger<Pointer<Drag>>,
     mut indicator_q: Query<(&mut Transform, &Indicator), With<IndicatorActive>>,
 ) {
-    if let Ok((mut transform, indicator)) = indicator_q.get_single_mut() {
+    if let Ok((mut transform, indicator)) = indicator_q.single_mut() {
         let distance = Vec2::new(event.distance.x + indicator.offset.x, event.distance.y - indicator.offset.y);
         let length = distance.length();
         let angle = distance.x.atan2(distance.y);
@@ -474,8 +474,8 @@ fn on_card_drag_end(
     mut commands: Commands,
     indicator_q: Query<Entity, With<IndicatorActive>>,
 ) {
-    commands.entity(event.target).insert(PickingBehavior::default());
-    if let Ok(entity) = indicator_q.get_single() {
+    commands.entity(event.target).insert(Pickable::default());
+    if let Ok(entity) = indicator_q.single() {
         commands.entity(entity).remove::<IndicatorActive>();
     }
 }
@@ -491,7 +491,7 @@ pub(crate) fn on_card_drop(
 ) {
     let dropped_on = event.target;
 
-    if let Ok(mut indicator) = indicator_q.get_single_mut() {
+    if let Ok(mut indicator) = indicator_q.single_mut() {
         if let Ok(drop) = drop_q.get(dropped_on) {
             if let Ok(hand) = hand_q.get(indicator.parent) {
                 if let Some(card) = context.hand.get(hand.index).cloned() {
@@ -570,8 +570,8 @@ fn on_out_hide_card_tooltip(
 }
 
 fn cleanup_indicator(commands: &mut Commands, indicator: Entity, parent: Entity) {
-    commands.entity(indicator).despawn_recursive();
-    commands.entity(parent).insert(PickingBehavior::default()).remove::<IndicatorTracker>();
+    commands.entity(indicator).despawn();
+    commands.entity(parent).insert(Pickable::default()).remove::<IndicatorTracker>();
 }
 
 fn cleanup_indicator_post_update(

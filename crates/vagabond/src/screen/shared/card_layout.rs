@@ -75,7 +75,7 @@ impl CardLayout {
         layout_q: Query<&CardLayout>,
         mut text_q: Query<&mut Text2d, With<CardLayoutPiece>>,
     ) {
-        let target = event.entity();
+        let target = event.target();
         match (&event.card, layout_q.get(target)) {
             (Some(card), Ok(layout)) => {
                 layout.title.map(|title| text_q.get_mut(title).map(|mut title_text| *title_text = card.title.clone().into()));

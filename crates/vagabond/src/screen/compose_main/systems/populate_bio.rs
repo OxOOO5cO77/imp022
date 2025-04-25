@@ -24,7 +24,7 @@ pub(super) fn on_populate_bio_ui(
             Visibility::Visible
         }
     };
-    if let Ok(bio) = bio_q.get_single() {
+    if let Ok(bio) = bio_q.single() {
         commands.entity(bio).insert(visibility);
     }
 }

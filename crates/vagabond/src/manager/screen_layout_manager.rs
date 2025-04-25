@@ -393,30 +393,30 @@ impl ScreenLayoutManager {
         }
     }
 
-    fn spawn_shape_bundle_frame(parent: &mut ChildBuilder, element: &ShapeElement, dash_size: f32, meshes: &mut Assets<Mesh>, materials: &mut Assets<FrameMaterial>) -> Entity {
+    fn spawn_shape_bundle_frame(parent: &mut ChildSpawnerCommands, element: &ShapeElement, dash_size: f32, meshes: &mut Assets<Mesh>, materials: &mut Assets<FrameMaterial>) -> Entity {
         let mesh = Mesh2d(meshes.add(Rectangle::new(element.size.x, element.size.y)));
         let material = MeshMaterial2d(materials.add(FrameMaterial::new(LinearRgba::from(element.color), element.size, dash_size)));
         let transform = Transform::from_translation(element.position);
 
-        parent.spawn((mesh, material, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::IGNORE)).id()
+        parent.spawn((mesh, material, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), Pickable::IGNORE)).id()
     }
 
-    fn spawn_shape_bundle_region(parent: &mut ChildBuilder, element: &ShapeElement, meshes: &mut Assets<Mesh>) -> Entity {
+    fn spawn_shape_bundle_region(parent: &mut ChildSpawnerCommands, element: &ShapeElement, meshes: &mut Assets<Mesh>) -> Entity {
         let mesh = Mesh2d(meshes.add(Rectangle::new(element.size.x, element.size.y)));
         let transform = Transform::from_translation(element.position);
 
-        parent.spawn((mesh, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::default())).id()
+        parent.spawn((mesh, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), Pickable::default())).id()
     }
 
-    fn spawn_shape_bundle_rect(parent: &mut ChildBuilder, element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> Entity {
+    fn spawn_shape_bundle_rect(parent: &mut ChildSpawnerCommands, element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> Entity {
         let mesh = Mesh2d(meshes.add(Rectangle::new(element.size.x, element.size.y)));
         let material = MeshMaterial2d(materials.add(Color::Srgba(element.color)));
         let transform = Transform::from_translation(element.position);
 
-        parent.spawn((mesh, material, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::IGNORE)).id()
+        parent.spawn((mesh, material, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), Pickable::IGNORE)).id()
     }
 
-    fn spawn_shape_bundle_capsule_x(parent: &mut ChildBuilder, element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> Entity {
+    fn spawn_shape_bundle_capsule_x(parent: &mut ChildSpawnerCommands, element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> Entity {
         let mesh = Mesh2d(meshes.add(Capsule2d::new(element.size.y / 2.0, element.size.x - element.size.y)));
         let material = MeshMaterial2d(materials.add(Color::Srgba(element.color)));
         let rotation = Quat::from_rotation_z(PI / 2.0);
@@ -427,18 +427,18 @@ impl ScreenLayoutManager {
             scale: Vec3::ONE,
         };
 
-        parent.spawn((mesh, material, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::IGNORE)).id()
+        parent.spawn((mesh, material, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), Pickable::IGNORE)).id()
     }
 
-    fn spawn_shape_bundle_circle(parent: &mut ChildBuilder, element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> Entity {
+    fn spawn_shape_bundle_circle(parent: &mut ChildSpawnerCommands, element: &ShapeElement, meshes: &mut Assets<Mesh>, materials: &mut Assets<ColorMaterial>) -> Entity {
         let mesh = Mesh2d(meshes.add(Circle::new(element.size.x / 2.0)));
         let material = MeshMaterial2d(materials.add(Color::Srgba(element.color)));
         let transform = Transform::from_translation(element.position);
 
-        parent.spawn((mesh, material, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::IGNORE)).id()
+        parent.spawn((mesh, material, transform, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), Pickable::IGNORE)).id()
     }
 
-    fn spawn_sprite_bundle(parent: &mut ChildBuilder, element: &SpriteElement, am: &AtlasManager) -> Option<Entity> {
+    fn spawn_sprite_bundle(parent: &mut ChildSpawnerCommands, element: &SpriteElement, am: &AtlasManager) -> Option<Entity> {
         let (atlas, image) = am.get_atlas_texture(&element.atlas, &element.item)?;
 
         let sprite = (
@@ -451,11 +451,11 @@ impl ScreenLayoutManager {
             },
             Transform::from_translation(element.position),
         );
-        let sprite = parent.spawn((sprite, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), PickingBehavior::IGNORE)).id();
+        let sprite = parent.spawn((sprite, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), Pickable::IGNORE)).id();
         Some(sprite)
     }
 
-    fn spawn_text_bundle(parent: &mut ChildBuilder, element: &TextElement, asset_server: &AssetServer) -> Entity {
+    fn spawn_text_bundle(parent: &mut ChildSpawnerCommands, element: &TextElement, asset_server: &AssetServer) -> Entity {
         let font = asset_server.load(&element.font_name);
         let translation = Vec3::new(element.position.x, element.position.y - (element.size.y / 2.0), element.position.z);
 
@@ -482,11 +482,11 @@ impl ScreenLayoutManager {
             },
             Transform::from_translation(element.position),
             UiFxTrackedSize::from(element.size),
-            PickingBehavior::IGNORE,
+            Pickable::IGNORE,
         )
     }
 
-    fn spawn_input_bundle(parent: &mut ChildBuilder, element: &UiInputBoxElement, asset_server: &AssetServer) -> Entity {
+    fn spawn_input_bundle(parent: &mut ChildSpawnerCommands, element: &UiInputBoxElement, asset_server: &AssetServer) -> Entity {
         let font = asset_server.load(&element.text_element.font_name);
         let bundle = (
             Node {
@@ -520,7 +520,7 @@ impl ScreenLayoutManager {
         }
     }
 
-    fn build_layout(&self, layout_name: &str, parent: &mut ChildBuilder, base_name: &str, am: &AtlasManager, slm_params: &mut ScreenLayoutManagerParams) -> Vec<(String, Entity)> {
+    fn build_layout(&self, layout_name: &str, parent: &mut ChildSpawnerCommands, base_name: &str, am: &AtlasManager, slm_params: &mut ScreenLayoutManagerParams) -> Vec<(String, Entity)> {
         let mut entities = Vec::new();
         let layout = self.layout_map.get(layout_name).unwrap();
 
@@ -560,7 +560,7 @@ impl ScreenLayoutManager {
 
         entities
     }
-    fn build_ui_layer(&self, layout_name: &str, parent: &mut ChildBuilder, asset_server: &AssetServer) -> Vec<(String, Entity)> {
+    fn build_ui_layer(&self, layout_name: &str, parent: &mut ChildSpawnerCommands, asset_server: &AssetServer) -> Vec<(String, Entity)> {
         let mut entities = Vec::new();
         let layout = self.layout_map.get(layout_name).unwrap();
         for (name, element) in &layout.element_map {
@@ -576,7 +576,7 @@ impl ScreenLayoutManager {
         entities
     }
 
-    pub(crate) fn build(&mut self, commands: &mut Commands, layout_name: &str, am: &AtlasManager, slm_params: &mut ScreenLayoutManagerParams, observe: Option<fn(&mut ChildBuilder)>) -> &ScreenLayout {
+    pub(crate) fn build(&mut self, commands: &mut Commands, layout_name: &str, am: &AtlasManager, slm_params: &mut ScreenLayoutManagerParams, observe: Option<fn(&mut ChildSpawnerCommands)>) -> &ScreenLayout {
         let base_id = commands
             .spawn(ScreenLayoutContainer::default())
             .with_children(|parent| {
@@ -611,10 +611,10 @@ impl ScreenLayoutManager {
 
     pub(crate) fn destroy(&mut self, mut commands: Commands, layout_name: &str) {
         if let Some(entity) = self.base_entity_map.remove(layout_name) {
-            commands.entity(entity).despawn_recursive();
+            commands.entity(entity).despawn();
         }
         if let Some(entity) = self.ui_entity_map.remove(layout_name) {
-            commands.entity(entity).despawn_recursive();
+            commands.entity(entity).despawn();
         }
     }
 
@@ -629,7 +629,7 @@ impl ScreenLayoutManager {
                 height: Val::Percent(100.0),
                 ..default()
             },
-            PickingBehavior::IGNORE,
+            Pickable::IGNORE,
         )
     }
 }

@@ -6,9 +6,9 @@ use crate::manager::{AtlasManager, DataManager, ScreenLayoutManager, ScreenLayou
 use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::compose_init::ComposeInitHandoff;
 use crate::screen::compose_main::{components::*, events::*, resources::*, systems::*};
-use crate::screen::shared::{AppScreenExt, CardLayout, CardTooltip, UpdateCardTooltipEvent, on_out_reset_color, on_update_card_tooltip};
-use crate::system::AppState;
+use crate::screen::shared::{on_out_reset_color, on_update_card_tooltip, AppScreenExt, CardLayout, CardTooltip, UpdateCardTooltipEvent};
 use crate::system::ui_effects::{Glower, Hider, SetColorEvent, TextTip, UiFxTrackedColor, UiFxTrackedSize};
+use crate::system::AppState;
 
 pub(crate) use resources::ComposeHandoff;
 
@@ -57,22 +57,22 @@ impl PartEntityCommandsExtension for &mut EntityCommands<'_> {
     }
     fn insert_empty_slot(self, slot: Slot, layout: PartLayout) -> Self {
         self //
-            .insert((slot, layout, PartHolder::default(), PickingBehavior::default()))
+            .insert((slot, layout, PartHolder::default(), Pickable::default()))
     }
     fn insert_filled_slot(self, slot: Slot, layout: PartLayout, part: VagabondPart) -> Self {
         self //
-            .insert((slot, layout, PartHolder::new(part), PickingBehavior::default()))
+            .insert((slot, layout, PartHolder::new(part), Pickable::default()))
     }
     fn observe_commit_button(self) -> Self {
         self //
-            .insert((CommitButton, PickingBehavior::default()))
+            .insert((CommitButton, Pickable::default()))
             .observe(on_click_commit)
             .observe(on_over_commit)
             .observe(on_out_reset_color)
     }
     fn observe_card_header(self, index: usize) -> Self {
         self //
-            .insert((CardHeader::new(index), PickingBehavior::default()))
+            .insert((CardHeader::new(index), Pickable::default()))
             .observe(on_over_header)
             .observe(on_out_header)
     }
@@ -216,7 +216,7 @@ fn on_part_drag_start(
         holder.part = None;
         draggable.active = true;
 
-        commands.entity(event.target).insert(PickingBehavior::IGNORE);
+        commands.entity(event.target).insert(Pickable::IGNORE);
     }
 
     for (entity, source_color, slot, holder) in &holder_q {
@@ -271,7 +271,7 @@ fn on_part_drag_end(
     handle_empty(event.target, original, holder_q);
 
     draggable.active = false;
-    commands.entity(event.target).insert(PickingBehavior::default());
+    commands.entity(event.target).insert(Pickable::default());
 
     for (entity, glower) in glower_q.iter_mut() {
         glower.remove(&mut commands, entity);
@@ -357,13 +357,14 @@ fn on_over_header(
     context: Res<ComposeContext>,
     window_q: Query<&Window>,
 ) {
-    let window = window_q.single();
-    if let Ok((header_transform, header)) = header_q.get(event.target) {
-        if let Ok((tooltip_transform, tooltip_size)) = tooltip_q.get(tooltip.entity) {
-            let new_y = (header_transform.translation.y + (tooltip_size.y / 2.0)).clamp(-window.height() + tooltip_size.y, 0.0);
-            let position = Vec2::new(tooltip_transform.translation.x, -new_y);
-            let card = context.deck.get(header.index).cloned();
-            commands.entity(tooltip.entity).remove::<Hider>().trigger(UpdateCardTooltipEvent::new(position, card, context.attributes));
+    if let Ok(window) = window_q.single() {
+        if let Ok((header_transform, header)) = header_q.get(event.target) {
+            if let Ok((tooltip_transform, tooltip_size)) = tooltip_q.get(tooltip.entity) {
+                let new_y = (header_transform.translation.y + (tooltip_size.y / 2.0)).clamp(-window.height() + tooltip_size.y, 0.0);
+                let position = Vec2::new(tooltip_transform.translation.x, -new_y);
+                let card = context.deck.get(header.index).cloned();
+                commands.entity(tooltip.entity).remove::<Hider>().trigger(UpdateCardTooltipEvent::new(position, card, context.attributes));
+            }
         }
     }
 }

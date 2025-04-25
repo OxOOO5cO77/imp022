@@ -1,9 +1,12 @@
-use crate::gfx::FrameMaterial;
-use bevy::app::App;
+use std::num::NonZero;
+
 use bevy::prelude::*;
 use bevy::sprite::Material2dPlugin;
 use bevy::window::WindowResolution;
+
 use system::AppState;
+
+use crate::gfx::FrameMaterial;
 
 mod gfx;
 mod manager;
@@ -14,8 +17,21 @@ mod system;
 const WINDOW_WIDTH: f32 = 1920.0;
 const WINDOW_HEIGHT: f32 = 1080.0;
 
-fn main() -> AppExit {
-    App::new()
+#[derive(Debug)]
+#[allow(dead_code)] //Note: Derived Debug is intentionally ignored during dead code analysis
+enum VagabondAppError {
+    DotEnv(dotenv::Error),
+    Bevy(NonZero<u8>),
+}
+
+fn main() -> Result<(), VagabondAppError> {
+    dotenv::dotenv().map_err(VagabondAppError::DotEnv)?;
+    bevy_main().map_err(VagabondAppError::Bevy)?;
+    Ok(())
+}
+
+fn bevy_main() -> Result<(), NonZero<u8>> {
+    let result = App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 resolution: WindowResolution::new(WINDOW_WIDTH, WINDOW_HEIGHT).with_scale_factor_override(1.0),
@@ -31,7 +47,11 @@ fn main() -> AppExit {
         .insert_resource(ClearColor(Color::srgb(0.0, 0.0, 0.0)))
         .init_state::<AppState>()
         .add_systems(Startup, setup)
-        .run()
+        .run();
+    match result {
+        AppExit::Success => Ok(()),
+        AppExit::Error(code) => Err(code),
+    }
 }
 
 fn setup(mut commands: Commands) {

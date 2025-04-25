@@ -44,13 +44,13 @@ pub(crate) fn on_update_card_tooltip(
     mut tooltip_q: Query<(&mut Transform, &UiFxTrackedSize)>,
     window_q: Query<&Window>,
 ) {
-    let target = event.entity();
-    let window = window_q.single();
-
-    if let Ok((mut transform, tooltip_size)) = tooltip_q.get_mut(target) {
-        let x = event.position.x.clamp(0.0, window.width() - tooltip_size.x);
-        let y = event.position.y.clamp(0.0, window.height() - tooltip_size.y);
-        transform.translation = Vec3::new(x, -y, transform.translation.z);
-        commands.entity(target).trigger(CardPopulateEvent::new(event.card.clone(), event.attr));
+    let target = event.target();
+    if let Ok(window) = window_q.single() {
+        if let Ok((mut transform, tooltip_size)) = tooltip_q.get_mut(target) {
+            let x = event.position.x.clamp(0.0, window.width() - tooltip_size.x);
+            let y = event.position.y.clamp(0.0, window.height() - tooltip_size.y);
+            transform.translation = Vec3::new(x, -y, transform.translation.z);
+            commands.entity(target).trigger(CardPopulateEvent::new(event.card.clone(), event.attr));
+        }
     }
 }

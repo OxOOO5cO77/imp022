@@ -15,7 +15,7 @@ pub(super) fn on_remote_ui_update_roll(
         *attr_text = "-".into();
         *color = bevy::color::palettes::basic::GRAY.into();
     }
-    if let Ok(entity) = icon_q.get_single() {
+    if let Ok(entity) = icon_q.single() {
         commands.entity(entity).insert(Visibility::Hidden);
     }
 }
@@ -31,7 +31,7 @@ pub(super) fn on_remote_ui_update_resources(
         *attr_text = event.remote_attr[remote_attr.index].to_string().into();
         *color = bevy::color::palettes::basic::RED.into();
     }
-    if let Ok((entity, mut icon)) = icon_q.get_single_mut() {
+    if let Ok((entity, mut icon)) = icon_q.single_mut() {
         *icon = kind_icon(event.remote_kind).into();
         commands.entity(entity).insert(Visibility::Visible);
     }

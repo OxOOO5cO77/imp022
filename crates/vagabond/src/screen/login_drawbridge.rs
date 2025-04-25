@@ -140,7 +140,7 @@ fn drawbridge_update(
     connected_q: Query<Entity, With<ConnectedIcon>>,
 ) {
     if let Ok(auth_info) = drawbridge.drx.try_recv() {
-        if let Ok(connected) = connected_q.get_single() {
+        if let Ok(connected) = connected_q.single() {
             commands.entity(connected).trigger(SetColorEvent::new(connected, bevy::color::palettes::css::YELLOW));
         }
         commands.insert_resource(DrawbridgeHandoff::new(auth_info));

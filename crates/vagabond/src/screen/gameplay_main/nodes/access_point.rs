@@ -1,5 +1,4 @@
-use bevy::picking::PickingBehavior;
-use bevy::prelude::{Click, Commands, Entity, EntityCommands, Pointer, Query, ResMut, Text2d, Trigger};
+use bevy::prelude::{Click, Commands, Entity, EntityCommands, Pickable, Pointer, Query, ResMut, Text2d, Trigger};
 
 use hall_lib::core::{AccessPointIntent, MissionNodeIntent};
 use hall_lib::view::GameMissionPlayerView;
@@ -39,9 +38,9 @@ impl AccessPoint {
         let access_point = layout.entity(&format!("{name}/access_point"));
         let location = layout.entity(&format!("{name}/location"));
 
-        let auth_button = commands.entity(layout.entity(&format!("{name}/authorize_bg"))).insert((MissionNodeButton::new(AccessPointIntent::Authenticate), PickingBehavior::default())).id();
-        let next_button = commands.entity(layout.entity(&format!("{name}/next_bg"))).insert((MissionNodeButton::new(AccessPointIntent::TransferNext), PickingBehavior::default())).id();
-        let prev_button = commands.entity(layout.entity(&format!("{name}/prev_bg"))).insert((MissionNodeButton::new(AccessPointIntent::TransferPrev), PickingBehavior::default())).id();
+        let auth_button = commands.entity(layout.entity(&format!("{name}/authorize_bg"))).insert((MissionNodeButton::new(AccessPointIntent::Authenticate), Pickable::default())).id();
+        let next_button = commands.entity(layout.entity(&format!("{name}/next_bg"))).insert((MissionNodeButton::new(AccessPointIntent::TransferNext), Pickable::default())).id();
+        let prev_button = commands.entity(layout.entity(&format!("{name}/prev_bg"))).insert((MissionNodeButton::new(AccessPointIntent::TransferPrev), Pickable::default())).id();
 
         Self {
             institution,

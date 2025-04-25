@@ -1,13 +1,13 @@
 use bevy::ecs::query::QueryEntityError;
 use bevy::ecs::system::IntoObserverSystem;
-use bevy::prelude::{Bundle, Commands, Entity, EntityCommand, Event, Observer, Over, Pointer, Res, Trigger, World};
+use bevy::prelude::{Bundle, Commands, Entity, EntityCommand, EntityWorldMut, Event, Observer, Over, Pointer, Res, Trigger};
 
 use hall_lib::core::MissionNodeIntent;
 
-use crate::screen::gameplay_main::VagabondGamePhase;
 use crate::screen::gameplay_main::components::{MissionNodeButton, MissionNodeLocalObserver};
 use crate::screen::gameplay_main::nodes::MissionNodeAction;
 use crate::screen::gameplay_main::resources::GameplayContext;
+use crate::screen::gameplay_main::VagabondGamePhase;
 use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor};
 
 pub(crate) fn on_over_node_action(
@@ -57,11 +57,10 @@ pub(crate) fn click_common<T: Clone>(
 
 // local copy of observe to decorate observers with NodeLocalObserver to easily dispose before reactivation
 pub(crate) fn local_observe<E: Event, B: Bundle, M>(observer: impl IntoObserverSystem<E, B, M>) -> impl EntityCommand {
-    move |entity: Entity, world: &mut World| {
-        if let Ok(mut world_entity) = world.get_entity_mut(entity) {
-            world_entity.world_scope(|w| {
-                w.spawn(Observer::new(observer).with_entity(entity)).insert(MissionNodeLocalObserver);
-            });
-        }
+    move |mut entity_world: EntityWorldMut| {
+        let entity = entity_world.id();
+        entity_world.world_scope(|w| {
+            w.spawn(Observer::new(observer).with_entity(entity)).insert(MissionNodeLocalObserver);
+        });
     }
 }

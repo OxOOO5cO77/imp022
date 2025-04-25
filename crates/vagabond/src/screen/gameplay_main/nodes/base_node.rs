@@ -8,7 +8,7 @@ use crate::screen::gameplay_main::components::{CardDropTarget, MissionNodeButton
 use crate::screen::gameplay_main::nodes::shared;
 use crate::screen::gameplay_main::on_card_drop;
 use crate::screen::gameplay_main::resources::GameplayContext;
-use crate::screen::shared::{GameMissionNodePlayerViewExt, MissionNodeKindExt, on_out_reset_color};
+use crate::screen::shared::{on_out_reset_color, GameMissionNodePlayerViewExt, MissionNodeKindExt};
 use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor, UiFxTrackedSize};
 
 struct BaseNodeLink {
@@ -113,18 +113,18 @@ impl BaseNode {
             ("link_w", MissionNodeLinkDir::West),
         ];
         for (link, dir) in LINKS {
-            commands.entity(layout.entity(&format!("{name}/{link}/frame"))).insert((MissionNodeButton::new(*dir), PickingBehavior::default()));
+            commands.entity(layout.entity(&format!("{name}/{link}/frame"))).insert((MissionNodeButton::new(*dir), Pickable::default()));
         }
         let links = LINKS.map(|(link, _)| BaseNodeLink::new(layout, name, link));
 
         const ACTORS: &[&str; MAX_ACTOR_COUNT] = &["actor0", "actor1", "actor2", "actor3", "actor4", "actor5", "actor6", "actor7"];
         let actors = ACTORS.map(|actor| BaseNodeActor::new(layout, name, actor));
         for actor in &actors {
-            commands.entity(actor.container).insert(PickingBehavior::default());
+            commands.entity(actor.container).insert(Pickable::default());
         }
 
         const CONTENT: &[&str; MAX_CONTENT_COUNT] = &["content1", "content2", "content3", "content4"];
-        let content = CONTENT.map(|content| commands.entity(layout.entity(&format!("{name}/{content}"))).insert((MissionNodeContentButton, PickingBehavior::default())).id());
+        let content = CONTENT.map(|content| commands.entity(layout.entity(&format!("{name}/{content}"))).insert((MissionNodeContentButton, Pickable::default())).id());
 
         let tooltip_entity = commands.entity(layout.entity(&format!("{name}/tooltip"))).insert(Visibility::Hidden).observe(on_update_actor_tooltip).id();
         let tooltip = ActorTooltip {
@@ -283,24 +283,24 @@ fn on_update_actor_tooltip(
     tooltip: Res<ActorTooltip>,
     mut wm: ResMut<WarehouseManager>,
 ) {
-    let target = event.entity();
-    let window = window_q.single();
+    let target = event.target();
+    if let Ok(window) = window_q.single() {
+        if let Ok((mut transform, global_transform, tooltip_size)) = tooltip_q.get_mut(target) {
+            if let Some(bio) = wm.fetch_player(event.id).ok().and_then(|bio| bio.player_bio.as_ref()) {
+                if let Ok([mut name, mut location, mut auth]) = text_q.get_many_mut([tooltip.name, tooltip.location, tooltip.auth]) {
+                    *name = bio.name.as_str().into();
+                    *location = bio.birthplace().into();
+                    *auth = event.auth.as_str().into();
+                }
 
-    if let Ok((mut transform, global_transform, tooltip_size)) = tooltip_q.get_mut(target) {
-        if let Some(bio) = wm.fetch_player(event.id).ok().and_then(|bio| bio.player_bio.as_ref()) {
-            if let Ok([mut name, mut location, mut auth]) = text_q.get_many_mut([tooltip.name, tooltip.location, tooltip.auth]) {
-                *name = bio.name.as_str().into();
-                *location = bio.birthplace().into();
-                *auth = event.auth.as_str().into();
+                let offset = global_transform.translation().xy() - transform.translation.xy();
+
+                let x = event.position.x.clamp(0.0, window.width() - tooltip_size.x);
+                let y = event.position.y.clamp(0.0, window.height() - tooltip_size.y);
+                transform.translation = (Vec2::new(x, -y) - offset).extend(transform.translation.z);
+
+                commands.entity(tooltip.container).insert(Visibility::Visible);
             }
-
-            let offset = global_transform.translation().xy() - transform.translation.xy();
-
-            let x = event.position.x.clamp(0.0, window.width() - tooltip_size.x);
-            let y = event.position.y.clamp(0.0, window.height() - tooltip_size.y);
-            transform.translation = (Vec2::new(x, -y) - offset).extend(transform.translation.z);
-
-            commands.entity(tooltip.container).insert(Visibility::Visible);
         }
     }
 }

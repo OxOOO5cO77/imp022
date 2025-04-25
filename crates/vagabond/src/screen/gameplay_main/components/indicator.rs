@@ -40,7 +40,7 @@ impl Indicator {
             Mesh2d(meshes.add(Rectangle::new(16.0, 1.0))),
             MeshMaterial2d(materials.add(ColorMaterial::from(Color::Srgba(Srgba::new(0.0, 0.75, 0.0, 0.35))))),
             Transform::from_translation(translation),
-            PickingBehavior::IGNORE,
+            Pickable::IGNORE,
         )
     }
 }

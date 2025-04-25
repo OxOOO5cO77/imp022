@@ -63,6 +63,7 @@ $color:phase_dim=grey2
 &ld_icon:main.64.center%64,64@20,984,1!icon|𐆅
 #ld_bg:dash_frame%064,064@20,984,2!grey6
 &ld:main.48.center%56,56@24,988,3!yellow|0
+#card_group:dash_frame%1228,320@136,738,0!grey6
 #card0_bg:dash_frame%236,312@140,742,0!grey6
 /card0:card%236,312@140,742,1
 #card1_bg:dash_frame%236,312@386,742,0!grey6

@@ -11,7 +11,7 @@ pub(super) fn on_commit_button_ui(
     mut commands: Commands,
     mut glower_q: Query<(Entity, &UiFxTrackedColor, Option<&Glower>), With<CommitButton>>,
 ) {
-    if let Ok((entity, source_color, glower)) = glower_q.get_single_mut() {
+    if let Ok((entity, source_color, glower)) = glower_q.single_mut() {
         match *event {
             PopulatePlayerUi::Hide => {
                 if let Some(glower) = glower {

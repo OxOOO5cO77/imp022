@@ -61,11 +61,12 @@ fn splash_update(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mouse_button: Res<ButtonInput<MouseButton>>,
 ) {
-    let mut splash = splash_q.single_mut();
-    splash.timer.tick(time.delta());
+    if let Ok(mut splash) = splash_q.single_mut() {
+        splash.timer.tick(time.delta());
 
-    if splash.timer.just_finished() || keyboard_input.any_pressed([KeyCode::Space, KeyCode::Enter]) || mouse_button.pressed(MouseButton::Left) {
-        app_state.set(AppState::LoginDrawbridge);
+        if splash.timer.just_finished() || keyboard_input.any_pressed([KeyCode::Space, KeyCode::Enter]) || mouse_button.pressed(MouseButton::Left) {
+            app_state.set(AppState::LoginDrawbridge);
+        }
     }
 }
 
@@ -75,6 +76,6 @@ fn splash_exit(
     splash_q: Query<Entity, With<SplashScreen>>,
 ) {
     for e in &splash_q {
-        commands.entity(e).despawn_recursive();
+        commands.entity(e).despawn();
     }
 }

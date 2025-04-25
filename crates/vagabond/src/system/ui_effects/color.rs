@@ -81,7 +81,7 @@ fn on_color_update_sprite(
     event: Trigger<SetColorEvent>,
     mut sprite_q: Query<&mut Sprite>,
 ) {
-    if let Ok(mut sprite) = sprite_q.get_mut(event.entity()) {
+    if let Ok(mut sprite) = sprite_q.get_mut(event.target()) {
         sprite.color = event.color.into();
     }
 }

@@ -10,12 +10,12 @@ mod remote;
 mod roll;
 mod tty;
 
-use bevy::prelude::{ChildBuild, ChildBuilder, Observer};
+use bevy::prelude::{ChildSpawnerCommands, Observer};
 
 pub(super) struct GameplaySystems;
 
 impl GameplaySystems {
-    pub(super) fn observe(parent: &mut ChildBuilder) {
+    pub(super) fn observe(parent: &mut ChildSpawnerCommands) {
         parent.spawn(Observer::new(tty::on_tty_update));
         parent.spawn(Observer::new(roll::on_roll_ui_update_roll));
         parent.spawn(Observer::new(roll::on_roll_ui_update_resources));

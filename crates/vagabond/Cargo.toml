@@ -7,9 +7,9 @@ authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 default-run = "vagabond"
 
 [dependencies]
-anyhow = { version = "1.0.97" }
-bevy = { version = "0.15.3" }
-bevy_simple_text_input = { version = "0.10.2" }
+anyhow = { version = "1.0.98" }
+bevy = { version = "0.16.0" }
+bevy_simple_text_input = { version = "0.11.0" }
 cached = { version = "0.55.1" }
 dotenv = {version = "0.15.0" }
 fasthash = { version = "0.4.0" }
