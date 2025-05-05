@@ -14,3 +14,4 @@ uuid = { version = "1.16", features = ["v4"] }
 shared-net = { path = "../shared-net" }
 archive-lib = { path = "../archive-lib" }
 gate-lib = { path = "../gate-lib" }
+mimalloc = "0.1.46"

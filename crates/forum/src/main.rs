@@ -1,3 +1,4 @@
+use mimalloc::MiMalloc;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, instrument};
@@ -5,6 +6,9 @@ use tracing::{info, instrument};
 use forum_lib::core::ForumSubCommand;
 use shared_net::op::SubCommandType;
 use shared_net::{NodeType, RoutedMessage, SizedBuffer, SizedBufferError, VClientMode, op};
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 #[derive(Clone)]
 struct NoContext;

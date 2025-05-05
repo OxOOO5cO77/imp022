@@ -1,13 +1,18 @@
 use std::sync::Arc;
 
-use crate::manager::bio_manager::BioManager;
 use axum::Router;
 use axum::routing::get;
+use mimalloc::MiMalloc;
 use tokio::net::TcpListener;
 use tracing::{info, instrument};
 
+use crate::manager::bio_manager::BioManager;
+
 pub(crate) mod manager;
 mod route;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 #[derive(Clone)]
 struct AppState {

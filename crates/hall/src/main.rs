@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::RwLock;
 
+use mimalloc::MiMalloc;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::mpsc::error::SendError;
@@ -25,6 +26,9 @@ pub(crate) mod network;
 
 pub(crate) type HallContext = Rc<Hall>;
 pub(crate) type HallGames = HashMap<GameIdType, GameState>;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 struct Hall {
     games: RwLock<HallGames>,

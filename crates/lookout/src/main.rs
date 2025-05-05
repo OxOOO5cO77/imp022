@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex};
 
+use mimalloc::MiMalloc;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use sqlx::types::Uuid;
 use tokio::sync::mpsc;
@@ -7,6 +8,9 @@ use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, instrument};
 
 use shared_net::{NodeType, PasswordType, RoutedMessage, SizedBuffer, SizedBufferError, UserIdType, VClientMode, op};
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 struct Lookout {
     pool: PgPool,

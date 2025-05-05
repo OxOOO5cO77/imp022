@@ -1,12 +1,15 @@
 use std::sync::{Arc, Mutex};
 
+use mimalloc::MiMalloc;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, instrument};
 
-use shared_net::op;
-use shared_net::{RoutedMessage, SizedBuffer, VClientMode};
+use shared_net::{op, RoutedMessage, SizedBuffer, VClientMode};
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 struct Bazaar {
     _pool: PgPool,

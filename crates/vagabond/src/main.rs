@@ -3,6 +3,7 @@ use std::num::NonZero;
 use bevy::prelude::*;
 use bevy::sprite::Material2dPlugin;
 use bevy::window::WindowResolution;
+use mimalloc::MiMalloc;
 
 use system::AppState;
 
@@ -13,6 +14,9 @@ mod manager;
 mod network;
 mod screen;
 mod system;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 const WINDOW_WIDTH: f32 = 1920.0;
 const WINDOW_HEIGHT: f32 = 1080.0;

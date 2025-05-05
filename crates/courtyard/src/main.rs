@@ -1,8 +1,12 @@
+use mimalloc::MiMalloc;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{error, info, instrument};
 
 use shared_net::{Bufferable, IdMessage, RoutedMessage, SizedBuffer, op};
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 #[derive(Clone)]
 struct NoContext;

@@ -2,17 +2,21 @@ use std::collections::HashMap;
 use std::net::{IpAddr, Ipv6Addr, SocketAddr};
 use std::sync::{Arc, Mutex};
 
-use archive_lib::core::ArchiveSubCommand;
 use chrono::Utc;
-use forum_lib::core::ForumSubCommand;
-use gate_lib::message::gate_header::GateHeader;
-use hall_lib::core::GameSubCommand;
-use shared_net::op::SubCommandType;
-use shared_net::{AuthType, Bufferable, IdMessage, NodeType, RoutedMessage, SizedBuffer, SizedBufferError, TimestampType, UserIdType, VClientMode, op};
+use mimalloc::MiMalloc;
 use tokio::signal;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{error, info, instrument};
+
+use archive_lib::core::ArchiveSubCommand;
+use forum_lib::core::ForumSubCommand;
+use gate_lib::message::gate_header::GateHeader;
+use hall_lib::core::GameSubCommand;
+use shared_net::{op, AuthType, Bufferable, IdMessage, NodeType, RoutedMessage, SizedBuffer, SizedBufferError, TimestampType, UserIdType, VClientMode};
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 struct GateUser {
     name: String,
@@ -75,7 +79,7 @@ async fn gate_main(interface: String, courtyard: String) -> Result<(), GateError
 }
 
 #[rustfmt::skip]
-fn should_marshal_game_to_vagabond(subcommand: SubCommandType) -> bool {
+fn should_marshal_game_to_vagabond(subcommand: op::SubCommandType) -> bool {
     match subcommand.into() {
         GameSubCommand::Activate
         | GameSubCommand::Build

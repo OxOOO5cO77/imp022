@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex};
 
+use mimalloc::MiMalloc;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use sqlx::types::Uuid;
 use tokio::sync::mpsc;
@@ -8,8 +9,10 @@ use tracing::{info, instrument};
 
 use archive_lib::core::ArchiveSubCommand;
 use gate_lib::message::gate_header::GateHeader;
-use shared_net::op::SubCommandType;
-use shared_net::{Bufferable, NodeType, RoutedMessage, SizedBuffer, SizedBufferError, VClientMode, op};
+use shared_net::{op, Bufferable, NodeType, RoutedMessage, SizedBuffer, SizedBufferError, VClientMode};
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 struct Archive {
     pool: PgPool,
@@ -79,7 +82,7 @@ fn c_invgen(context: Arc<Mutex<Archive>>, tx: UnboundedSender<RoutedMessage>, mu
         if result {
             if let Ok(out) = move || -> Result<SizedBuffer, SizedBufferError> {
                 let route = op::Route::One(gate);
-                let command = op::Command::Inventory(ArchiveSubCommand::InvList as SubCommandType);
+                let command = op::Command::Inventory(ArchiveSubCommand::InvList as op::SubCommandType);
                 let results = vec![object_uuid.as_u128()];
 
                 let mut out = SizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + header.vagabond.size_in_buffer() + results.size_in_buffer());
@@ -116,12 +119,12 @@ fn c_invlist(context: Arc<Mutex<Archive>>, tx: UnboundedSender<RoutedMessage>, m
         if let Ok(results) = query_result {
             if let Ok(out) = move || -> Result<SizedBuffer, SizedBufferError> {
                 let route = op::Route::One(gate);
-                let command = op::Command::Inventory(ArchiveSubCommand::InvList as SubCommandType);
+                let command = op::Command::Inventory(ArchiveSubCommand::InvList as op::SubCommandType);
                 let mapped_results = results.iter().map(|r| r.ob_uuid.as_u128()).collect::<Vec<_>>();
 
                 let mut out = SizedBuffer::new(route.size_in_buffer() + command.size_in_buffer() + header.vagabond.size_in_buffer() + mapped_results.size_in_buffer());
                 out.push(&op::Route::One(gate))?;
-                out.push(&op::Command::Inventory(ArchiveSubCommand::InvList as SubCommandType))?;
+                out.push(&op::Command::Inventory(ArchiveSubCommand::InvList as op::SubCommandType))?;
                 out.push(&header.vagabond)?;
                 out.push(&mapped_results)?;
                 Ok(out)

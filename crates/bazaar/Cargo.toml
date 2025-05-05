@@ -11,3 +11,4 @@ tokio = { version = "1.44.2", features = ["macros", "rt-multi-thread"] }
 tracing = { version = "0.1.41" }
 tracing-subscriber = { version = "0.3.19" }
 shared-net = { path = "../shared-net" }
+mimalloc = "0.1.46"

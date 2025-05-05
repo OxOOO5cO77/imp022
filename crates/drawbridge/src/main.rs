@@ -1,10 +1,15 @@
+use mimalloc::MiMalloc;
 use tokio::signal;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, instrument};
 
+use shared_net::{op, IdMessage, NodeType, RoutedMessage, SizedBuffer, VClientMode};
+
 use crate::DrawbridgeError::{Client, Server};
-use shared_net::{IdMessage, NodeType, RoutedMessage, SizedBuffer, VClientMode, op};
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
 
 #[derive(Clone)]
 struct NoContext;

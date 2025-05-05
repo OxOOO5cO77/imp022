@@ -6,7 +6,7 @@ edition = "2024"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 
 [dependencies]
-chrono = { version = "0.4.40" }
+chrono = { version = "0.4.41" }
 tokio = { version = "1.44.2", features = ["macros", "rt-multi-thread", "signal"] }
 tracing = { version = "0.1.41" }
 tracing-subscriber = { version = "0.3.19" }
@@ -15,3 +15,4 @@ archive-lib = { path = "../archive-lib" }
 forum-lib = { path = "../forum-lib" }
 gate-lib = { path = "../gate-lib" }
 hall-lib = { path = "../hall-lib" }
+mimalloc = "0.1.46"

@@ -15,3 +15,4 @@ tracing-subscriber = { version = "0.3.19" }
 gate-lib = { path = "../gate-lib" }
 hall-lib = { path = "../hall-lib" }
 shared-net = { path = "../shared-net" }
+mimalloc = "0.1.46"
