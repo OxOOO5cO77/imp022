@@ -11,7 +11,7 @@ chrono = { version = "0.4.41", default-features = false, features = ["std", "ser
 rand = { version = "0.9.1" }
 ron = { version = "0.10.1" }
 serde = { version = "1.0.219", features = ["derive"] }
-tokio = { version = "1.44.2", features = ["full"] }
+tokio = { version = "1.45.0", features = ["full"] }
 tracing = { version = "0.1.41" }
 tracing-subscriber = { version = "0.3.19" }
 shared-net = { path = "../shared-net" }
