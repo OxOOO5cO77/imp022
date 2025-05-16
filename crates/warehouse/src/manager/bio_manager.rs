@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::io::{Error, ErrorKind};
+use std::io::Error;
 use std::path::Path;
 
 use chrono::NaiveDate;
@@ -124,7 +124,7 @@ where
     P: AsRef<Path>,
 {
     let ron = std::fs::read_to_string(source_file)?;
-    ron::from_str::<T>(&ron).map_err(|o| Error::new(ErrorKind::Other, o))
+    ron::from_str::<T>(&ron).map_err(Error::other)
 }
 
 #[cfg(test)]

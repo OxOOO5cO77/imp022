@@ -1,4 +1,4 @@
-use std::io::{Error, ErrorKind};
+use std::io::Error;
 use std::path::Path;
 
 use hall_lib::core::{Build, CardSlot, Detail, GeneralType, SpecificType};
@@ -22,25 +22,23 @@ impl DataManager {
     }
 
     pub(crate) fn pick_build(&self, rng: &mut impl Rng) -> [HallBuild; 4] {
-        let build = [
+        [
             //
             self.build.iter().filter(|o| o.is(Build::ANT)).choose(rng).unwrap().clone(),
             self.build.iter().filter(|o| o.is(Build::BRD)).choose(rng).unwrap().clone(),
             self.build.iter().filter(|o| o.is(Build::CPU)).choose(rng).unwrap().clone(),
             self.build.iter().filter(|o| o.is(Build::DSK)).choose(rng).unwrap().clone(),
-        ];
-        build
+        ]
     }
 
     pub(crate) fn pick_detail(&self, rng: &mut impl Rng) -> [HallDetail; 4] {
-        let detail = [
+        [
             //
             self.detail.iter().filter(|o| o.is(Detail::Institution)).choose(rng).unwrap().clone(),
             self.detail.iter().filter(|o| o.is(Detail::Role)).choose(rng).unwrap().clone(),
             self.detail.iter().filter(|o| o.is(Detail::Location)).choose(rng).unwrap().clone(),
             self.detail.iter().filter(|o| o.is(Detail::Distro)).choose(rng).unwrap().clone(),
-        ];
-        detail
+        ]
     }
 
     fn pick_card(&self, rng: &mut impl Rng, slot: &CardSlot) -> Option<&HallCard> {
@@ -70,7 +68,7 @@ where
     P: AsRef<Path>,
 {
     let ron = std::fs::read_to_string(source_file)?;
-    ron::from_str::<T>(&ron).map_err(|o| Error::new(ErrorKind::Other, o))
+    ron::from_str::<T>(&ron).map_err(Error::other)
 }
 
 #[cfg(test)]

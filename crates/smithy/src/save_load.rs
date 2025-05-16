@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use std::io::{Error, ErrorKind};
+use std::io::Error;
 use std::path::Path;
 
 pub(crate) mod hall;
@@ -12,7 +12,7 @@ where
 {
     println!("[Smithy] > {}", dest_file);
 
-    let ron = ron::to_string::<T>(&data).map_err(|o| Error::new(ErrorKind::Other, o))?;
+    let ron = ron::to_string::<T>(&data).map_err(Error::other)?;
     std::fs::write(dest_file, ron)?;
 
     Ok(())
