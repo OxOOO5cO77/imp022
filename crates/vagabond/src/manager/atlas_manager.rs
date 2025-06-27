@@ -23,7 +23,7 @@ fn preload_atlases(
 ) {
     match am.load_all_atlas(&asset_server, &mut texture_atlas_layouts) {
         Ok(_) => {}
-        Err(e) => panic!("Failed to load atlases: {:?}", e),
+        Err(e) => panic!("Failed to load atlases: {e:?}"),
     }
 }
 
@@ -43,11 +43,11 @@ pub(crate) enum AtlasManagerError {
 impl std::fmt::Debug for AtlasManagerError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            AtlasManagerError::Io(err) => write!(f, "AtlasManagerError::Io: {}", err),
+            AtlasManagerError::Io(err) => write!(f, "AtlasManagerError::Io: {err}"),
             AtlasManagerError::ContentEmpty => write!(f, "AtlasManagerError::ContentEmpty"),
-            AtlasManagerError::MissingColon(line) => write!(f, "AtlasManagerError::MissingColon: Line {}", line),
-            AtlasManagerError::ParseSizeCount(line) => write!(f, "AtlasManagerError::ParseSizeCount: Line {}", line),
-            AtlasManagerError::ParseSizeContent((line, err)) => write!(f, "AtlasManagerError::ParseSizeContent: Line {}: {}", line, err),
+            AtlasManagerError::MissingColon(line) => write!(f, "AtlasManagerError::MissingColon: Line {line}"),
+            AtlasManagerError::ParseSizeCount(line) => write!(f, "AtlasManagerError::ParseSizeCount: Line {line}"),
+            AtlasManagerError::ParseSizeContent((line, err)) => write!(f, "AtlasManagerError::ParseSizeContent: Line {line}: {err}"),
         }
     }
 }
@@ -175,7 +175,7 @@ impl Atlas {
 
 #[cfg(test)]
 mod test {
-    use super::{AtlasManagerError, parse_file};
+    use super::{parse_file, AtlasManagerError};
 
     #[test]
     fn test_atlas_manager() -> Result<(), AtlasManagerError> {

@@ -24,12 +24,12 @@ const WINDOW_HEIGHT: f32 = 1080.0;
 #[derive(Debug)]
 #[allow(dead_code)] //Note: Derived Debug is intentionally ignored during dead code analysis
 enum VagabondAppError {
-    DotEnv(dotenv::Error),
+    DotEnv(dotenvy::Error),
     Bevy(NonZero<u8>),
 }
 
 fn main() -> Result<(), VagabondAppError> {
-    dotenv::dotenv().map_err(VagabondAppError::DotEnv)?;
+    dotenvy::dotenv().map_err(VagabondAppError::DotEnv)?;
     bevy_main().map_err(VagabondAppError::Bevy)?;
     Ok(())
 }

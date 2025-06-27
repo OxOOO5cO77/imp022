@@ -48,15 +48,15 @@ pub(crate) struct CardLayout {
 impl CardLayout {
     pub(crate) fn build(commands: &mut Commands, screen_layout: &ScreenLayout, base_name: &str) -> Entity {
         let card_layout = Self {
-            frame: Self::maybe_get_entity(commands, screen_layout, &format!("{}/frame", base_name)),
-            icon: Self::maybe_get_entity(commands, screen_layout, &format!("{}/icon", base_name)),
-            title: Self::maybe_get_entity(commands, screen_layout, &format!("{}/title", base_name)),
-            cost: Self::maybe_get_entity(commands, screen_layout, &format!("{}/cost", base_name)),
-            delay: Self::maybe_get_entity(commands, screen_layout, &format!("{}/delay", base_name)),
-            priority: Self::maybe_get_entity(commands, screen_layout, &format!("{}/priority", base_name)),
-            host: Self::maybe_get_entity(commands, screen_layout, &format!("{}/host", base_name)),
-            launch: Self::maybe_get_entity(commands, screen_layout, &format!("{}/launch", base_name)),
-            run: Self::maybe_get_entity(commands, screen_layout, &format!("{}/run", base_name)),
+            frame: Self::maybe_get_entity(commands, screen_layout, &format!("{base_name}/frame")),
+            icon: Self::maybe_get_entity(commands, screen_layout, &format!("{base_name}/icon")),
+            title: Self::maybe_get_entity(commands, screen_layout, &format!("{base_name}/title")),
+            cost: Self::maybe_get_entity(commands, screen_layout, &format!("{base_name}/cost")),
+            delay: Self::maybe_get_entity(commands, screen_layout, &format!("{base_name}/delay")),
+            priority: Self::maybe_get_entity(commands, screen_layout, &format!("{base_name}/priority")),
+            host: Self::maybe_get_entity(commands, screen_layout, &format!("{base_name}/host")),
+            launch: Self::maybe_get_entity(commands, screen_layout, &format!("{base_name}/launch")),
+            run: Self::maybe_get_entity(commands, screen_layout, &format!("{base_name}/run")),
         };
 
         commands.entity(screen_layout.entity(base_name)).insert(card_layout).observe(Self::on_populate).id()

@@ -36,7 +36,7 @@ async fn main() -> Result<(), sqlx::Error> {
     let connection = format!("postgres://{}:{}@{}/smithy", args.user, args.password, args.database);
 
     let pool = PgPoolOptions::new().max_connections(5).connect(connection.as_str()).await.map_err(|e| {
-        println!("[ERROR] sqlx error: {}", e);
+        println!("[ERROR] sqlx error: {e}");
         e
     })?;
 

@@ -516,7 +516,7 @@ impl ScreenLayoutManager {
         if base_name.is_empty() {
             name.to_string()
         } else {
-            format!("{}/{}", base_name, name)
+            format!("{base_name}/{name}")
         }
     }
 

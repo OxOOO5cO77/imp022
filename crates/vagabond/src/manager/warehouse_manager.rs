@@ -23,7 +23,7 @@ impl WarehouseManager {
     }
 
     fn fetch<T: Default + for<'de> serde::Deserialize<'de>>(client: &reqwest::blocking::Client, address: &str, route: &str, seed: u64) -> T {
-        client.get(format!("{}/{}/{:X}", address, route, seed)).send().and_then(|response| response.json::<T>()).unwrap_or_default()
+        client.get(format!("{address}/{route}/{seed:X}")).send().and_then(|response| response.json::<T>()).unwrap_or_default()
     }
 
     pub fn fetch_player(&mut self, seed: u64) -> anyhow::Result<&PlayerBioResponse> {

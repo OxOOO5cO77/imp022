@@ -6,13 +6,13 @@ edition = "2024"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 
 [dependencies]
-tokio = { version = "1.45.0", features = ["macros", "rt-multi-thread"] }
-sqlx = { version = "0.8.5", features = ["postgres", "macros", "uuid", "runtime-tokio-rustls"] }
+tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread"] }
+sqlx = { version = "0.8.6", features = ["postgres", "macros", "uuid", "runtime-tokio-rustls"] }
 tracing = { version = "0.1.41" }
 tracing-subscriber = { version = "0.3.19" }
-uuid = { version = "1.16", features = ["v4"] }
+uuid = { version = "1.17", features = ["v4"] }
 shared-net = { path = "../shared-net" }
-mimalloc = "0.1.46"
+mimalloc = "0.1.47"
 
 [dev-dependencies]
 fasthash = { version = "0.4.0" }

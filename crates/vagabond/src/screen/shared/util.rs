@@ -61,7 +61,7 @@ impl GameMissionNodePlayerViewExt for GameMissionNodePlayerView {
             output.push(ENCODE_MAP[(remain & 0x1F) as usize]);
             remain >>= 5;
         }
-        format!("{:0<15}", output).chars().collect::<Vec<char>>().chunks(3).map(|c| c.iter().collect::<String>()).collect::<Vec<String>>().join(":")
+        format!("{output:0<15}").chars().collect::<Vec<char>>().chunks(3).map(|c| c.iter().collect::<String>()).collect::<Vec<String>>().join(":")
     }
 }
 

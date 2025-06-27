@@ -130,7 +130,7 @@ fn recv_dm(buf: &mut SizedBuffer) -> Result<VClientMode, SizedBufferError> {
 
 fn recv_inv_list(buf: &mut SizedBuffer) -> Result<VClientMode, SizedBufferError> {
     let count = buf.pull::<u16>()?;
-    println!("[InvList] {} objects", count);
+    println!("[InvList] {count} objects");
     for _idx in 0..count {
         println!("[InvList] * {:X}", buf.pull::<u64>()?);
     }

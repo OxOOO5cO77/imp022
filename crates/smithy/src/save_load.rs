@@ -10,7 +10,7 @@ where
     T: serde::ser::Serialize,
     P: AsRef<Path> + Display,
 {
-    println!("[Smithy] > {}", dest_file);
+    println!("[Smithy] > {dest_file}");
 
     let ron = ron::to_string::<T>(&data).map_err(Error::other)?;
     std::fs::write(dest_file, ron)?;

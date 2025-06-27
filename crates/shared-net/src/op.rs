@@ -77,9 +77,9 @@ impl fmt::Debug for Route {
         match self {
             Route::None => write!(f, "None"),
             Route::Local => write!(f, "Local"),
-            Route::One(id) => write!(f, "One({})", id),
-            Route::Any(flavor) => write!(f, "Any({:?})", flavor),
-            Route::All(flavor) => write!(f, "All({:?})", flavor),
+            Route::One(id) => write!(f, "One({id})"),
+            Route::Any(flavor) => write!(f, "Any({flavor:?})"),
+            Route::All(flavor) => write!(f, "All({flavor:?})"),
         }
     }
 }
