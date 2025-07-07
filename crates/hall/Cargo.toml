@@ -9,7 +9,7 @@ authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 rand = { version = "0.9.1" }
 ron = { version = "0.10.1" }
 serde = { version = "1.0.219", features = ["derive"] }
-tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.46.1", features = ["macros", "rt-multi-thread"] }
 tracing = { version = "0.1.41" }
 tracing-subscriber = { version = "0.3.19" }
 gate-lib = { path = "../gate-lib" }

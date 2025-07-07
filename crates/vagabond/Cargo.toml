@@ -12,10 +12,10 @@ bevy = { version = "0.16.1" }
 bevy_simple_text_input = { version = "0.11.1" }
 cached = { version = "0.55.1" }
 fasthash = { version = "0.4.0" }
-reqwest = { version = "0.12.20", features = ["blocking", "json"] }
+reqwest = { version = "0.12.22", features = ["blocking", "json"] }
 ron = { version = "0.10.1" }
 serde = { version = "1.0.219", features = ["derive"] }
-tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.46.1", features = ["macros", "rt-multi-thread"] }
 shared-net = { path = "../shared-net" }
 archive-lib = { path = "../archive-lib" }
 forum-lib = { path = "../forum-lib" }
