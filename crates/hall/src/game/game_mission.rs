@@ -194,10 +194,10 @@ impl GameMission {
         ];
 
         while !start_points.is_empty() {
-            if let Some((coord, set, force)) = start_points.pop() {
-                if map.at(&coord).distance.is_none() {
-                    start_points.append(&mut Self::make_exits(&mut map, &coord, set, force, rng));
-                }
+            if let Some((coord, set, force)) = start_points.pop()
+                && map.at(&coord).distance.is_none()
+            {
+                start_points.append(&mut Self::make_exits(&mut map, &coord, set, force, rng));
             }
         }
 
@@ -222,12 +222,12 @@ impl GameMission {
         for coord in &dist_points {
             let mut travel = vec![(Some(*coord), 0)];
             while !travel.is_empty() {
-                if let Some((Some(target), distance)) = travel.pop() {
-                    if Self::set_distance(map, &target, distance) {
-                        for dir in &DIRS {
-                            if map.at(&target).exit[dir.value()] {
-                                travel.push((dir.target(&target), distance + 1));
-                            }
+                if let Some((Some(target), distance)) = travel.pop()
+                    && Self::set_distance(map, &target, distance)
+                {
+                    for dir in &DIRS {
+                        if map.at(&target).exit[dir.value()] {
+                            travel.push((dir.target(&target), distance + 1));
                         }
                     }
                 }

@@ -6,11 +6,11 @@ use tokio::io::{AsyncReadExt, WriteHalf};
 use tokio::net::TcpListener;
 use tokio::signal;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
-use tokio::sync::{Mutex, mpsc};
+use tokio::sync::{mpsc, Mutex};
 use tracing::{error, info};
 
 use crate::util::write_buf;
-use crate::{IdMessage, RoutedMessage, SizedBuffer, op};
+use crate::{op, IdMessage, RoutedMessage, SizedBuffer};
 
 struct VConnection<T> {
     write: WriteHalf<T>,
@@ -144,21 +144,23 @@ where
                         let msg_buf = msg.buf;
                         let mut connections = connections.lock().await;
 
-                        if let Some(cx) = connections.get_mut(&msg_id) {
-                            if write_buf(&mut cx.write, &msg_buf).await.is_err() {
+                        if let Some(cx) = connections.get_mut(&msg_id)
+                            && write_buf(&mut cx.write, &msg_buf).await.is_err()
+                        {
                                 cleanup_needed.push(msg_id);
 
-                            }
                         }
+
                     }
                     op::Route::Any(flavor) => {
                         let msg_buf = msg.buf;
                         let mut connections = connections.lock().await;
-                        if let Some((id,cx)) = connections.iter_mut().find(|(_,cx)| cx.flavor == Some(flavor)) {
-                            if write_buf(&mut cx.write, &msg_buf).await.is_err() {
+                        if let Some((id,cx)) = connections.iter_mut().find(|(_,cx)| cx.flavor == Some(flavor))
+                            && write_buf(&mut cx.write, &msg_buf).await.is_err()
+                        {
                                 cleanup_needed.push(*id);
-                            }
                         }
+
                     }
                     op::Route::All(flavor) => {
                         let msg_buf = msg.buf;

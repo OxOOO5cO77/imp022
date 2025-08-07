@@ -51,10 +51,10 @@ fn set_color_common<T>(event: Trigger<SetColorEvent>, material_q: Query<&MeshMat
 where
     T: SetColorMaterial,
 {
-    if let Ok(material) = material_q.get(event.target) {
-        if let Some(instance) = materials.get_mut(&material.0) {
-            instance.set_color(event.color);
-        }
+    if let Ok(material) = material_q.get(event.target)
+        && let Some(instance) = materials.get_mut(&material.0)
+    {
+        instance.set_color(event.color);
     }
 }
 

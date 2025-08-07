@@ -1,4 +1,4 @@
-use rand::{Rng, distr::Uniform, rngs::ThreadRng};
+use rand::{distr::Uniform, rngs::ThreadRng, Rng};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::iter::zip;
@@ -107,19 +107,21 @@ impl GameState {
     }
 
     pub(crate) fn get_user_auth(&self, user_id_type: UserIdType, user_auth: AuthType) -> Option<&GameUser> {
-        if let Some(user) = self.users.get(&user_id_type) {
-            if user.auth == user_auth {
-                return Some(user);
-            }
+        if let Some(user) = self.users.get(&user_id_type)
+            && user.auth == user_auth
+        {
+            return Some(user);
         }
+
         None
     }
     pub(crate) fn split_get_user_auth_mut(users: &mut UserMapType, user_id_type: UserIdType, user_auth: AuthType) -> Option<&mut GameUser> {
-        if let Some(user) = users.get_mut(&user_id_type) {
-            if user.auth == user_auth {
-                return Some(user);
-            }
+        if let Some(user) = users.get_mut(&user_id_type)
+            && user.auth == user_auth
+        {
+            return Some(user);
         }
+
         None
     }
 

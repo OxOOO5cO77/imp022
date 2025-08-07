@@ -12,9 +12,9 @@ use crate::network::client_gate::{GateCommand, GateIFace};
 use crate::screen::gameplay_init::GameplayInitHandoff;
 use crate::screen::gameplay_main::nodes::*;
 use crate::screen::gameplay_main::{components::*, events::*, resources::*, systems::*};
-use crate::screen::shared::{AppScreenExt, CardLayout, CardTooltip, GameMissionNodePlayerViewExt, MissionNodeKindExt, UpdateCardTooltipEvent, on_out_reset_color, on_update_card_tooltip};
-use crate::system::AppState;
+use crate::screen::shared::{on_out_reset_color, on_update_card_tooltip, AppScreenExt, CardLayout, CardTooltip, GameMissionNodePlayerViewExt, MissionNodeKindExt, UpdateCardTooltipEvent};
 use crate::system::ui_effects::{Blinker, SetColorEvent, TextTip, UiFxTrackedColor};
+use crate::system::AppState;
 
 mod components;
 mod events;
@@ -419,14 +419,15 @@ fn on_card_drag_start(
     if let Ok((layout, sprite, transform, hand, tracker)) = sprite_q.get(target) {
         let card = context.hand.get(hand.index).cloned();
         if tracker.is_none() && card.as_ref().is_none_or(|card| card.cost > context.cached_state.erg[map_kind_to_index(card.kind)]) {
-            if let Some(frame) = layout.frame {
-                if let Ok((source_color, blink)) = bg_q.get(frame) {
-                    if let Some(blink) = blink {
-                        blink.remove(&mut commands, frame);
-                    }
-                    commands.entity(frame).insert(Blinker::new(source_color.color, bevy::color::palettes::basic::RED, BLINKER_COUNT, BLINKER_SPEED));
+            if let Some(frame) = layout.frame
+                && let Ok((source_color, blink)) = bg_q.get(frame)
+            {
+                if let Some(blink) = blink {
+                    blink.remove(&mut commands, frame);
                 }
+                commands.entity(frame).insert(Blinker::new(source_color.color, bevy::color::palettes::basic::RED, BLINKER_COUNT, BLINKER_SPEED));
             }
+
             return;
         }
 
@@ -491,19 +492,16 @@ pub(crate) fn on_card_drop(
 ) {
     let dropped_on = event.target;
 
-    if let Ok(mut indicator) = indicator_q.single_mut() {
-        if let Ok(drop) = drop_q.get(dropped_on) {
-            if let Ok(hand) = hand_q.get(indicator.parent) {
-                if let Some(card) = context.hand.get(hand.index).cloned() {
-                    if valid_target(&card, drop.target) {
-                        indicator.target = Some(drop.target);
-                        context.add_card_pick(hand.index, drop.target);
-                        context.cached_state.erg[map_kind_to_index(card.kind)] -= card.cost;
-                        commands.trigger(PlayerErgTrigger::new(context.cached_state.erg));
-                    }
-                }
-            }
-        }
+    if let Ok(mut indicator) = indicator_q.single_mut()
+        && let Ok(drop) = drop_q.get(dropped_on)
+        && let Ok(hand) = hand_q.get(indicator.parent)
+        && let Some(card) = context.hand.get(hand.index).cloned()
+        && valid_target(&card, drop.target)
+    {
+        indicator.target = Some(drop.target);
+        context.add_card_pick(hand.index, drop.target);
+        context.cached_state.erg[map_kind_to_index(card.kind)] -= card.cost;
+        commands.trigger(PlayerErgTrigger::new(context.cached_state.erg));
     }
 }
 
@@ -581,10 +579,10 @@ fn cleanup_indicator_post_update(
     indicator_q: Query<(Entity, &Indicator)>,
 ) {
     for event in receive.read() {
-        if let Some((entity, indicator)) = indicator_q.iter().find(|(_, i)| i.parent == event.target) {
-            if indicator.target.is_none() {
-                cleanup_indicator(&mut commands, entity, indicator.parent);
-            }
+        if let Some((entity, indicator)) = indicator_q.iter().find(|(_, i)| i.parent == event.target)
+            && indicator.target.is_none()
+        {
+            cleanup_indicator(&mut commands, entity, indicator.parent);
         }
     }
 }

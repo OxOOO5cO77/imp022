@@ -26,21 +26,21 @@ pub(crate) fn handle_choose_intent(game: &mut GameState, bx: &mut Broadcaster, d
     let mut node_changes = HashSet::new();
     let mut token_changes = HashMap::new();
     for (id, intent) in intents.drain(..) {
-        if let Some(user) = game.users.get_mut(&id) {
-            if let Some(results) = intents::process_intent(intent, &mut game.mission, user, tick, dm) {
-                for result in results.into_iter() {
-                    match result {
-                        IntentResult::Node => {
-                            node_changes.insert(id);
-                        }
-                        IntentResult::Token(messages) => {
-                            token_changes.insert(id, messages);
-                        }
-                        IntentResult::Deck => {
-                            // do nothing
-                        }
-                    };
-                }
+        if let Some(user) = game.users.get_mut(&id)
+            && let Some(results) = intents::process_intent(intent, &mut game.mission, user, tick, dm)
+        {
+            for result in results.into_iter() {
+                match result {
+                    IntentResult::Node => {
+                        node_changes.insert(id);
+                    }
+                    IntentResult::Token(messages) => {
+                        token_changes.insert(id, messages);
+                    }
+                    IntentResult::Deck => {
+                        // do nothing
+                    }
+                };
             }
         }
     }

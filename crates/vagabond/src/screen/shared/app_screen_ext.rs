@@ -4,11 +4,11 @@ use bevy::ecs::system::ScheduleSystem;
 use bevy::prelude::{in_state, IntoScheduleConfigs, OnEnter, OnExit};
 
 pub(crate) trait AppScreenExt {
-    fn add_screen(&mut self, app_state: AppState) -> ScreenBuilder;
+    fn add_screen(&mut self, app_state: AppState) -> ScreenBuilder<'_>;
 }
 
 impl AppScreenExt for App {
-    fn add_screen(&mut self, app_state: AppState) -> ScreenBuilder {
+    fn add_screen(&mut self, app_state: AppState) -> ScreenBuilder<'_> {
         ScreenBuilder {
             app: self,
             app_state,

@@ -357,15 +357,14 @@ fn on_over_header(
     context: Res<ComposeContext>,
     window_q: Query<&Window>,
 ) {
-    if let Ok(window) = window_q.single() {
-        if let Ok((header_transform, header)) = header_q.get(event.target) {
-            if let Ok((tooltip_transform, tooltip_size)) = tooltip_q.get(tooltip.entity) {
-                let new_y = (header_transform.translation.y + (tooltip_size.y / 2.0)).clamp(-window.height() + tooltip_size.y, 0.0);
-                let position = Vec2::new(tooltip_transform.translation.x, -new_y);
-                let card = context.deck.get(header.index).cloned();
-                commands.entity(tooltip.entity).remove::<Hider>().trigger(UpdateCardTooltipEvent::new(position, card, context.attributes));
-            }
-        }
+    if let Ok(window) = window_q.single()
+        && let Ok((header_transform, header)) = header_q.get(event.target)
+        && let Ok((tooltip_transform, tooltip_size)) = tooltip_q.get(tooltip.entity)
+    {
+        let new_y = (header_transform.translation.y + (tooltip_size.y / 2.0)).clamp(-window.height() + tooltip_size.y, 0.0);
+        let position = Vec2::new(tooltip_transform.translation.x, -new_y);
+        let card = context.deck.get(header.index).cloned();
+        commands.entity(tooltip.entity).remove::<Hider>().trigger(UpdateCardTooltipEvent::new(position, card, context.attributes));
     }
 }
 

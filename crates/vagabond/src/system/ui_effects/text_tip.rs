@@ -61,19 +61,18 @@ fn on_over_text_tip(
     mut text_q: Query<&mut Text2d>,
     window_q: Query<&Window>,
 ) {
-    if let Ok(window) = window_q.single() {
-        if let Ok(text_tip) = text_tip_q.get(event.target) {
-            if let Ok((mut container_transform, container_size, container)) = container_q.get_mut(text_tip.container_entity) {
-                if let Ok(mut text) = text_q.get_mut(container.text_entity) {
-                    *text = text_tip.text.clone().into();
-                }
-                let x = event.pointer_location.position.x.clamp(0.0, window.width() - container_size.x);
-                let y = event.pointer_location.position.y.clamp(0.0, window.height() - container_size.y);
-                container_transform.translation = Vec3::new(x, -y, container_transform.translation.z);
-
-                commands.entity(text_tip.container_entity).insert(Hider::new(TEXT_TIP_DELAY_SHOW, Visibility::Visible));
-            }
+    if let Ok(window) = window_q.single()
+        && let Ok(text_tip) = text_tip_q.get(event.target)
+        && let Ok((mut container_transform, container_size, container)) = container_q.get_mut(text_tip.container_entity)
+    {
+        if let Ok(mut text) = text_q.get_mut(container.text_entity) {
+            *text = text_tip.text.clone().into();
         }
+        let x = event.pointer_location.position.x.clamp(0.0, window.width() - container_size.x);
+        let y = event.pointer_location.position.y.clamp(0.0, window.height() - container_size.y);
+        container_transform.translation = Vec3::new(x, -y, container_transform.translation.z);
+
+        commands.entity(text_tip.container_entity).insert(Hider::new(TEXT_TIP_DELAY_SHOW, Visibility::Visible));
     }
 }
 

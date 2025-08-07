@@ -79,8 +79,8 @@ fn c_invgen(context: Arc<Mutex<Archive>>, tx: UnboundedSender<RoutedMessage>, mu
         let user_uuid = Uuid::from_u128(header.user);
         let object_uuid = Uuid::new_v4();
         let result = sqlx::query("INSERT INTO objects(user_uuid,ob_uuid) VALUES ( $1, $2 )").bind(user_uuid).bind(object_uuid).execute(&pool).await.is_ok();
-        if result {
-            if let Ok(out) = move || -> Result<SizedBuffer, SizedBufferError> {
+        if result
+            && let Ok(out) = move || -> Result<SizedBuffer, SizedBufferError> {
                 let route = op::Route::One(gate);
                 let command = op::Command::Inventory(ArchiveSubCommand::InvList as op::SubCommandType);
                 let results = vec![object_uuid.as_u128()];
@@ -91,9 +91,9 @@ fn c_invgen(context: Arc<Mutex<Archive>>, tx: UnboundedSender<RoutedMessage>, mu
                 out.push(&header.vagabond)?;
                 out.push(&results)?;
                 Ok(out)
-            }() {
-                let _ = tx.send(out.into());
-            }
+            }()
+        {
+            let _ = tx.send(out.into());
         }
     };
     tokio::spawn(future);
@@ -116,8 +116,8 @@ fn c_invlist(context: Arc<Mutex<Archive>>, tx: UnboundedSender<RoutedMessage>, m
         let user_uuid = Uuid::from_u128(header.user);
 
         let query_result = sqlx::query_as::<_, Object>("SELECT (ob_uuid) FROM objects WHERE user_uuid = $1").bind(user_uuid).fetch_all(&pool).await;
-        if let Ok(results) = query_result {
-            if let Ok(out) = move || -> Result<SizedBuffer, SizedBufferError> {
+        if let Ok(results) = query_result
+            && let Ok(out) = move || -> Result<SizedBuffer, SizedBufferError> {
                 let route = op::Route::One(gate);
                 let command = op::Command::Inventory(ArchiveSubCommand::InvList as op::SubCommandType);
                 let mapped_results = results.iter().map(|r| r.ob_uuid.as_u128()).collect::<Vec<_>>();
@@ -128,9 +128,9 @@ fn c_invlist(context: Arc<Mutex<Archive>>, tx: UnboundedSender<RoutedMessage>, m
                 out.push(&header.vagabond)?;
                 out.push(&mapped_results)?;
                 Ok(out)
-            }() {
-                let _ = tx.send(out.into());
-            }
+            }()
+        {
+            let _ = tx.send(out.into());
         }
     };
     tokio::spawn(future);

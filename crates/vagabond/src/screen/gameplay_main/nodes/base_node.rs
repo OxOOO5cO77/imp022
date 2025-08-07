@@ -187,12 +187,11 @@ impl BaseNode {
                 let hue = pick_hue(actor.id);
                 let color = Hwba::hwb(hue, 0.25, 0.25);
                 commands.entity(actor_ui.bg).trigger(SetColorEvent::new(actor_ui.bg, color.into()));
-                if let Ok(mut text_letter) = text_q.get_mut(actor_ui.text) {
-                    if let Ok(response) = wm.fetch_player(actor.id) {
-                        if let Some(bio) = response.player_bio.as_ref() {
-                            *text_letter = bio.name.chars().next().unwrap_or('?').to_string().into();
-                        }
-                    }
+                if let Ok(mut text_letter) = text_q.get_mut(actor_ui.text)
+                    && let Ok(response) = wm.fetch_player(actor.id)
+                    && let Some(bio) = response.player_bio.as_ref()
+                {
+                    *text_letter = bio.name.chars().next().unwrap_or('?').to_string().into();
                 }
             }
             commands.entity(actor_ui.container).insert(Self::is_visible(visible));
@@ -284,23 +283,22 @@ fn on_update_actor_tooltip(
     mut wm: ResMut<WarehouseManager>,
 ) {
     let target = event.target();
-    if let Ok(window) = window_q.single() {
-        if let Ok((mut transform, global_transform, tooltip_size)) = tooltip_q.get_mut(target) {
-            if let Some(bio) = wm.fetch_player(event.id).ok().and_then(|bio| bio.player_bio.as_ref()) {
-                if let Ok([mut name, mut location, mut auth]) = text_q.get_many_mut([tooltip.name, tooltip.location, tooltip.auth]) {
-                    *name = bio.name.as_str().into();
-                    *location = bio.birthplace().into();
-                    *auth = event.auth.as_str().into();
-                }
-
-                let offset = global_transform.translation().xy() - transform.translation.xy();
-
-                let x = event.position.x.clamp(0.0, window.width() - tooltip_size.x);
-                let y = event.position.y.clamp(0.0, window.height() - tooltip_size.y);
-                transform.translation = (Vec2::new(x, -y) - offset).extend(transform.translation.z);
-
-                commands.entity(tooltip.container).insert(Visibility::Visible);
-            }
+    if let Ok(window) = window_q.single()
+        && let Ok((mut transform, global_transform, tooltip_size)) = tooltip_q.get_mut(target)
+        && let Some(bio) = wm.fetch_player(event.id).ok().and_then(|bio| bio.player_bio.as_ref())
+    {
+        if let Ok([mut name, mut location, mut auth]) = text_q.get_many_mut([tooltip.name, tooltip.location, tooltip.auth]) {
+            *name = bio.name.as_str().into();
+            *location = bio.birthplace().into();
+            *auth = event.auth.as_str().into();
         }
+
+        let offset = global_transform.translation().xy() - transform.translation.xy();
+
+        let x = event.position.x.clamp(0.0, window.width() - tooltip_size.x);
+        let y = event.position.y.clamp(0.0, window.height() - tooltip_size.y);
+        transform.translation = (Vec2::new(x, -y) - offset).extend(transform.translation.z);
+
+        commands.entity(tooltip.container).insert(Visibility::Visible);
     }
 }
