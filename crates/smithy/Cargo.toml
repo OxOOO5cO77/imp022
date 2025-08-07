@@ -6,10 +6,10 @@ edition = "2024"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 
 [dependencies]
-clap = { version = "4.5.41", features = ["derive"] }
+clap = { version = "4.5.43", features = ["derive"] }
 ron = { version = "0.10.1" }
 serde = { version = "1.0.219", features = ["derive"] }
 sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio"] }
-tokio = { version = "1.47.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
 hall-lib = { path = "../hall-lib" }
 vagabond-lib = { path = "../vagabond-lib" }

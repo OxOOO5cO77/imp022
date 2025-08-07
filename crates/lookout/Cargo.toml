@@ -6,7 +6,7 @@ edition = "2024"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 
 [dependencies]
-tokio = { version = "1.47.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
 sqlx = { version = "0.8.6", features = ["postgres", "macros", "uuid", "runtime-tokio-rustls"] }
 tracing = { version = "0.1.41" }
 tracing-subscriber = { version = "0.3.19" }
