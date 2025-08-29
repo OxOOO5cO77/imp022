@@ -10,9 +10,9 @@ tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
 sqlx = { version = "0.8.6", features = ["postgres", "macros", "uuid", "runtime-tokio-rustls"] }
 tracing = { version = "0.1.41" }
 tracing-subscriber = { version = "0.3.19" }
-uuid = { version = "1.17", features = ["v4"] }
+uuid = { version = "1.18", features = ["v4"] }
 shared-net = { path = "../shared-net" }
-mimalloc = "0.1.47"
+mimalloc = "0.1.48"
 
 [dev-dependencies]
 fasthash = { version = "0.4.0" }

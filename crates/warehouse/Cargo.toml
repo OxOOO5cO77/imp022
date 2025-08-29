@@ -9,14 +9,14 @@ authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 axum = { version = "0.8.4", features = ["macros"] }
 chrono = { version = "0.4.41", default-features = false, features = ["std", "serde"] }
 rand = { version = "0.9.2" }
-ron = { version = "0.10.1" }
+ron = { version = "0.11.0" }
 serde = { version = "1.0.219", features = ["derive"] }
 tokio = { version = "1.47.1", features = ["full"] }
 tracing = { version = "0.1.41" }
 tracing-subscriber = { version = "0.3.19" }
 shared-net = { path = "../shared-net" }
 warehouse-lib = { path = "../warehouse-lib" }
-mimalloc = "0.1.47"
+mimalloc = "0.1.48"
 
 [dev-dependencies]
 httpc-test = "0.1.10"

@@ -7,13 +7,13 @@ authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 default-run = "vagabond"
 
 [dependencies]
-anyhow = { version = "1.0.98" }
+anyhow = { version = "1.0.99" }
 bevy = { version = "0.16.1" }
 bevy_simple_text_input = { version = "0.11.1" }
 cached = { version = "0.56.0" }
 fasthash = { version = "0.4.0" }
-reqwest = { version = "0.12.22", features = ["blocking", "json"] }
-ron = { version = "0.10.1" }
+reqwest = { version = "0.12.23", features = ["blocking", "json"] }
+ron = { version = "0.11.0" }
 serde = { version = "1.0.219", features = ["derive"] }
 tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
 shared-net = { path = "../shared-net" }
@@ -22,5 +22,5 @@ forum-lib = { path = "../forum-lib" }
 hall-lib = { path = "../hall-lib" }
 vagabond-lib = { path = "../vagabond-lib" }
 warehouse-lib = { path = "../warehouse-lib" }
-mimalloc = "0.1.47"
+mimalloc = "0.1.48"
 dotenvy = "0.15.7"
