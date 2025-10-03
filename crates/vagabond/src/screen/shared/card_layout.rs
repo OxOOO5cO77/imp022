@@ -1,4 +1,4 @@
-use bevy::prelude::{Commands, Component, Entity, Event, Query, Srgba, Text2d, Trigger, Visibility, With};
+use bevy::prelude::{Commands, Component, Entity, EntityEvent, On, Query, Srgba, Text2d, Visibility, With};
 
 use hall_lib::core::{AttributeKind, Attributes, CardTargetValue, Host, LaunchInstruction, RunInstruction, ValueTarget};
 use vagabond_lib::data::VagabondCard;
@@ -10,22 +10,25 @@ use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor};
 #[derive(Component)]
 pub(crate) struct CardLayoutPiece;
 
-#[derive(Event, Default)]
+#[derive(EntityEvent)]
 pub(crate) struct CardPopulateEvent {
+    entity: Entity,
     card: Option<VagabondCard>,
     attr: Attributes,
 }
 
 impl CardPopulateEvent {
-    pub(crate) fn new(card: Option<VagabondCard>, attr: Attributes) -> Self {
+    pub(crate) fn new(entity: Entity, card: Option<VagabondCard>, attr: Attributes) -> Self {
         Self {
+            entity,
             card,
             attr,
         }
     }
 
-    pub(crate) fn empty() -> Self {
+    pub(crate) fn empty(entity: Entity) -> Self {
         Self {
+            entity,
             card: None,
             attr: Attributes::default(),
         }
@@ -70,12 +73,12 @@ impl CardLayout {
 
     fn on_populate(
         // bevy system
-        event: Trigger<CardPopulateEvent>,
+        event: On<CardPopulateEvent>,
         mut commands: Commands,
         layout_q: Query<&CardLayout>,
         mut text_q: Query<&mut Text2d, With<CardLayoutPiece>>,
     ) {
-        let target = event.target();
+        let target = event.event_target();
         match (&event.card, layout_q.get(target)) {
             (Some(card), Ok(layout)) => {
                 layout.title.map(|title| text_q.get_mut(title).map(|mut title_text| *title_text = card.title.clone().into()));
@@ -88,7 +91,7 @@ impl CardLayout {
                 layout.icon.map(|icon| text_q.get_mut(icon).map(|mut icon_text| *icon_text = util::kind_icon(card.kind).into()));
                 if let Some(frame) = layout.frame {
                     let color = Self::map_kind_to_color(card.kind);
-                    commands.entity(frame).insert(UiFxTrackedColor::from(color)).trigger(SetColorEvent::new(frame, color));
+                    commands.entity(frame).insert(UiFxTrackedColor::from(color)).trigger(|e| SetColorEvent::new(e, color));
                 }
 
                 commands.entity(target).insert(Visibility::Visible);

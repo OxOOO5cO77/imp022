@@ -1,6 +1,6 @@
 use bevy::ecs::query::QueryEntityError;
 use bevy::ecs::system::IntoObserverSystem;
-use bevy::prelude::{Bundle, Commands, Entity, EntityCommand, EntityWorldMut, Event, Observer, Over, Pointer, Res, Trigger};
+use bevy::prelude::{Bundle, Commands, Entity, EntityCommand, EntityWorldMut, Event, Observer, Over, Pointer, Res, On, EntityEvent};
 
 use hall_lib::core::MissionNodeIntent;
 
@@ -12,19 +12,19 @@ use crate::system::ui_effects::{SetColorEvent, UiFxTrackedColor};
 
 pub(crate) fn on_over_node_action(
     //
-    event: Trigger<Pointer<Over>>,
+    event: On<Pointer<Over>>,
     mut commands: Commands,
     context: Res<GameplayContext>,
 ) {
     if context.phase != VagabondGamePhase::Start {
         return;
     }
-    commands.entity(event.target).trigger(SetColorEvent::new(event.target, bevy::color::palettes::basic::WHITE));
+    commands.entity(event.event_target()).trigger(|e| SetColorEvent::new(e, bevy::color::palettes::basic::WHITE));
 }
 
 pub(crate) fn deselect_node_action(commands: &mut Commands, context: &GameplayContext) {
     if let Some(entity) = context.node_action.entity {
-        commands.entity(entity).trigger(SetColorEvent::new(entity, context.node_action.color)).insert(UiFxTrackedColor::from(context.node_action.color));
+        commands.entity(entity).trigger(|e| SetColorEvent::new(e, context.node_action.color)).insert(UiFxTrackedColor::from(context.node_action.color));
     }
 }
 
@@ -47,7 +47,7 @@ pub(crate) fn click_common<T: Clone>(
             (None, None)
         } else {
             let color = bevy::color::palettes::basic::GREEN;
-            commands.entity(target).trigger(SetColorEvent::new(target, color)).insert(UiFxTrackedColor::from(color));
+            commands.entity(target).trigger(|e| SetColorEvent::new(e, color)).insert(UiFxTrackedColor::from(color));
             (Some(callback(button.data.clone())), Some(target))
         };
 

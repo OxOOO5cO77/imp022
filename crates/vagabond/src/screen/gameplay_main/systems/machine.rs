@@ -1,4 +1,4 @@
-use bevy::prelude::{Commands, Entity, Query, Res, ResMut, Sprite, Text2d, Trigger};
+use bevy::prelude::{Commands, Entity, On, Query, Res, ResMut, Sprite, Text2d};
 
 use hall_lib::core::Attributes;
 use hall_lib::view::{GameMachinePlayerView, GameProcessPlayerView};
@@ -30,7 +30,7 @@ fn cache_game_machine(machine: &GameMachinePlayerView, dm: &DataManager) -> Vaga
 
 pub(super) fn on_machine_ui_update_info(
     // bevy system
-    event: Trigger<MachineInfoTrigger>,
+    event: On<MachineInfoTrigger>,
     mut text_q: Query<(&MachineKind, &mut Text2d, &MachineText)>,
 ) {
     for (machine_component, mut text, machine_text) in text_q.iter_mut() {
@@ -46,7 +46,7 @@ pub(super) fn on_machine_ui_update_info(
 
 pub(super) fn on_machine_ui_update_state(
     // bevy system
-    event: Trigger<MachineStateTrigger>,
+    event: On<MachineStateTrigger>,
     mut commands: Commands,
     mut text_q: Query<(&MachineKind, &mut Text2d, &MachineText)>,
     mut sprite_q: Query<(&MachineKind, &mut Sprite, &MachineQueueItem)>,
@@ -95,10 +95,10 @@ pub(super) fn on_machine_ui_update_state(
         };
         let trigger = if let Some(process) = machine.running.get(running.index) {
             let card = dm.convert_card(&process.player_card);
-            CardPopulateEvent::new(card, Attributes::from_arrays(process.attributes))
+            CardPopulateEvent::new(entity, card, Attributes::from_arrays(process.attributes))
         } else {
-            CardPopulateEvent::empty()
+            CardPopulateEvent::empty(entity)
         };
-        commands.entity(entity).trigger(trigger);
+        commands.entity(entity).trigger(|_| trigger);
     }
 }

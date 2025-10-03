@@ -1,13 +1,13 @@
 use std::cmp::Ordering;
 
-use bevy::prelude::{Query, Text2d, TextColor, Trigger};
+use bevy::prelude::{Query, Text2d, TextColor, On};
 
 use crate::screen::gameplay_main::components::RollText;
 use crate::screen::gameplay_main::events::{ResourcesTrigger, RollTrigger};
 
 pub(super) fn on_roll_ui_update_roll(
     // bevy system
-    event: Trigger<RollTrigger>,
+    event: On<RollTrigger>,
     mut roll_q: Query<(&mut Text2d, &mut TextColor, &RollText)>,
 ) {
     for (mut text, mut color, roll) in roll_q.iter_mut() {
@@ -18,7 +18,7 @@ pub(super) fn on_roll_ui_update_roll(
 
 pub(super) fn on_roll_ui_update_resources(
     // bevy system
-    event: Trigger<ResourcesTrigger>,
+    event: On<ResourcesTrigger>,
     mut roll_q: Query<(&mut TextColor, &RollText)>,
 ) {
     for (mut color, roll) in roll_q.iter_mut() {

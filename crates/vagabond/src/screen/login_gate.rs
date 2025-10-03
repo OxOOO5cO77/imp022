@@ -7,8 +7,8 @@ use crate::manager::{NetworkManager, ScreenLayoutManager};
 use crate::network::client_gate::{GateClient, GateCommand, GateIFace};
 use crate::screen::login_drawbridge::DrawbridgeHandoff;
 use crate::screen::shared::AppScreenExt;
-use crate::system::AppState;
 use crate::system::ui_effects::SetColorEvent;
+use crate::system::AppState;
 
 const SCREEN_LAYOUT: &str = "login";
 
@@ -61,7 +61,7 @@ fn gate_update(
 ) {
     if let Ok(gate_command) = gate.grx.try_recv() {
         if let Ok(connected) = connected_q.single() {
-            commands.entity(connected).trigger(SetColorEvent::new(connected, bevy::color::palettes::css::GREEN));
+            commands.entity(connected).trigger(|e| SetColorEvent::new(e, bevy::color::palettes::css::GREEN));
         }
         match gate_command {
             GateCommand::Hello => app_state.set(AppState::ComposeInit),

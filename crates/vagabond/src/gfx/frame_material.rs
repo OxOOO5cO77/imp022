@@ -1,7 +1,8 @@
 use bevy::asset::Asset;
 use bevy::prelude::{LinearRgba, TypePath, Vec2};
-use bevy::render::render_resource::{AsBindGroup, ShaderRef};
-use bevy::sprite::{AlphaMode2d, Material2d};
+use bevy::render::render_resource::AsBindGroup;
+use bevy::shader::ShaderRef;
+use bevy::sprite_render::{AlphaMode2d, Material2d};
 
 const SHADER_ASSET_PATH: &str = "shader/frame_material.wgsl";
 

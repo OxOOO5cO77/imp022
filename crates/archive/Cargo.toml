@@ -9,7 +9,7 @@ authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 sqlx = { version = "0.8.6", features = ["postgres", "macros", "uuid", "runtime-tokio-rustls"] }
 tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
 tracing = { version = "0.1.41" }
-tracing-subscriber = { version = "0.3.19" }
+tracing-subscriber = { version = "0.3.20" }
 uuid = { version = "1.18", features = ["v4"] }
 shared-net = { path = "../shared-net" }
 archive-lib = { path = "../archive-lib" }

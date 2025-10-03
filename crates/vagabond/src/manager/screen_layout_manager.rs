@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
-use bevy::sprite::{Anchor, MeshMaterial2d};
+use bevy::sprite::Anchor;
 use bevy::text::TextBounds;
 use bevy::ui::FocusPolicy;
 use bevy_simple_text_input::{TextInput, TextInputInactive, TextInputSettings, TextInputTextColor, TextInputTextFont};
@@ -41,6 +41,7 @@ enum Element {
     UiInputBox(UiInputBoxElement),
 }
 
+#[derive(Debug)]
 enum ShapeKind {
     CapsuleX,
     Circle,
@@ -50,6 +51,7 @@ enum ShapeKind {
     Region,
 }
 
+#[derive(Debug)]
 struct ShapeElement {
     kind: ShapeKind,
     position: Vec3,
@@ -72,7 +74,7 @@ struct TextElement {
     font_size: f32,
     position: Vec3,
     size: Vec2,
-    justify: JustifyText,
+    justify: Justify,
 }
 
 struct LayoutElement {
@@ -164,7 +166,7 @@ impl ScreenLayout {
         Ok(Some((name, Element::Sprite(element))))
     }
 
-    fn parse_font_info(font_info: &str, resources: &ScreenResources, overrides: &ScreenResources) -> Result<(String, f32, JustifyText), String> {
+    fn parse_font_info(font_info: &str, resources: &ScreenResources, overrides: &ScreenResources) -> Result<(String, f32, Justify), String> {
         let mut parts = font_info.split(".");
         let name_str = parts.next().ok_or_else(|| format!("font_info: {font_info}"))?;
         let font_size = parts.next().and_then(|p| p.parse::<f32>().ok()).ok_or_else(|| format!("font_info: {font_info}"))?;
@@ -172,10 +174,10 @@ impl ScreenLayout {
 
         let font_name = overrides.font_map.get(name_str).or(resources.font_map.get(name_str)).ok_or_else(|| format!("font_info: {font_info}"))?.clone();
         let justify = match justify_str {
-            "left" => JustifyText::Left,
-            "center" => JustifyText::Center,
-            "right" => JustifyText::Right,
-            _ => JustifyText::Center,
+            "left" => Justify::Left,
+            "center" => Justify::Center,
+            "right" => Justify::Right,
+            _ => Justify::Center,
         };
         Ok((font_name, font_size, justify))
     }
@@ -444,11 +446,11 @@ impl ScreenLayoutManager {
         let sprite = (
             Sprite {
                 color: Color::Srgba(element.color),
-                anchor: Anchor::TopLeft,
                 image,
                 texture_atlas: Some(atlas),
                 ..default()
             },
+            Anchor::TOP_LEFT,
             Transform::from_translation(element.position),
         );
         let sprite = parent.spawn((sprite, UiFxTrackedColor::from(element.color), UiFxTrackedSize::from(element.size), Pickable::IGNORE)).id();
@@ -464,10 +466,10 @@ impl ScreenLayoutManager {
             Text2d::new(&element.default_text),
             TextBounds::from(element.size),
             TextColor::from(element.color),
-            TextFont::from_font(font).with_font_size(element.font_size),
+            TextFont::from(font).with_font_size(element.font_size),
             TextLayout::new_with_justify(element.justify),
             Transform::from_translation(translation),
-            Anchor::CenterLeft,
+            Anchor::CENTER_LEFT,
         );
         parent.spawn(bundle).id()
     }
@@ -476,10 +478,10 @@ impl ScreenLayoutManager {
         (
             Sprite {
                 color: Color::NONE,
-                anchor: Anchor::TopLeft,
                 custom_size: Some(element.size),
                 ..default()
             },
+            Anchor::TOP_LEFT,
             Transform::from_translation(element.position),
             UiFxTrackedSize::from(element.size),
             Pickable::IGNORE,
@@ -501,7 +503,7 @@ impl ScreenLayoutManager {
             // behind it
             FocusPolicy::Block,
             TextInput,
-            TextInputTextFont(TextFont::from_font(font).with_font_size(element.text_element.font_size)),
+            TextInputTextFont(TextFont::from(font).with_font_size(element.text_element.font_size)),
             TextInputTextColor(TextColor(Color::WHITE)),
             TextInputInactive(true),
             TextInputSettings {

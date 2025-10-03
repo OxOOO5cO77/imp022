@@ -1,9 +1,10 @@
-use crate::gfx::FrameMaterial;
 use bevy::app::{App, Plugin};
 use bevy::asset::Assets;
 use bevy::color::Srgba;
-use bevy::prelude::{ColorMaterial, Component, Entity, Event, MeshMaterial2d, Query, ResMut, Sprite, Trigger};
-use bevy::sprite::Material2d;
+use bevy::prelude::{ColorMaterial, Component, Entity, EntityEvent, MeshMaterial2d, On, Query, ResMut, Sprite};
+use bevy::sprite_render::Material2d;
+
+use crate::gfx::FrameMaterial;
 
 pub(crate) struct ColorPlugin;
 
@@ -16,16 +17,16 @@ impl Plugin for ColorPlugin {
     }
 }
 
-#[derive(Event)]
+#[derive(EntityEvent)]
 pub(crate) struct SetColorEvent {
-    pub target: Entity,
+    pub entity: Entity,
     pub color: Srgba,
 }
 
 impl SetColorEvent {
     pub(crate) fn new(target: Entity, color: Srgba) -> Self {
         Self {
-            target,
+            entity: target,
             color,
         }
     }
@@ -47,11 +48,11 @@ impl SetColorMaterial for ColorMaterial {
     }
 }
 
-fn set_color_common<T>(event: Trigger<SetColorEvent>, material_q: Query<&MeshMaterial2d<T>>, mut materials: ResMut<Assets<T>>)
+fn set_color_common<T>(event: On<SetColorEvent>, material_q: Query<&MeshMaterial2d<T>>, mut materials: ResMut<Assets<T>>)
 where
     T: SetColorMaterial,
 {
-    if let Ok(material) = material_q.get(event.target)
+    if let Ok(material) = material_q.get(event.entity)
         && let Some(instance) = materials.get_mut(&material.0)
     {
         instance.set_color(event.color);
@@ -60,7 +61,7 @@ where
 
 fn on_color_update_frame_material(
     //
-    event: Trigger<SetColorEvent>,
+    event: On<SetColorEvent>,
     material_q: Query<&MeshMaterial2d<FrameMaterial>>,
     materials: ResMut<Assets<FrameMaterial>>,
 ) {
@@ -69,7 +70,7 @@ fn on_color_update_frame_material(
 
 fn on_color_update_color_material(
     //
-    event: Trigger<SetColorEvent>,
+    event: On<SetColorEvent>,
     material_q: Query<&MeshMaterial2d<ColorMaterial>>,
     materials: ResMut<Assets<ColorMaterial>>,
 ) {
@@ -78,10 +79,10 @@ fn on_color_update_color_material(
 
 fn on_color_update_sprite(
     //
-    event: Trigger<SetColorEvent>,
+    event: On<SetColorEvent>,
     mut sprite_q: Query<&mut Sprite>,
 ) {
-    if let Ok(mut sprite) = sprite_q.get_mut(event.target()) {
+    if let Ok(mut sprite) = sprite_q.get_mut(event.event_target()) {
         sprite.color = event.color.into();
     }
 }

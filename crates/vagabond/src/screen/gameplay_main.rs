@@ -304,7 +304,7 @@ fn gameplay_enter(
     commands.remove_resource::<GameplayInitHandoff>();
 }
 
-fn on_click_next(_event: Trigger<Pointer<Click>>, mut context: ResMut<GameplayContext>, gate: Res<GateIFace>) {
+fn on_click_next(_event: On<Pointer<Click>>, mut context: ResMut<GameplayContext>, gate: Res<GateIFace>) {
     let wait = match context.phase {
         VagabondGamePhase::Start => gate.send_game_choose_intent(context.node_action.intent),
         VagabondGamePhase::Pick => gate.send_game_choose_attr(context.attr_pick),
@@ -319,12 +319,12 @@ fn on_click_next(_event: Trigger<Pointer<Click>>, mut context: ResMut<GameplayCo
 
 fn on_over_next(
     //
-    event: Trigger<Pointer<Over>>,
+    event: On<Pointer<Over>>,
     mut commands: Commands,
     context: Res<GameplayContext>,
     color_q: Query<&UiFxTrackedColor>,
 ) {
-    if let Ok(source_color) = color_q.get(event.target) {
+    if let Ok(source_color) = color_q.get(event.event_target()) {
         let color = match context.phase {
             VagabondGamePhase::Pick => {
                 if context.attr_pick.is_some() {
@@ -337,21 +337,21 @@ fn on_over_next(
             VagabondGamePhase::Wait(WaitKind::All) => bevy::color::palettes::basic::YELLOW,
             _ => source_color.color,
         };
-        commands.entity(event.target).trigger(SetColorEvent::new(event.target, color));
+        commands.entity(event.event_target()).trigger(|e| SetColorEvent::new(e, color));
     }
 }
 
 fn on_click_map(
     //
-    event: Trigger<Pointer<Click>>,
+    event: On<Pointer<Click>>,
     mut commands: Commands,
 ) {
-    commands.entity(event.target).insert(Visibility::Hidden);
+    commands.entity(event.event_target()).insert(Visibility::Hidden);
 }
 
 fn on_click_map_button(
     //
-    _event: Trigger<Pointer<Click>>,
+    _event: On<Pointer<Click>>,
     mut commands: Commands,
 ) {
     commands.trigger(ShowMapTrigger)
@@ -359,37 +359,37 @@ fn on_click_map_button(
 
 fn on_over_map_button(
     //
-    event: Trigger<Pointer<Over>>,
+    event: On<Pointer<Over>>,
     mut commands: Commands,
 ) {
-    commands.entity(event.target).trigger(SetColorEvent::new(event.target, bevy::color::palettes::basic::GREEN));
+    commands.entity(event.event_target()).trigger(|e| SetColorEvent::new(e, bevy::color::palettes::basic::GREEN));
 }
 
 fn on_click_attr(
     //
-    event: Trigger<Pointer<Click>>,
+    event: On<Pointer<Click>>,
     mut commands: Commands,
     attr_q: Query<&AttributeRow>,
 ) {
-    if let Ok(attr_row) = attr_q.get(event.target) {
+    if let Ok(attr_row) = attr_q.get(event.event_target()) {
         commands.trigger(ChooseAttrTrigger::new(Some(attr_row.kind)));
     }
 }
 
 fn on_over_attr(
     //
-    event: Trigger<Pointer<Over>>,
+    event: On<Pointer<Over>>,
     mut commands: Commands,
     context: Res<GameplayContext>,
     color_q: Query<&UiFxTrackedColor>,
 ) {
-    if let Ok(source_color) = color_q.get(event.target) {
+    if let Ok(source_color) = color_q.get(event.event_target()) {
         let color = if VagabondGamePhase::Pick == context.phase {
             bevy::color::palettes::basic::GREEN
         } else {
             source_color.color
         };
-        commands.entity(event.target).trigger(SetColorEvent::new(event.target, color));
+        commands.entity(event.event_target()).trigger(|e| SetColorEvent::new(e, color));
     }
 }
 
@@ -401,7 +401,7 @@ fn map_kind_to_index(kind: AttributeKind) -> usize {
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 fn on_card_drag_start(
     // bevy system
-    event: Trigger<Pointer<DragStart>>,
+    event: On<Pointer<DragStart>>,
     mut commands: Commands,
     sprite_q: Query<(&CardLayout, &mut Sprite, &mut Transform, &HandCard, Option<&IndicatorTracker>), With<Pickable>>,
     bg_q: Query<(&UiFxTrackedColor, Option<&Blinker>), Without<CardLayout>>,
@@ -414,7 +414,7 @@ fn on_card_drag_start(
         return;
     }
 
-    let target = event.target;
+    let target = event.event_target();
 
     if let Ok((layout, sprite, transform, hand, tracker)) = sprite_q.get(target) {
         let card = context.hand.get(hand.index).cloned();
@@ -455,7 +455,7 @@ fn on_card_drag_start(
 
 fn on_card_drag(
     // bevy system
-    event: Trigger<Pointer<Drag>>,
+    event: On<Pointer<Drag>>,
     mut indicator_q: Query<(&mut Transform, &Indicator), With<IndicatorActive>>,
 ) {
     if let Ok((mut transform, indicator)) = indicator_q.single_mut() {
@@ -471,11 +471,11 @@ fn on_card_drag(
 
 fn on_card_drag_end(
     // bevy system
-    event: Trigger<Pointer<DragEnd>>,
+    event: On<Pointer<DragEnd>>,
     mut commands: Commands,
     indicator_q: Query<Entity, With<IndicatorActive>>,
 ) {
-    commands.entity(event.target).insert(Pickable::default());
+    commands.entity(event.event_target()).insert(Pickable::default());
     if let Ok(entity) = indicator_q.single() {
         commands.entity(entity).remove::<IndicatorActive>();
     }
@@ -483,14 +483,14 @@ fn on_card_drag_end(
 
 pub(crate) fn on_card_drop(
     // bevy system
-    event: Trigger<Pointer<DragDrop>>,
+    event: On<Pointer<DragDrop>>,
     mut commands: Commands,
     mut indicator_q: Query<&mut Indicator, With<IndicatorActive>>,
     drop_q: Query<&CardDropTarget>,
     hand_q: Query<&HandCard>,
     mut context: ResMut<GameplayContext>,
 ) {
-    let dropped_on = event.target;
+    let dropped_on = event.event_target();
 
     if let Ok(mut indicator) = indicator_q.single_mut()
         && let Ok(drop) = drop_q.get(dropped_on)
@@ -518,13 +518,13 @@ fn valid_target(card: &VagabondCard, target: PickedCardTarget) -> bool {
 
 fn on_over_process(
     // bevy system
-    event: Trigger<Pointer<Over>>,
+    event: On<Pointer<Over>>,
     mut commands: Commands,
     queue_q: Query<(&MachineKind, &MachineQueueItem)>,
     tooltip: Res<CardTooltip>,
     context: Res<GameplayContext>,
 ) {
-    if let Ok((machine_kind, queue_item)) = queue_q.get(event.target) {
+    if let Ok((machine_kind, queue_item)) = queue_q.get(event.event_target()) {
         let cached = match machine_kind {
             MachineKind::Local => &context.cached_local,
             MachineKind::Remote => &context.cached_remote,
@@ -532,20 +532,20 @@ fn on_over_process(
         if let Some(process) = cached.queue.iter().find(|(_, d)| queue_item.delay == *d).map(|(c, _)| c) {
             let card = Some(process.card.clone());
             let attributes = Attributes::from_arrays(process.attributes);
-            commands.trigger_targets(UpdateCardTooltipEvent::new(event.pointer_location.position, card, attributes), tooltip.entity);
+            commands.trigger(UpdateCardTooltipEvent::new(tooltip.entity, event.pointer_location.position, card, attributes));
         }
     }
 }
 
 fn on_over_running(
     // bevy system
-    event: Trigger<Pointer<Over>>,
+    event: On<Pointer<Over>>,
     mut commands: Commands,
     running_q: Query<(&MachineKind, &MachineRunning)>,
     tooltip: Res<CardTooltip>,
     context: Res<GameplayContext>,
 ) {
-    if let Ok((machine_kind, running)) = running_q.get(event.target) {
+    if let Ok((machine_kind, running)) = running_q.get(event.event_target()) {
         let cached = match machine_kind {
             MachineKind::Local => &context.cached_local,
             MachineKind::Remote => &context.cached_remote,
@@ -553,14 +553,14 @@ fn on_over_running(
         if let Some(process) = cached.running.get(running.index) {
             let card = Some(process.card.clone());
             let attributes = Attributes::from_arrays(process.attributes);
-            commands.trigger_targets(UpdateCardTooltipEvent::new(event.pointer_location.position, card, attributes), tooltip.entity);
+            commands.trigger(UpdateCardTooltipEvent::new(tooltip.entity, event.pointer_location.position, card, attributes));
         }
     }
 }
 
 fn on_out_hide_card_tooltip(
     // bevy system
-    _event: Trigger<Pointer<Out>>,
+    _event: On<Pointer<Out>>,
     mut commands: Commands,
     tooltip: Res<CardTooltip>,
 ) {
@@ -575,11 +575,11 @@ fn cleanup_indicator(commands: &mut Commands, indicator: Entity, parent: Entity)
 fn cleanup_indicator_post_update(
     // bevy system
     mut commands: Commands,
-    mut receive: EventReader<Pointer<DragEnd>>,
+    mut receive: MessageReader<Pointer<DragEnd>>,
     indicator_q: Query<(Entity, &Indicator)>,
 ) {
     for event in receive.read() {
-        if let Some((entity, indicator)) = indicator_q.iter().find(|(_, i)| i.parent == event.target)
+        if let Some((entity, indicator)) = indicator_q.iter().find(|(_, i)| i.parent == event.event_target())
             && indicator.target.is_none()
         {
             cleanup_indicator(&mut commands, entity, indicator.parent);

@@ -1,4 +1,4 @@
-use bevy::prelude::{Commands, Entity, Query, Res, ResMut, Srgba, Text2d, TextColor, Trigger, With};
+use bevy::prelude::{Commands, Entity, Query, Res, ResMut, Srgba, Text2d, TextColor, On, With};
 
 use crate::manager::DataManager;
 use crate::screen::gameplay_main::components::{AttributeRow, PlayerStateText};
@@ -9,7 +9,7 @@ use crate::system::ui_effects::{Glower, UiFxTrackedColor};
 
 pub(super) fn on_local_state_update_player(
     // bevy system
-    event: Trigger<PlayerStateTrigger>,
+    event: On<PlayerStateTrigger>,
     mut context: ResMut<GameplayContext>,
     dm: Res<DataManager>,
 ) {
@@ -19,7 +19,7 @@ pub(super) fn on_local_state_update_player(
 
 pub(super) fn on_local_ui_update_player(
     // bevy system
-    event: Trigger<PlayerStateTrigger>,
+    event: On<PlayerStateTrigger>,
     mut text_q: Query<(&mut Text2d, &PlayerStateText)>,
 ) {
     for (mut text, state_text) in text_q.iter_mut() {
@@ -34,7 +34,7 @@ pub(super) fn on_local_ui_update_player(
 
 pub(super) fn on_local_ui_update_attr(
     // bevy system
-    event: Trigger<ChooseAttrTrigger>,
+    event: On<ChooseAttrTrigger>,
     mut commands: Commands,
     mut text_q: Query<(&mut TextColor, &PlayerStateText)>,
     mut row_q: Query<(Entity, &UiFxTrackedColor, Option<&Glower>), With<AttributeRow>>,

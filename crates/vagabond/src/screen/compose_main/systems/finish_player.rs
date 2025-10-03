@@ -1,4 +1,4 @@
-use bevy::prelude::{Commands, Query, Res, ResMut, Trigger};
+use bevy::prelude::{Commands, Query, Res, ResMut, On};
 
 use hall_lib::core::AttributeValues;
 
@@ -16,7 +16,7 @@ fn seed_from_holder(holder: &PartHolder) -> u64 {
 
 pub(super) fn on_finish_player(
     // bevy system
-    _event: Trigger<FinishPlayerTrigger>,
+    _event: On<FinishPlayerTrigger>,
     mut commands: Commands,
     holder_q: Query<(&PartHolder, &Slot)>,
     gate: Res<GateIFace>,

@@ -1,7 +1,7 @@
 use std::num::NonZero;
 
 use bevy::prelude::*;
-use bevy::sprite::Material2dPlugin;
+use bevy::sprite_render::Material2dPlugin;
 use bevy::window::WindowResolution;
 use mimalloc::MiMalloc;
 
@@ -18,8 +18,10 @@ mod system;
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
-const WINDOW_WIDTH: f32 = 1920.0;
-const WINDOW_HEIGHT: f32 = 1080.0;
+const WINDOW_WIDTH: u32 = 1920;
+const WINDOW_HALF_WIDTH_FLOAT: f32 = WINDOW_WIDTH as f32 / 2.0;
+const WINDOW_HEIGHT: u32 = 1080;
+const WINDOW_HALF_HEIGHT_FLOAT: f32 = WINDOW_HEIGHT as f32 / 2.0;
 
 #[derive(Debug)]
 #[allow(dead_code)] //Note: Derived Debug is intentionally ignored during dead code analysis
@@ -59,6 +61,6 @@ fn bevy_main() -> Result<(), NonZero<u8>> {
 }
 
 fn setup(mut commands: Commands) {
-    let transform = Transform::from_translation(Vec3::new(WINDOW_WIDTH / 2.0, -WINDOW_HEIGHT / 2.0, 0.0));
+    let transform = Transform::from_translation(Vec3::new(WINDOW_HALF_WIDTH_FLOAT, -WINDOW_HALF_HEIGHT_FLOAT, 0.0));
     commands.spawn((Camera2d, transform));
 }

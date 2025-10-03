@@ -1,4 +1,4 @@
-use bevy::prelude::{Commands, Out, Pointer, Query, Trigger};
+use bevy::prelude::{Commands, EntityEvent, On, Out, Pointer, Query};
 
 use hall_lib::core::{AttributeKind, MissionNodeKind};
 use hall_lib::view::GameMissionNodePlayerView;
@@ -67,12 +67,12 @@ impl GameMissionNodePlayerViewExt for GameMissionNodePlayerView {
 
 pub(crate) fn on_out_reset_color(
     //
-    event: Trigger<Pointer<Out>>,
+    event: On<Pointer<Out>>,
     mut commands: Commands,
     color_q: Query<&UiFxTrackedColor>,
 ) {
-    if let Ok(source_color) = color_q.get(event.target) {
-        commands.entity(event.target).trigger(SetColorEvent::new(event.target, source_color.color));
+    if let Ok(source_color) = color_q.get(event.event_target()) {
+        commands.entity(event.event_target()).trigger(|e| SetColorEvent::new(e, source_color.color));
     }
 }
 

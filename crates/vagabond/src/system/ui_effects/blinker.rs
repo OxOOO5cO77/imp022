@@ -1,7 +1,7 @@
 use crate::system::ui_effects::SetColorEvent;
 use bevy::app::{App, Plugin, Update};
 use bevy::color::Srgba;
-use bevy::prelude::{Commands, Component, Entity, Mix, Query, Res, Time, ops};
+use bevy::prelude::{ops, Commands, Component, Entity, Mix, Query, Res, Time};
 use std::f32::consts::PI;
 
 pub(crate) struct BlinkerPlugin;
@@ -36,7 +36,7 @@ impl Blinker {
     }
 
     pub(crate) fn remove(&self, commands: &mut Commands, entity: Entity) {
-        commands.entity(entity).remove::<Blinker>().trigger(SetColorEvent::new(entity, self.original));
+        commands.entity(entity).remove::<Blinker>().trigger(|e| SetColorEvent::new(e, self.original));
     }
 }
 
@@ -57,6 +57,6 @@ fn blinker_update(
         let t = (ops::sin(x) + 1.0) / 2.0;
 
         let color = blink.source.mix(&blink.target, t);
-        commands.entity(entity).trigger(SetColorEvent::new(entity, color));
+        commands.entity(entity).trigger(|e| SetColorEvent::new(e, color));
     }
 }

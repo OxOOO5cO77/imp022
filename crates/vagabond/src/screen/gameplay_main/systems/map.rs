@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bevy::prelude::{Commands, Query, Res, Text2d, Trigger, Visibility};
+use bevy::prelude::{Commands, Query, Res, Text2d, On, Visibility};
 
 use crate::screen::gameplay_main::events::ShowMapTrigger;
 use crate::screen::gameplay_main::resources::{GameplayContext, GameplayMap};
@@ -9,7 +9,7 @@ use crate::system::ui_effects::SetColorEvent;
 
 pub(super) fn on_show_map(
     // bevy system
-    _event: Trigger<ShowMapTrigger>,
+    _event: On<ShowMapTrigger>,
     mut commands: Commands,
     mut text_q: Query<&mut Text2d>,
     map: Res<GameplayMap>,
@@ -38,6 +38,6 @@ pub(super) fn on_show_map(
             bevy::color::palettes::basic::GRAY
         };
         commands.entity(map_node.entity).insert(visible);
-        commands.entity(map_node.frame).trigger(SetColorEvent::new(map_node.frame, color));
+        commands.entity(map_node.frame).trigger(|e| SetColorEvent::new(e, color));
     }
 }

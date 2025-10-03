@@ -1,4 +1,4 @@
-use bevy::prelude::{Commands, Entity, Query, Trigger, With};
+use bevy::prelude::{Commands, Entity, Query, On, With};
 
 use crate::screen::compose_main::{CommitButton, PopulatePlayerUi};
 use crate::system::ui_effects::{Glower, UiFxTrackedColor};
@@ -7,7 +7,7 @@ const GLOWER_COMMIT_SPEED: f32 = 8.0;
 
 pub(super) fn on_commit_button_ui(
     // bevy system
-    event: Trigger<PopulatePlayerUi>,
+    event: On<PopulatePlayerUi>,
     mut commands: Commands,
     mut glower_q: Query<(Entity, &UiFxTrackedColor, Option<&Glower>), With<CommitButton>>,
 ) {

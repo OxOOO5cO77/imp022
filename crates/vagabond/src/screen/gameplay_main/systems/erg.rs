@@ -1,11 +1,11 @@
-use bevy::prelude::{Query, Text2d, Trigger};
+use bevy::prelude::{Query, Text2d, On};
 
 use crate::screen::gameplay_main::components::PlayerStateText;
 use crate::screen::gameplay_main::events::PlayerErgTrigger;
 
 pub(super) fn on_erg_ui_update(
     // bevy system
-    event: Trigger<PlayerErgTrigger>,
+    event: On<PlayerErgTrigger>,
     mut erg_q: Query<(&mut Text2d, &PlayerStateText)>,
 ) {
     for (mut erg_text, state_text) in erg_q.iter_mut() {

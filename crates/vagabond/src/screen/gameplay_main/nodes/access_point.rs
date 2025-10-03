@@ -1,4 +1,4 @@
-use bevy::prelude::{Click, Commands, Entity, EntityCommands, Pickable, Pointer, Query, ResMut, Text2d, Trigger};
+use bevy::prelude::{Click, Commands, Entity, EntityCommands, EntityEvent, On, Pickable, Pointer, Query, ResMut, Text2d};
 
 use hall_lib::core::{AccessPointIntent, MissionNodeIntent};
 use hall_lib::view::GameMissionPlayerView;
@@ -76,11 +76,11 @@ impl AccessPoint {
 
     fn on_click_access_point_button(
         //
-        event: Trigger<Pointer<Click>>,
+        event: On<Pointer<Click>>,
         mut commands: Commands,
         button_q: Query<(&MissionNodeButton<AccessPointIntent>, &UiFxTrackedColor)>,
         mut context: ResMut<GameplayContext>,
     ) {
-        shared::click_common(&mut commands, &mut context, event.target, button_q.get(event.target), MissionNodeIntent::AccessPoint);
+        shared::click_common(&mut commands, &mut context, event.event_target(), button_q.get(event.event_target()), MissionNodeIntent::AccessPoint);
     }
 }

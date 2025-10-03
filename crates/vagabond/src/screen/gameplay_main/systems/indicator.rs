@@ -1,4 +1,4 @@
-use bevy::prelude::{Commands, Entity, Query, Trigger};
+use bevy::prelude::{Commands, Entity, Query, On};
 
 use crate::screen::gameplay_main::components::Indicator;
 use crate::screen::gameplay_main::events::GamePhaseTrigger;
@@ -6,7 +6,7 @@ use crate::screen::gameplay_main::{VagabondGamePhase, cleanup_indicator};
 
 pub(super) fn on_indicator_ui_update(
     // bevy system
-    event: Trigger<GamePhaseTrigger>,
+    event: On<GamePhaseTrigger>,
     mut commands: Commands,
     indicator_q: Query<(Entity, &Indicator)>,
 ) {

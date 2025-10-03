@@ -1,4 +1,4 @@
-use bevy::prelude::{Commands, Entity, Query, Res, ResMut, Text2d, Trigger, Visibility, With};
+use bevy::prelude::{Commands, Entity, Query, Res, ResMut, Text2d, On, Visibility, With};
 
 use crate::manager::{DataManager, WarehouseManager};
 use crate::screen::gameplay_main::VagabondGamePhase;
@@ -10,7 +10,7 @@ use crate::screen::gameplay_main::resources::{GameplayContext, NodeLayouts};
 #[allow(clippy::too_many_arguments)]
 pub(super) fn on_mission_ui_update(
     // bevy system
-    event: Trigger<MissionTrigger>,
+    event: On<MissionTrigger>,
     mut commands: Commands,
     display_q: Query<(Entity, &MissionNodeDisplay)>,
     observer_q: Query<Entity, With<MissionNodeLocalObserver>>,
@@ -54,7 +54,7 @@ pub(super) fn on_mission_ui_update(
 
 pub(super) fn on_mission_phase_update(
     // bevy system
-    event: Trigger<GamePhaseTrigger>,
+    event: On<GamePhaseTrigger>,
     mut commands: Commands,
     mut context: ResMut<GameplayContext>,
 ) {

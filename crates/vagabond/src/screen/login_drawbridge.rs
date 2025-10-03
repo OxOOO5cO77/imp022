@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_simple_text_input::{TextInputCursorPos, TextInputInactive, TextInputSubmitEvent, TextInputValue};
+use bevy_simple_text_input::{TextInputCursorPos, TextInputInactive, TextInputSubmitMessage, TextInputValue};
 use tokio::sync::mpsc;
 
 use shared_net::AuthType;
@@ -112,7 +112,7 @@ fn login_ui_setup(
 fn textedit_update(
     // bevy system
     mut commands: Commands,
-    mut events: EventReader<TextInputSubmitEvent>,
+    mut events: MessageReader<TextInputSubmitMessage>,
     tracker: Res<LoginContext>,
     mut drawbridge: ResMut<DrawbridgeIFace>,
 ) {
@@ -141,7 +141,7 @@ fn drawbridge_update(
 ) {
     if let Ok(auth_info) = drawbridge.drx.try_recv() {
         if let Ok(connected) = connected_q.single() {
-            commands.entity(connected).trigger(SetColorEvent::new(connected, bevy::color::palettes::css::YELLOW));
+            commands.entity(connected).trigger(|e| SetColorEvent::new(e, bevy::color::palettes::css::YELLOW));
         }
         commands.insert_resource(DrawbridgeHandoff::new(auth_info));
         app_state.set(AppState::LoginGate);

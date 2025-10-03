@@ -1,7 +1,7 @@
 use crate::system::ui_effects::{Hider, UiFxTrackedSize};
 use bevy::math::Vec3;
-use bevy::prelude::{Commands, Component, Entity, EntityCommands, Out, Over, Pickable, Pointer, Query, Transform, Trigger, Visibility, Window};
-use bevy::text::Text2d;
+use bevy::prelude::{Commands, Component, Entity, EntityCommands, EntityEvent, On, Out, Over, Pickable, Pointer, Query, Transform, Visibility, Window};
+use bevy::sprite::Text2d;
 
 const TEXT_TIP_DELAY_SHOW: f32 = 2.0;
 const TEXT_TIP_DELAY_HIDE: f32 = 0.25;
@@ -54,7 +54,7 @@ impl TextTip for &mut EntityCommands<'_> {
 
 fn on_over_text_tip(
     //
-    event: Trigger<Pointer<Over>>,
+    event: On<Pointer<Over>>,
     mut commands: Commands,
     text_tip_q: Query<&TextTipComponent>,
     mut container_q: Query<(&mut Transform, &UiFxTrackedSize, &TextTipContainer)>,
@@ -62,7 +62,7 @@ fn on_over_text_tip(
     window_q: Query<&Window>,
 ) {
     if let Ok(window) = window_q.single()
-        && let Ok(text_tip) = text_tip_q.get(event.target)
+        && let Ok(text_tip) = text_tip_q.get(event.event_target())
         && let Ok((mut container_transform, container_size, container)) = container_q.get_mut(text_tip.container_entity)
     {
         if let Ok(mut text) = text_q.get_mut(container.text_entity) {
@@ -78,11 +78,11 @@ fn on_over_text_tip(
 
 fn on_out_text_tip(
     //
-    event: Trigger<Pointer<Out>>,
+    event: On<Pointer<Out>>,
     mut commands: Commands,
     text_tip_q: Query<&TextTipComponent>,
 ) {
-    if let Ok(text_tip) = text_tip_q.get(event.target) {
+    if let Ok(text_tip) = text_tip_q.get(event.event_target()) {
         commands.entity(text_tip.container_entity).insert(Hider::new(TEXT_TIP_DELAY_HIDE, Visibility::Hidden));
     }
 }

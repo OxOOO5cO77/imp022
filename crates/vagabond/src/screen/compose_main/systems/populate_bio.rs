@@ -1,11 +1,11 @@
-use bevy::prelude::{Commands, Entity, Query, Text2d, Trigger, Visibility, With, Without};
+use bevy::prelude::{Commands, Entity, Query, Text2d, On, Visibility, With, Without};
 
 use crate::screen::compose_main::{InfoKind, PlayerBioGroup, PopulatePlayerUi};
 use crate::screen::shared::CardLayout;
 
 pub(super) fn on_populate_bio_ui(
     // bevy system
-    event: Trigger<PopulatePlayerUi>,
+    event: On<PopulatePlayerUi>,
     mut commands: Commands,
     mut info_q: Query<(&mut Text2d, &InfoKind), Without<CardLayout>>,
     bio_q: Query<Entity, With<PlayerBioGroup>>,

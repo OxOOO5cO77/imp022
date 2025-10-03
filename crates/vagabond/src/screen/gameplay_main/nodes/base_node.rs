@@ -186,7 +186,7 @@ impl BaseNode {
                 commands.entity(actor_ui.container).observe_actor(actor.id, actor.auth_level, idx);
                 let hue = pick_hue(actor.id);
                 let color = Hwba::hwb(hue, 0.25, 0.25);
-                commands.entity(actor_ui.bg).trigger(SetColorEvent::new(actor_ui.bg, color.into()));
+                commands.entity(actor_ui.bg).trigger(|e| SetColorEvent::new(e, color.into()));
                 if let Ok(mut text_letter) = text_q.get_mut(actor_ui.text)
                     && let Ok(response) = wm.fetch_player(actor.id)
                     && let Some(bio) = response.player_bio.as_ref()
@@ -208,12 +208,12 @@ impl BaseNode {
 
     fn on_click_link(
         //
-        event: Trigger<Pointer<Click>>,
+        event: On<Pointer<Click>>,
         mut commands: Commands,
         button_q: Query<(&MissionNodeButton<MissionNodeLinkDir>, &UiFxTrackedColor)>,
         mut context: ResMut<GameplayContext>,
     ) {
-        shared::click_common(&mut commands, &mut context, event.target, button_q.get(event.target), MissionNodeIntent::Link);
+        shared::click_common(&mut commands, &mut context, event.event_target(), button_q.get(event.event_target()), MissionNodeIntent::Link);
     }
 }
 
@@ -228,19 +228,19 @@ fn pick_hue(id: ActorIdType) -> f32 {
 
 fn on_over_actor_action(
     //
-    event: Trigger<Pointer<Over>>,
+    event: On<Pointer<Over>>,
     mut commands: Commands,
     holder_q: Query<&ActorInfoHolder>,
     tooltip: Res<ActorTooltip>,
 ) {
-    if let Ok(holder) = holder_q.get(event.target) {
-        commands.trigger_targets(UpdateActorTooltipEvent::new(event.pointer_location.position, holder.id, holder.auth), tooltip.container);
+    if let Ok(holder) = holder_q.get(event.event_target()) {
+        commands.trigger(UpdateActorTooltipEvent::new(tooltip.container, event.pointer_location.position, holder.id, holder.auth));
     }
 }
 
 fn on_out_actor_action(
     //
-    _event: Trigger<Pointer<Out>>,
+    _event: On<Pointer<Out>>,
     mut commands: Commands,
     tooltip: Res<ActorTooltip>,
 ) {
@@ -255,16 +255,18 @@ pub(crate) struct ActorTooltip {
     pub(crate) auth: Entity,
 }
 
-#[derive(Event)]
+#[derive(EntityEvent)]
 pub(crate) struct UpdateActorTooltipEvent {
+    entity: Entity,
     position: Vec2,
     id: ActorIdType,
     auth: AuthLevel,
 }
 
 impl UpdateActorTooltipEvent {
-    pub(crate) fn new(position: Vec2, id: ActorIdType, auth: AuthLevel) -> Self {
+    pub(crate) fn new(entity: Entity, position: Vec2, id: ActorIdType, auth: AuthLevel) -> Self {
         Self {
+            entity,
             position,
             id,
             auth,
@@ -274,7 +276,7 @@ impl UpdateActorTooltipEvent {
 
 fn on_update_actor_tooltip(
     // bevy system
-    event: Trigger<UpdateActorTooltipEvent>,
+    event: On<UpdateActorTooltipEvent>,
     mut commands: Commands,
     mut tooltip_q: Query<(&mut Transform, &GlobalTransform, &UiFxTrackedSize)>,
     mut text_q: Query<&mut Text2d>,
@@ -282,7 +284,7 @@ fn on_update_actor_tooltip(
     tooltip: Res<ActorTooltip>,
     mut wm: ResMut<WarehouseManager>,
 ) {
-    let target = event.target();
+    let target = event.event_target();
     if let Ok(window) = window_q.single()
         && let Ok((mut transform, global_transform, tooltip_size)) = tooltip_q.get_mut(target)
         && let Some(bio) = wm.fetch_player(event.id).ok().and_then(|bio| bio.player_bio.as_ref())

@@ -1,4 +1,4 @@
-use bevy::prelude::{Commands, Entity, Query, Text2d, TextColor, Trigger, Visibility, With, Without};
+use bevy::prelude::{Commands, Entity, Query, Text2d, TextColor, On, Visibility, With, Without};
 
 use crate::screen::gameplay_main::components::{RemoteAttrIcon, RemoteAttrText};
 use crate::screen::gameplay_main::events::{ResourcesTrigger, RollTrigger};
@@ -6,7 +6,7 @@ use crate::screen::shared::kind_icon;
 
 pub(super) fn on_remote_ui_update_roll(
     // bevy system
-    _event: Trigger<RollTrigger>,
+    _event: On<RollTrigger>,
     mut commands: Commands,
     mut text_q: Query<(&mut Text2d, &mut TextColor), With<RemoteAttrText>>,
     icon_q: Query<Entity, With<RemoteAttrIcon>>,
@@ -22,7 +22,7 @@ pub(super) fn on_remote_ui_update_roll(
 
 pub(super) fn on_remote_ui_update_resources(
     // bevy system
-    event: Trigger<ResourcesTrigger>,
+    event: On<ResourcesTrigger>,
     mut commands: Commands,
     mut text_q: Query<(&mut Text2d, &mut TextColor, &RemoteAttrText), Without<RemoteAttrIcon>>,
     mut icon_q: Query<(Entity, &mut Text2d), With<RemoteAttrIcon>>,

@@ -201,12 +201,12 @@ fn compose_enter(
 
 fn on_part_drag_start(
     //
-    event: Trigger<Pointer<DragStart>>,
+    event: On<Pointer<DragStart>>,
     mut commands: Commands,
     mut holder_q: Query<(Entity, Option<&UiFxTrackedColor>, &Slot, &mut PartHolder)>,
     mut draggable: ResMut<DraggedPart>,
 ) {
-    if let Ok([(_, _, _, mut holder), (_, _, _, mut drag_holder)]) = holder_q.get_many_mut([event.target, draggable.entity]) {
+    if let Ok([(_, _, _, mut holder), (_, _, _, mut drag_holder)]) = holder_q.get_many_mut([event.event_target(), draggable.entity]) {
         if holder.part.is_none() {
             draggable.active = false;
             return;
@@ -216,7 +216,7 @@ fn on_part_drag_start(
         holder.part = None;
         draggable.active = true;
 
-        commands.entity(event.target).insert(Pickable::IGNORE);
+        commands.entity(event.event_target()).insert(Pickable::IGNORE);
     }
 
     for (entity, source_color, slot, holder) in &holder_q {
@@ -237,7 +237,7 @@ fn on_part_drag_start(
 
 fn on_part_drag(
     //
-    event: Trigger<Pointer<Drag>>,
+    event: On<Pointer<Drag>>,
     mut draggable_q: Query<&mut Transform, With<PartHolder>>,
     draggable: Res<DraggedPart>,
 ) {
@@ -253,7 +253,7 @@ fn on_part_drag(
 
 fn on_part_drag_end(
     //
-    event: Trigger<Pointer<DragEnd>>,
+    event: On<Pointer<DragEnd>>,
     mut commands: Commands,
     mut holder_q: Query<(&mut PartHolder, &Slot)>,
     mut draggable: ResMut<DraggedPart>,
@@ -264,14 +264,14 @@ fn on_part_drag_end(
     }
 
     let mut original = Entity::PLACEHOLDER;
-    if let Ok([mut target, mut drag]) = holder_q.get_many_mut([event.target, draggable.entity]) {
+    if let Ok([mut target, mut drag]) = holder_q.get_many_mut([event.event_target(), draggable.entity]) {
         original = handle_swap(None, &mut target.0, &mut drag.0, target.1);
     }
 
-    handle_empty(event.target, original, holder_q);
+    handle_empty(event.event_target(), original, holder_q);
 
     draggable.active = false;
-    commands.entity(event.target).insert(Pickable::default());
+    commands.entity(event.event_target()).insert(Pickable::default());
 
     for (entity, glower) in glower_q.iter_mut() {
         glower.remove(&mut commands, entity);
@@ -307,7 +307,7 @@ fn handle_empty(empty: Entity, original: Entity, mut holder_q: Query<(&mut PartH
 
 fn on_part_drop(
     //
-    event: Trigger<Pointer<DragDrop>>,
+    event: On<Pointer<DragDrop>>,
     mut commands: Commands,
     mut holder_q: Query<(&mut PartHolder, &Slot)>,
     draggable: Res<DraggedPart>,
@@ -317,18 +317,18 @@ fn on_part_drop(
     }
 
     let mut original = Entity::PLACEHOLDER;
-    if let Ok([(mut source, _), (mut target, slot), (mut drag, _)]) = holder_q.get_many_mut([event.dropped, event.target, draggable.entity]) {
+    if let Ok([(mut source, _), (mut target, slot), (mut drag, _)]) = holder_q.get_many_mut([event.dropped, event.event_target(), draggable.entity]) {
         original = handle_swap(Some(&mut source), &mut target, &mut drag, slot);
     }
 
-    handle_empty(event.target, original, holder_q);
+    handle_empty(event.event_target(), original, holder_q);
 
     commands.trigger(FinishPlayerTrigger);
 }
 
 fn on_click_commit(
     //
-    _event: Trigger<Pointer<Click>>,
+    _event: On<Pointer<Click>>,
     mut commands: Commands,
     mut context: ResMut<ComposeContext>,
 ) {
@@ -341,15 +341,15 @@ fn on_click_commit(
 
 fn on_over_commit(
     //
-    event: Trigger<Pointer<Over>>,
+    event: On<Pointer<Over>>,
     mut commands: Commands,
 ) {
-    commands.entity(event.target).trigger(SetColorEvent::new(event.target, bevy::color::palettes::basic::RED));
+    commands.entity(event.event_target()).trigger(|e| SetColorEvent::new(e, bevy::color::palettes::basic::RED));
 }
 
 fn on_over_header(
     //
-    event: Trigger<Pointer<Over>>,
+    event: On<Pointer<Over>>,
     mut commands: Commands,
     header_q: Query<(&Transform, &CardHeader)>,
     tooltip_q: Query<(&Transform, &UiFxTrackedSize)>,
@@ -358,19 +358,19 @@ fn on_over_header(
     window_q: Query<&Window>,
 ) {
     if let Ok(window) = window_q.single()
-        && let Ok((header_transform, header)) = header_q.get(event.target)
+        && let Ok((header_transform, header)) = header_q.get(event.event_target())
         && let Ok((tooltip_transform, tooltip_size)) = tooltip_q.get(tooltip.entity)
     {
         let new_y = (header_transform.translation.y + (tooltip_size.y / 2.0)).clamp(-window.height() + tooltip_size.y, 0.0);
         let position = Vec2::new(tooltip_transform.translation.x, -new_y);
         let card = context.deck.get(header.index).cloned();
-        commands.entity(tooltip.entity).remove::<Hider>().trigger(UpdateCardTooltipEvent::new(position, card, context.attributes));
+        commands.entity(tooltip.entity).remove::<Hider>().trigger(|e| UpdateCardTooltipEvent::new(e, position, card, context.attributes));
     }
 }
 
 fn on_out_header(
     //
-    _event: Trigger<Pointer<Out>>,
+    _event: On<Pointer<Out>>,
     mut commands: Commands,
     tooltip: Res<CardTooltip>,
 ) {
