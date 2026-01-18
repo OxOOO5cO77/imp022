@@ -6,9 +6,9 @@ edition = "2024"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 
 [dependencies]
-tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
-tracing = { version = "0.1.41" }
-tracing-subscriber = { version = "0.3.20" }
+tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread"] }
+tracing = { version = "0.1.44" }
+tracing-subscriber = { version = "0.3.22" }
 shared-net = { path = "../shared-net" }
 forum-lib = { path = "../forum-lib" }
 mimalloc = "0.1.48"

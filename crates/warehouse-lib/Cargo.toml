@@ -7,6 +7,6 @@ authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 
 
 [dependencies]
-chrono = { version = "0.4.42", default-features = false, features = ["std", "serde"] }
+chrono = { version = "0.4.43", default-features = false, features = ["std", "serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
 shared-net = { path = "../shared-net" }

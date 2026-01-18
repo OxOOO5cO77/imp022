@@ -6,10 +6,10 @@ edition = "2024"
 authors = ["Scott Barcik <oxooo5co77@impending.org>"]
 
 [dependencies]
-chrono = { version = "0.4.42" }
-tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread", "signal"] }
-tracing = { version = "0.1.41" }
-tracing-subscriber = { version = "0.3.20" }
+chrono = { version = "0.4.43" }
+tokio = { version = "1.49.0", features = ["macros", "rt-multi-thread", "signal"] }
+tracing = { version = "0.1.44" }
+tracing-subscriber = { version = "0.3.22" }
 shared-net = { path = "../shared-net" }
 archive-lib = { path = "../archive-lib" }
 forum-lib = { path = "../forum-lib" }
