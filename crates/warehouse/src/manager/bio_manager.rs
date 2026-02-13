@@ -4,8 +4,9 @@ use std::path::Path;
 
 use chrono::NaiveDate;
 use rand::prelude::{IndexedRandom, StdRng};
-use rand::{Rng, SeedableRng};
+use rand::{Rng, RngExt, SeedableRng};
 use serde::Deserialize;
+
 use warehouse_lib::data::geo_location::GeoLocation;
 use warehouse_lib::data::player_bio::PlayerBio;
 

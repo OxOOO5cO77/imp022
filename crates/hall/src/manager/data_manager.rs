@@ -46,7 +46,7 @@ impl DataManager {
     }
 
     pub(crate) fn pick_cards(&self, rng: &mut impl Rng, from: &[CardSlot], count: u8) -> Vec<&HallCard> {
-        let slots = from.choose_multiple(rng, count as usize).cloned().collect::<Vec<_>>();
+        let slots = from.sample(rng, count as usize).cloned().collect::<Vec<_>>();
         slots.iter().filter_map(|slot| self.pick_card(rng, slot)).collect()
     }
 

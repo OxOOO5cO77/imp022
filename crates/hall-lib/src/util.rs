@@ -1,5 +1,5 @@
 use crate::core::AttributeArray;
-use rand::Rng;
+use rand::{Rng, RngExt};
 
 pub fn pick_values(rng: &mut impl Rng) -> AttributeArray {
     let v1 = rng.random_range(1..=9);

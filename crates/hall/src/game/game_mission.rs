@@ -1,5 +1,5 @@
 use rand::prelude::StdRng;
-use rand::{Rng, SeedableRng};
+use rand::{Rng, RngExt, SeedableRng};
 
 use hall_lib::core::{AuthLevel, GeneralType, MissionIdType, MissionNodeIdType, MissionNodeKind, MissionNodeLink, MissionNodeLinkDir, MissionNodeState, SpecificType};
 use hall_lib::view::{GameMissionObjectivePlayerView, GameMissionPlayerView};

@@ -1,6 +1,7 @@
+use rand::{Rng, RngExt};
+
 use hall_lib::core::{ActorIdType, AuthLevel};
 use hall_lib::view::GameActorPlayerView;
-use rand::Rng;
 
 enum ActorKind {
     Guest,

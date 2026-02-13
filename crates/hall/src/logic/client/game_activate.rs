@@ -1,5 +1,5 @@
 use rand::prelude::{IteratorRandom, StdRng};
-use rand::{Rng, SeedableRng};
+use rand::{RngExt, SeedableRng};
 use std::collections::HashSet;
 use tracing::info;
 

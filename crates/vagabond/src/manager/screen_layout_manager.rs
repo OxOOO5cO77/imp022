@@ -509,6 +509,7 @@ impl ScreenLayoutManager {
             TextInputSettings {
                 retain_on_submit: true,
                 mask_character: element.password.then_some('*'),
+                max_length: None,
             },
         );
         parent.spawn(bundle).id()
